@@ -1,7 +1,7 @@
-import { HomePage } from '@/components/home'
+import { AppRouter } from '@/routes'
 
 function App() {
-  return <HomePage />
+  return <AppRouter />
 }
 
 export default App

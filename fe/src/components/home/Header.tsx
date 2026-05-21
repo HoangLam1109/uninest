@@ -1,4 +1,6 @@
+import { Link } from 'react-router-dom'
 import { images } from '@/assets/figma'
+import { paths } from '@/routes/paths'
 import { Button } from '@/components/ui/button'
 import { navLinks } from './data'
 
@@ -6,7 +8,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-surface/95 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-4 lg:px-10 xl:px-20">
-        <a href="#" className="flex shrink-0 items-center gap-3">
+        <Link to={paths.home} className="flex shrink-0 items-center gap-3">
           <img
             src={images.logo}
             alt=""
@@ -17,7 +19,7 @@ export function Header() {
           <span className="font-sans text-2xl font-black uppercase tracking-tight text-foreground">
             UniNest
           </span>
-        </a>
+        </Link>
 
         <nav
           className="hidden flex-1 items-center justify-center gap-10 md:flex"
@@ -35,10 +37,17 @@ export function Header() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-3">
-          <Button variant="outline" size="default" className="hidden sm:inline-flex">
-            Đăng nhập
+          <Button
+            variant="outline"
+            size="default"
+            className="hidden sm:inline-flex"
+            asChild
+          >
+            <Link to={paths.login}>Đăng nhập</Link>
           </Button>
-          <Button size="default">Đăng ký</Button>
+          <Button size="default" asChild>
+            <Link to={paths.register}>Đăng ký</Link>
+          </Button>
         </div>
       </div>
     </header>
