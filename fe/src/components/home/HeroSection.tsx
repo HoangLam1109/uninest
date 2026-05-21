@@ -17,10 +17,14 @@ export function HeroSection() {
       <img
         src={images.hero}
         alt=""
+        width={2400}
+        height={1600}
+        decoding="async"
+        fetchPriority="high"
         className="absolute inset-0 size-full object-cover object-center"
       />
       <div
-        className="absolute inset-0 bg-gradient-to-b from-[#2d241a]/60 to-[#2d241a]/40"
+        className="absolute inset-0 bg-gradient-to-b from-[#2d241a]/50 to-[#2d241a]/30"
         aria-hidden
       />
 

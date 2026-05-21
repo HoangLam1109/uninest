@@ -1,7 +1,8 @@
-/** Figma MCP assets (valid ~7 days). Regenerate from design file if expired. */
+/** Static assets in /public; room cards may use Figma MCP URLs (~7 days). */
 export const images = {
-  hero: 'https://www.figma.com/api/mcp/asset/d614fd4f-07e4-48f8-b729-9914719b769e',
-  logo: 'https://www.figma.com/api/mcp/asset/2961be84-6d98-47d7-9195-28d133325183',
+  hero: '/hero.jpg',
+  authPanel: '/auth-panel.jpg',
+  logo: '/logo.png',
   rooms: [
     'https://www.figma.com/api/mcp/asset/c7815ab5-3e35-46b8-a8a4-832b17c27d81',
     'https://www.figma.com/api/mcp/asset/e69c0b47-1206-4bfc-ad89-83776b8d9d2d',
