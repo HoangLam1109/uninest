@@ -2,9 +2,9 @@ import { Link } from 'react-router-dom'
 import { paths } from '@/routes/paths'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { AuthField } from './AuthField'
-import { AuthLayout } from './AuthLayout'
-import { PasswordInput } from './PasswordInput'
+import { AuthField } from '../components/auth/AuthField'
+import { AuthLayout } from '../components/auth/AuthLayout'
+import { PasswordInput } from '../components/auth/PasswordInput'
 
 const inputClass =
   'h-12 border border-border bg-surface px-4 text-sm font-medium'
