@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { LoginPage, RegisterPage } from '@/components/auth'
-import { HomePage } from '@/components/home'
+import { HomePage } from '@/pages/HomePage'
 import { paths } from './paths'
 
 export function AppRouter() {
