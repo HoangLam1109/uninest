@@ -18,12 +18,15 @@ export function AuthLayout({
     <div className="grid min-h-svh lg:grid-cols-2">
       <aside className="relative hidden overflow-hidden lg:block">
         <img
-          src={images.rooms[0]}
+          src={images.authPanel}
           alt=""
-          className="absolute inset-0 size-full object-cover"
+          width={1600}
+          height={1200}
+          decoding="async"
+          className="absolute inset-0 size-full object-cover object-center"
         />
         <div
-          className="absolute inset-0 bg-gradient-to-br from-[#2d241a]/85 via-[#2d241a]/70 to-primary/40"
+          className="absolute inset-0 bg-gradient-to-br from-[#2d241a]/55 via-[#2d241a]/40 to-primary/25"
           aria-hidden
         />
         <div className="relative z-10 flex h-full flex-col justify-between p-12 text-white">
