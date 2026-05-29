@@ -1,5 +1,8 @@
 export { LandlordCharts } from './components/landlord-charts'
+export { LandlordDashboardPage } from './components/landlord-dashboard'
 export { LandlordDashboardHeader } from './components/landlord-dashboard-header'
+export { LandlordMobileHeader } from './components/landlord-mobile-header'
 export { LandlordPaymentsTable } from './components/landlord-payments-table'
+export { LandlordPlaceholderPage } from './components/landlord-placeholder'
 export { LandlordSidebar } from './components/landlord-sidebar'
 export { LandlordStatCards } from './components/landlord-stat-cards'

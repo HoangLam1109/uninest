@@ -8,8 +8,10 @@ import { LandlordLayout } from '@/layouts/landlord-layout'
 import { AdminDashboardPage } from '@/pages/admin-dashboard'
 import { DashboardRedirectPage } from '@/pages/dashboard-redirect'
 import { HomePage } from '@/pages/home'
-import { LandlordDashboardPage } from '@/features/landlord/components/landlord-dashboard'
-import { LandlordPlaceholderPage } from '@/features/landlord/components/landlord-placeholder'
+import {
+  LandlordDashboardPage,
+  LandlordPlaceholderPage,
+} from '@/features/landlord'
 import { NotFoundPage } from '@/pages/not-found'
 import { TenantDashboardPage } from '@/pages/tenant-dashboard'
 
