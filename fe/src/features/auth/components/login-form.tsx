@@ -17,9 +17,8 @@ export function LoginForm() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      identifier: '',
+      email: '',
       password: '',
-      remember: false,
     },
   })
 
@@ -31,18 +30,18 @@ export function LoginForm() {
         noValidate
       >
         <AuthField
-          id="login-identifier"
-          label="Email hoặc số điện thoại"
-          error={errors.identifier?.message}
+          id="login-email"
+          label="Email"
+          error={errors.email?.message}
         >
           <Input
-            id="login-identifier"
-            type="text"
-            placeholder="name@email.com hoặc 09xx xxx xxx"
-            autoComplete="username"
-            className={authInputClassName(!!errors.identifier)}
-            aria-invalid={!!errors.identifier}
-            {...register('identifier')}
+            id="login-email"
+            type="email"
+            placeholder="name@email.com"
+            autoComplete="email"
+            className={authInputClassName(!!errors.email)}
+            aria-invalid={!!errors.email}
+            {...register('email')}
           />
         </AuthField>
 
@@ -65,7 +64,6 @@ export function LoginForm() {
             <input
               type="checkbox"
               className="size-4 rounded border-border text-primary accent-primary"
-              {...register('remember')}
             />
             Ghi nhớ đăng nhập
           </label>
@@ -76,12 +74,6 @@ export function LoginForm() {
             Quên mật khẩu?
           </a>
         </div>
-
-        {login.isError ? (
-          <p className="text-sm font-medium text-red-600" role="alert">
-            Đăng nhập thất bại. Vui lòng thử lại.
-          </p>
-        ) : null}
 
         <Button
           type="submit"

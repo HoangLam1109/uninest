@@ -1,5 +1,6 @@
 import { images } from '@/assets/images'
 
+
 export const navLinks = [
   { label: 'Trang chủ', href: '#' },
   { label: 'Phòng cho thuê', href: '#rooms' },

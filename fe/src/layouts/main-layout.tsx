@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { Navbar } from '@/components/common/navbar'
-import { FooterSection } from '@/features/home/components/FooterSection'
+import { Navbar } from '@/features/home/components/navbar'
+import { FooterSection } from '@/features/home/components/footer-section'
 
 export function MainLayout({ children }: { children: ReactNode }) {
   return (

@@ -1,14 +1,16 @@
+import type { UserRole } from '@/constants/roles'
+
 export type AuthUser = {
   id: string
   email: string
   fullName: string
   phone?: string
+  role?: UserRole
 }
 
 export type LoginPayload = {
-  identifier: string
+  email: string
   password: string
-  remember?: boolean
 }
 
 export type RegisterPayload = {
@@ -21,4 +23,13 @@ export type RegisterPayload = {
 export type AuthResponse = {
   user: AuthUser
   accessToken: string
+  refreshToken: string
+}
+
+export type RefreshTokenResponse = {
+  accessToken: string
+}
+
+export type AuthUserResponse = {
+  user: AuthUser
 }

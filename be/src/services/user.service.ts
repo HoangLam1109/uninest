@@ -7,6 +7,7 @@ export interface CreateUserData {
   email: string;
   fullName: string;
   password: string;
+  phone: string;
 }
 
 export interface UpdateUserData {

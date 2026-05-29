@@ -1,17 +1,20 @@
 import { z } from '@/lib/zod'
 
 export const loginSchema = z.object({
-  identifier: z
+  email: z
     .string()
-    .min(1, 'Vui lòng nhập email hoặc số điện thoại'),
-  password: z.string().min(1, 'Vui lòng nhập mật khẩu'),
-  remember: z.boolean(),
+    .min(1, { error: 'Vui lòng nhập email' })
+    .pipe(z.email({ error: 'Email không hợp lệ' })),
+  password: z.string().min(1, { error: 'Vui lòng nhập mật khẩu' }),
 })
 
 export const registerSchema = z
   .object({
     fullName: z.string().min(2, 'Họ và tên phải có ít nhất 2 ký tự'),
-    email: z.email('Email không hợp lệ'),
+    email: z
+      .string()
+      .min(1, { error: 'Vui lòng nhập email' })
+      .pipe(z.email({ error: 'Email không hợp lệ' })),
     phone: z
       .string()
       .min(10, 'Số điện thoại không hợp lệ')
