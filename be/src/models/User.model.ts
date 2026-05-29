@@ -52,7 +52,7 @@ const userSchema = new mongoose.Schema<IUser>(
       type: String,
       trim: true,
       enum: Object.values(USER_ROLES),
-      default: USER_ROLES.TENANT,
+      default: USER_ROLES.GUEST,
     },
     isActive: {
       type: Boolean,

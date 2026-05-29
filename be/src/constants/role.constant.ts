@@ -3,6 +3,7 @@ export const USER_ROLES = {
   STAFF: "STAFF",
   LANDLORD: "LANDLORD",
   TENANT: "TENANT",
+  GUEST: "GUEST",
 } as const;
 
 export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
