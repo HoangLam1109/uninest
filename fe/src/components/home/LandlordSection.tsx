@@ -16,7 +16,7 @@ export function LandlordSection() {
             <img
               src={images.landlord}
               alt="Chủ nhà làm việc với laptop"
-              className="aspect-[5/4] w-full object-cover"
+              className="aspect-5/4 w-full object-cover"
             />
           </div>
           <div className="absolute -bottom-6 -right-4 rounded-xl bg-primary px-6 py-5 text-white shadow-xl sm:-right-6">
