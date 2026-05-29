@@ -4,24 +4,27 @@ import type { IUser } from "../models/User.model.js";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import { errorHandler } from "../utils/error.utils.js";
-import { clearJWT, generateJWT, refreshJWT } from "../utils/jwt.utils.js";
+import { createAccessToken, createTokenPair } from "../utils/jwt.utils.js";
+
 dotenv.config();
 
 const userService = new UserService();
 
+function toAuthUser(user: IUser) {
+  return {
+    id: String(user._id),
+    email: user.email,
+    fullName: user.fullName,
+    phone: user.phone,
+    role: user.role,
+  };
+}
+
 const registerUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    const {
-      email,
-      fullName,
-      password,
-    } = req.body;
+    const { email, fullName, password,phone } = req.body;
 
-    if (
-      !email ||
-      !fullName ||
-      !password
-    ) {
+    if (!email || !fullName || !password || !phone) {
       res.status(400).json({ message: "Missing required fields!" });
       return;
     }
@@ -29,11 +32,7 @@ const registerUser = async (req: Request, res: Response): Promise<void> => {
     const existingEmail = await userService.getUserByEmail(email);
 
     if (existingEmail) {
-      res.status(400).json({
-        message: existingEmail
-          ? "Email already exists!"
-          : "Identity number already exists!",
-      });
+      res.status(400).json({ message: "Email already exists!" });
       return;
     }
 
@@ -41,12 +40,13 @@ const registerUser = async (req: Request, res: Response): Promise<void> => {
       {
         email,
         fullName,
-        password: password
+        password,
+        phone,
       },
-      undefined
+      undefined,
     );
 
-    res.status(200).json({
+    res.status(201).json({
       message: "User created successfully!",
     });
   } catch (error) {
@@ -76,17 +76,14 @@ const loginUser = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const tokens = await generateJWT(res, user._id.toString());
+    const tokens = createTokenPair(user._id.toString());
 
     res.status(200).json({
       message: "Login successful!",
-      accessToken: tokens?.accessToken,
-      refreshToken: tokens?.refreshToken,
-      user: {
-        id: user._id,
-        email: user.email,
-        fullName: user.fullName,
-        role: user.role,
+      data: {
+        user: toAuthUser(user),
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
       },
     });
   } catch (error) {
@@ -94,33 +91,54 @@ const loginUser = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-const logoutUser = async (req: Request, res: Response): Promise<void> => {
+const logoutUser = async (_req: Request, res: Response): Promise<void> => {
   try {
-    clearJWT(res);
-
+    // Stateless JWT: client drops tokens. Add server-side refresh revocation later if needed.
     res.status(200).json({ message: "Logout successful!" });
   } catch (error) {
     errorHandler(res, error);
   }
 };
 
-const refreshToken = async (req: Request, res: Response) => {
+const getMe = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).userId;
-    const refreshToken = req.cookies.refreshToken;
-
-    if (!refreshToken) {
-      return res.status(401).json({ message: "No refresh token provided" });
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
     }
 
-    // Generate new access token
-    refreshJWT(res, userId);
-
-    return res.status(200).json({ message: "Refresh token successful!" });
+    res.status(200).json({
+      message: "User fetched successfully!",
+      data: {
+        user: toAuthUser(req.user as IUser),
+      },
+    });
   } catch (error) {
-    console.error("Refresh Token failed:", error);
-    return res.status(500).json({ message: "Failed to refresh token" });
+    errorHandler(res, error);
   }
 };
 
-export { registerUser, loginUser, logoutUser, refreshToken };
+const refreshToken = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.userId;
+
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const accessToken = createAccessToken(userId);
+
+    res.status(200).json({
+      message: "Token refreshed successfully!",
+      data: {
+        accessToken,
+      },
+    });
+  } catch (error) {
+    console.error("Refresh token failed:", error);
+    res.status(500).json({ message: "Failed to refresh token" });
+  }
+};
+
+export { registerUser, loginUser, logoutUser, getMe, refreshToken };

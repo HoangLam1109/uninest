@@ -1,12 +1,14 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/User.model.js";
+import { extractBearerToken } from "../utils/auth.utils.js";
+import { verifyAccessToken, verifyRefreshToken } from "../utils/jwt.utils.js";
 
 declare global {
   namespace Express {
     interface Request {
       user?: any;
-      session?: any;
+      userId?: string;
     }
   }
 }
@@ -14,27 +16,23 @@ declare global {
 const refreshTokenValidation = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
-  const refreshToken = req.cookies.refreshToken;
+  const refreshToken =
+    typeof req.body?.refreshToken === "string"
+      ? req.body.refreshToken
+      : null;
 
   if (!refreshToken) {
     return res.status(401).json({ message: "No refresh token provided" });
   }
 
   try {
-
-    const decodedToken = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as string) as {
-      userId: string;
-    };
-
-    console.log("[AUTH MIDDLEWARE] Refresh Token authentication successful");
-    (req as any).userId = decodedToken.userId;
-
+    const decoded = verifyRefreshToken(refreshToken);
+    req.userId = decoded.userId;
     next();
   } catch (error) {
-    console.error("Refresh Token authentication failed:", error);
-
+    console.error("Refresh token validation failed:", error);
     return res.status(401).json({ message: "Invalid or expired refresh token" });
   }
 };
@@ -42,10 +40,10 @@ const refreshTokenValidation = (
 const authenticateUser = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
-    const token = req.cookies.accessToken;
+    const token = extractBearerToken(req);
 
     if (!token) {
       res.status(401).json({ message: "Not authorized, no token" });
@@ -57,21 +55,20 @@ const authenticateUser = async (
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY) as {
-      userId: string;
-    };
+    const decoded = verifyAccessToken(token);
 
     const user = await User.findById(
       decoded.userId,
-      "_id email fullName identityNumber gender age dateOfBirth role"
+      "_id email fullName phone identityNumber gender age dateOfBirth role",
     );
 
     if (!user) {
       res.status(401).json({ message: "Not authorized, user not found" });
       return;
     }
-    
+
     req.user = user;
+    req.userId = decoded.userId;
 
     next();
   } catch (error) {
@@ -80,14 +77,12 @@ const authenticateUser = async (
       return;
     }
     if (error instanceof jwt.JsonWebTokenError) {
-      console.log(error.message);
       res.status(401).json({ message: "Invalid token" });
       return;
     }
 
     console.error("Authentication error:", error);
     res.status(500).json({ message: "Server error during authentication" });
-    return;
   }
 };
 

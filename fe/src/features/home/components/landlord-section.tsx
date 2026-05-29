@@ -1,9 +1,15 @@
 import { ArrowRight, Check } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { images } from '@/assets/images'
 import { Button } from '@/components/ui/button'
+import { paths } from '@/config/constants'
+import { useAuth } from '@/hooks/use-auth'
 import { landlordBenefits } from '../data'
 
 export function LandlordSection() {
+  const { isLoggedIn, dashboardPath } = useAuth()
+  const ctaPath = isLoggedIn ? dashboardPath : paths.login
+
   return (
     <section id="landlords" className="bg-white px-6 py-16 lg:px-20 lg:py-20">
       <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2 lg:gap-16">
@@ -49,9 +55,11 @@ export function LandlordSection() {
               </li>
             ))}
           </ul>
-          <Button size="lg">
-            Tìm hiểu thêm về quản lý
-            <ArrowRight className="size-3.5" />
+          <Button size="lg" asChild>
+            <Link to={ctaPath}>
+              Tìm hiểu thêm về quản lý
+              <ArrowRight className="size-3.5" />
+            </Link>
           </Button>
         </div>
       </div>

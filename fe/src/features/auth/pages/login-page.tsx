@@ -1,9 +1,16 @@
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { paths } from '@/config/constants'
 import { AuthLayout } from '@/layouts/auth-layout'
+import { useAuth } from '@/hooks/use-auth'
 import { LoginForm } from '../components/login-form'
 
 export function LoginPage() {
+  const { isLoggedIn, dashboardPath } = useAuth()
+
+  if (isLoggedIn) {
+    return <Navigate to={dashboardPath} replace />
+  }
+
   return (
     <AuthLayout
       title="Đăng nhập"

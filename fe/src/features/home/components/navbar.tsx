@@ -3,8 +3,12 @@ import { images } from '@/assets/images'
 import { paths } from '@/config/constants'
 import { Button } from '@/components/ui/button'
 import { navLinks } from '@/features/home/data'
+import { useAuth } from '@/hooks/use-auth'
+import { NavbarUserMenu } from './navbar-user-menu'
 
 export function Navbar() {
+  const { user, isLoggedIn } = useAuth()
+
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-surface/95 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-4 lg:px-10 xl:px-20">
@@ -37,17 +41,23 @@ export function Navbar() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-3">
-          <Button
-            variant="outline"
-            size="default"
-            className="hidden sm:inline-flex"
-            asChild
-          >
-            <Link to={paths.login}>Đăng nhập</Link>
-          </Button>
-          <Button size="default" asChild>
-            <Link to={paths.register}>Đăng ký</Link>
-          </Button>
+          {isLoggedIn && user ? (
+            <NavbarUserMenu user={user} />
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="default"
+                className="hidden sm:inline-flex"
+                asChild
+              >
+                <Link to={paths.login}>Đăng nhập</Link>
+              </Button>
+              <Button size="default" asChild>
+                <Link to={paths.register}>Đăng ký</Link>
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </header>
