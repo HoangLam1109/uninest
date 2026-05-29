@@ -14,12 +14,14 @@ const registerUser = async (req: Request, res: Response): Promise<void> => {
     const {
       email,
       fullName,
+      phone,
       password,
     } = req.body;
 
     if (
       !email ||
       !fullName ||
+      !phone||
       !password
     ) {
       res.status(400).json({ message: "Missing required fields!" });
@@ -37,17 +39,28 @@ const registerUser = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    await userService.createUser(
+    const newUser = await userService.createUser(
       {
         email,
         fullName,
+        phone,
         password: password
       },
       undefined
     );
 
+    const tokens = await generateJWT(res, newUser._id.toString());
+
     res.status(200).json({
-      message: "User created successfully!",
+      message: "Register successful!",
+      accessToken: tokens?.accessToken,
+      refreshToken: tokens?.refreshToken,
+      user: {
+        id: newUser._id,
+        email: newUser.email,
+        fullName: newUser.fullName,
+        role: newUser.role,
+      },
     });
   } catch (error) {
     errorHandler(res, error);

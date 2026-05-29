@@ -6,6 +6,7 @@ import type { IUser } from "../models/User.model.js";
 export interface CreateUserData {
   email: string;
   fullName: string;
+  phone: string;
   password: string;
 }
 
