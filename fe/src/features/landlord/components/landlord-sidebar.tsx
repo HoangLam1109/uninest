@@ -51,7 +51,7 @@ export function LandlordSidebar({ mobileOpen, onMobileClose }: LandlordSidebarPr
           <div className="space-y-6 md:space-y-8">
             <div className="flex items-start justify-between gap-3">
               <Link
-                to={paths.landlordDashboard}
+                to={paths.home}
                 className="flex min-w-0 items-center gap-3"
                 onClick={onMobileClose}
               >

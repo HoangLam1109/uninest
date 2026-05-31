@@ -28,8 +28,8 @@ export const RoomService = {
     return { rooms, total };
   },
 
-  getRoomById: async (id: string) => {
-    return await RoomRepository.findById(id);
+  getRoomById: async (id: string, landlordId: string) => {
+    return await RoomRepository.findById(id, landlordId);
   },
 
   updateRoom: async (id: string, landlordId: string, data: any) => {

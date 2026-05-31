@@ -7,7 +7,7 @@ import { RoomService } from "../services/room.service.js";
  */
 export const createRoom = async (req: Request, res: Response) => {
   try {
-    const landlordId = req.user?.id;
+    const landlordId = req.userId;
     if (!landlordId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
@@ -28,10 +28,13 @@ export const createRoom = async (req: Request, res: Response) => {
  */
 export const getAllRooms = async (req: Request, res: Response) => {
   try {
+    const landlordId = req.userId;
+    if (!landlordId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
     const { city, district, status, minPrice, maxPrice, page = 1, limit = 10 } =
       req.query;
 
-    const filter: any = {};
+    const filter: any = { landlordId };
 
     if (city) filter.city = city;
     if (district) filter.district = district;
@@ -116,11 +119,15 @@ export const searchRooms = async (req: Request, res: Response) => {
 export const getRoomById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const landlordId = req.userId;
+
+    if (!landlordId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
 
     if (!mongoose.Types.ObjectId.isValid(id as string))
       return res.status(400).json({ success: false, message: "Invalid id" });
 
-    const room = await RoomService.getRoomById(id as string);
+    const room = await RoomService.getRoomById(id as string, landlordId);
 
     if (!room)
       return res.status(404).json({ success: false, message: "Not found" });
@@ -137,7 +144,13 @@ export const getRoomById = async (req: Request, res: Response) => {
 export const updateRoom = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const landlordId = req.user?.id;
+    const landlordId = req.userId;
+
+    if (!landlordId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    if (!mongoose.Types.ObjectId.isValid(id as string))
+      return res.status(400).json({ success: false, message: "Invalid id" });
 
     const room = await RoomService.updateRoom(id as string, landlordId, req.body);
 
@@ -156,7 +169,13 @@ export const updateRoom = async (req: Request, res: Response) => {
 export const deleteRoom = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const landlordId = req.user?.id;
+    const landlordId = req.userId;
+
+    if (!landlordId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    if (!mongoose.Types.ObjectId.isValid(id as string))
+      return res.status(400).json({ success: false, message: "Invalid id" });
 
     const room = await RoomService.deleteRoom(id as string, landlordId);
 
