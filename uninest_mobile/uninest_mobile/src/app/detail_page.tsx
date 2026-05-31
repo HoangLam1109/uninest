@@ -1,20 +1,25 @@
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
-    SafeAreaView,
-    useSafeAreaInsets,
+  SafeAreaView,
+  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { getPropertyDetails, PROPERTY_IMAGES } from "@/constants/properties";
 import { useAuth } from "@/context/auth-context";
 
 export default function DetailPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { image } = useLocalSearchParams<{ image?: string | string[] }>();
   const { isAuthenticated } = useAuth();
+
+  const property = getPropertyDetails(image);
+  const heroSource = PROPERTY_IMAGES[property.key];
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -53,7 +58,7 @@ export default function DetailPage() {
         >
           <View style={styles.galleryCard}>
             <Image
-              source={require("../../assets/images/tutorial-web.png")}
+              source={heroSource}
               style={styles.heroImage}
               contentFit="cover"
             />
@@ -81,10 +86,10 @@ export default function DetailPage() {
 
           <View style={styles.section}>
             <ThemedText type="title" style={styles.title}>
-              Phòng Studio Cao cấp UniNest
+              {property.title}
             </ThemedText>
             <ThemedText type="small" style={styles.location}>
-              📍 123 Đại lộ Võ Văn Kiệt, Quận 1, TP.HCM
+              {property.location}
             </ThemedText>
           </View>
 
@@ -227,7 +232,12 @@ export default function DetailPage() {
 
             <Pressable
               style={styles.bookButton}
-              onPress={() => router.push("/booking_page" as any)}
+              onPress={() =>
+                router.push({
+                  pathname: "/booking_page",
+                  params: { image: property.key },
+                } as any)
+              }
             >
               <Text style={styles.bookButtonText}>Đặt ngay →</Text>
             </Pressable>

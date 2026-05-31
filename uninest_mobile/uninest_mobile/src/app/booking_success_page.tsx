@@ -1,14 +1,15 @@
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
-    SafeAreaView,
-    useSafeAreaInsets,
+  SafeAreaView,
+  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { getPropertyDetails, PROPERTY_IMAGES } from "@/constants/properties";
 import { useAuth } from "@/context/auth-context";
 
 const nextSteps = [
@@ -35,7 +36,11 @@ const nextSteps = [
 export default function BookingSuccessPage() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { image } = useLocalSearchParams<{ image?: string | string[] }>();
   const { isAuthenticated } = useAuth();
+
+  const property = getPropertyDetails(image);
+  const heroSource = PROPERTY_IMAGES[property.key];
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -70,7 +75,7 @@ export default function BookingSuccessPage() {
         >
           <View style={styles.heroWrap}>
             <Image
-              source={require("../../assets/images/tutorial-web.png")}
+              source={heroSource}
               style={styles.heroImage}
               contentFit="cover"
             />
@@ -102,8 +107,8 @@ export default function BookingSuccessPage() {
               <DetailRow label="Mã đặt phòng" value="UN-827391-VN" />
               <DetailRow
                 label="Chỗ ở"
-                value="Căn hộ Studio cao cấp"
-                subValue="Phân khu A, Tầng 12"
+                value={property.title}
+                subValue={property.location.replace("📍 ", "")}
               />
               <DetailRow label="Ngày nhận phòng" value="01 Tháng 9, 2024" />
               <DetailRow

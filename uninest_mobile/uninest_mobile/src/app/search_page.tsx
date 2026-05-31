@@ -2,19 +2,26 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
-    SafeAreaView,
-    useSafeAreaInsets,
+  SafeAreaView,
+  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { PROPERTY_DETAILS } from "@/constants/properties";
 import { useAuth } from "@/context/auth-context";
 
 export default function SearchPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const landmark = PROPERTY_DETAILS["5"];
+  const stPancras = PROPERTY_DETAILS["6"];
+
+  const openDetail = (image: "5" | "6") => {
+    router.push({ pathname: "/detail_page", params: { image } } as any);
+  };
 
   return (
     <ThemedView style={styles.screen}>
@@ -82,13 +89,10 @@ export default function SearchPage() {
             Hiển thị 128 căn hộ gần ĐH Kinh tế
           </ThemedText>
 
-          <Pressable
-            style={styles.card}
-            onPress={() => router.push("/detail_page" as any)}
-          >
+          <Pressable style={styles.card} onPress={() => openDetail("5")}>
             <View style={styles.imageWrap}>
               <Image
-                source={require("../../assets/images/tutorial-web.png")}
+                source={require("../../assets/images/5.png")}
                 style={styles.propertyImage}
                 contentFit="cover"
               />
@@ -104,7 +108,7 @@ export default function SearchPage() {
             <View style={styles.cardBody}>
               <View style={styles.titleRow}>
                 <ThemedText type="smallBold" style={styles.propertyTitle}>
-                  Căn hộ Landmark
+                  {landmark.title}
                 </ThemedText>
                 <View style={styles.priceRow}>
                   <ThemedText type="smallBold" style={styles.price}>
@@ -117,7 +121,7 @@ export default function SearchPage() {
               </View>
 
               <ThemedText type="small" style={styles.locationText}>
-                📍 Quận 1, cách cơ sở 0.4 km
+                {landmark.location}
               </ThemedText>
 
               <View style={styles.featureRow}>
@@ -128,13 +132,10 @@ export default function SearchPage() {
             </View>
           </Pressable>
 
-          <Pressable
-            style={styles.card}
-            onPress={() => router.push("/detail_page" as any)}
-          >
+          <Pressable style={styles.card} onPress={() => openDetail("6")}>
             <View style={styles.imageWrap}>
               <Image
-                source={require("../../assets/images/tutorial-web.png")}
+                source={require("../../assets/images/6.png")}
                 style={styles.propertyImage}
                 contentFit="cover"
               />
@@ -150,7 +151,7 @@ export default function SearchPage() {
             <View style={styles.cardBody}>
               <View style={styles.titleRow}>
                 <ThemedText type="smallBold" style={styles.propertyTitle}>
-                  Phòng trọ St. Pancras
+                  {stPancras.title}
                 </ThemedText>
                 <View style={styles.priceRow}>
                   <ThemedText type="smallBold" style={styles.price}>
@@ -163,7 +164,7 @@ export default function SearchPage() {
               </View>
 
               <ThemedText type="small" style={styles.locationText}>
-                📍 Quận 7, gần RMIT (0.9 km)
+                {stPancras.location}
               </ThemedText>
 
               <View style={styles.featureRow}>

@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -9,6 +10,7 @@ import {
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { PROPERTY_DETAILS, PROPERTY_IMAGES } from "@/constants/properties";
 import { useAuth } from "@/context/auth-context";
 
 export default function SavedPage() {
@@ -72,33 +74,51 @@ export default function SavedPage() {
           </View>
 
           <SavedCard
-            onPress={() => router.push("/detail_page" as any)}
-            title="Căn hộ Studio Quận 7 Full Nội thất"
+            onPress={() =>
+              router.push({
+                pathname: "/detail_page",
+                params: { image: "7" },
+              } as any)
+            }
+            title={PROPERTY_DETAILS["7"].title}
             price="6.500.000đ"
             status="CÒN TRỐNG"
             statusStyle={styles.statusAvailable}
             badge="ĐÃ XÁC MINH"
             imageColor="#F3F0EA"
+            imageSource={PROPERTY_IMAGES["7"]}
           />
 
           <SavedCard
-            onPress={() => router.push("/detail_page" as any)}
-            title="Phòng trọ cao cấp Bình Thạnh"
+            onPress={() =>
+              router.push({
+                pathname: "/detail_page",
+                params: { image: "8" },
+              } as any)
+            }
+            title={PROPERTY_DETAILS["8"].title}
             price="4.200.000đ"
             status="ĐÃ HẾT PHÒNG"
             statusStyle={styles.statusSoldOut}
             badge="HẾT PHÒNG"
             imageColor="#E9E6E0"
+            imageSource={PROPERTY_IMAGES["8"]}
           />
 
           <SavedCard
-            onPress={() => router.push("/detail_page" as any)}
-            title="Căn hộ dịch vụ Quận 1 - Gần trung tâm"
+            onPress={() =>
+              router.push({
+                pathname: "/detail_page",
+                params: { image: "9" },
+              } as any)
+            }
+            title={PROPERTY_DETAILS["9"].title}
             price="7.800.000đ"
             status="CÒN TRỐNG"
             statusStyle={styles.statusAvailable}
             badge="ĐÃ XÁC MINH"
             imageColor="#F0EAE2"
+            imageSource={PROPERTY_IMAGES["9"]}
           />
         </ScrollView>
 
@@ -149,6 +169,7 @@ function SavedCard({
   statusStyle,
   badge,
   imageColor,
+  imageSource,
 }: {
   onPress: () => void;
   title: string;
@@ -157,6 +178,7 @@ function SavedCard({
   statusStyle: any;
   badge: string;
   imageColor: string;
+  imageSource?: any;
 }) {
   return (
     <Pressable style={styles.card} onPress={onPress}>
@@ -167,21 +189,29 @@ function SavedCard({
         <Pressable style={styles.favoriteButton}>
           <Text style={styles.favoriteIcon}>♡</Text>
         </Pressable>
-        <View style={styles.roomScene}>
-          <View style={styles.windowPane} />
-          <View style={styles.bed}>
-            <View style={styles.pillow} />
-            <View style={styles.pillow} />
-          </View>
-          <View style={styles.sideTable} />
-          {status.includes("HẾT") ? (
-            <View style={styles.soldOutOverlay}>
-              <ThemedText type="smallBold" style={styles.soldOutText}>
-                HẾT PHÒNG
-              </ThemedText>
+        {imageSource ? (
+          <Image
+            source={imageSource}
+            style={styles.roomImage}
+            contentFit="cover"
+          />
+        ) : (
+          <View style={styles.roomScene}>
+            <View style={styles.windowPane} />
+            <View style={styles.bed}>
+              <View style={styles.pillow} />
+              <View style={styles.pillow} />
             </View>
-          ) : null}
-        </View>
+            <View style={styles.sideTable} />
+            {status.includes("HẾT") ? (
+              <View style={styles.soldOutOverlay}>
+                <ThemedText type="smallBold" style={styles.soldOutText}>
+                  HẾT PHÒNG
+                </ThemedText>
+              </View>
+            ) : null}
+          </View>
+        )}
       </View>
 
       <View style={styles.cardBody}>
@@ -381,6 +411,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.35)",
     padding: 14,
     justifyContent: "space-between",
+  },
+  roomImage: {
+    width: "78%",
+    height: 118,
+    borderRadius: 10,
   },
   windowPane: {
     width: 18,

@@ -101,7 +101,7 @@ export default function LoginPage() {
 
               <View style={styles.bannerWrap}>
                 <Image
-                  source={require("../../assets/images/tutorial-web.png")}
+                  source={require("../../assets/images/4.png")}
                   style={styles.banner}
                 />
               </View>

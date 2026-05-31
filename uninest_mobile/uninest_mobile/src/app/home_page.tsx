@@ -1,16 +1,16 @@
 import { useRouter } from "expo-router";
 import {
-  Image,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Image,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import {
-  SafeAreaView,
-  useSafeAreaInsets,
+    SafeAreaView,
+    useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import { BottomNavigation } from "@/components/bottom-navigation";
@@ -126,7 +126,7 @@ export default function HomePage() {
           </View>
 
           <Image
-            source={require("../../assets/images/tutorial-web.png")}
+            source={require("../../assets/images/1.png")}
             style={styles.heroImage}
           />
 
@@ -220,7 +220,7 @@ export default function HomePage() {
             <View style={styles.listingsContainer}>
               <View style={styles.listingCard}>
                 <Image
-                  source={require("../../assets/images/tutorial-web.png")}
+                  source={require("../../assets/images/2.png")}
                   style={styles.listingImage}
                 />
                 <View style={styles.listingBody}>
@@ -251,7 +251,7 @@ export default function HomePage() {
 
               <View style={styles.listingCard}>
                 <Image
-                  source={require("../../assets/images/tutorial-web.png")}
+                  source={require("../../assets/images/3.png")}
                   style={styles.listingImage}
                 />
                 <View style={styles.listingBody}>

@@ -35,7 +35,12 @@ export function BottomNavigation({ activeTab }: { activeTab: BottomTab }) {
         icon="message"
         active={activeTab === "messages"}
       />
-      <NavItem label="Cá nhân" icon="person" active={activeTab === "profile"} />
+      <NavItem
+        label="Cá nhân"
+        icon="person"
+        active={activeTab === "profile"}
+        onPress={() => router.push("/profile_page" as any)}
+      />
     </View>
   );
 }

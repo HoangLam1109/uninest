@@ -1,13 +1,15 @@
-import { useRouter } from "expo-router";
+import { Image } from "expo-image";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
-    SafeAreaView,
-    useSafeAreaInsets,
+  SafeAreaView,
+  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { getPropertyDetails, PROPERTY_IMAGES } from "@/constants/properties";
 import { useAuth } from "@/context/auth-context";
 
 const days = [
@@ -58,7 +60,11 @@ const days = [
 export default function BookingPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { image } = useLocalSearchParams<{ image?: string | string[] }>();
   const { isAuthenticated } = useAuth();
+
+  const property = getPropertyDetails(image);
+  const propertySource = PROPERTY_IMAGES[property.key];
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -159,13 +165,17 @@ export default function BookingPage() {
           <View style={styles.section}>
             <View style={styles.propertyCard}>
               <View style={styles.propertyRow}>
-                <View style={styles.propertyImage} />
+                <Image
+                  source={propertySource}
+                  style={styles.propertyImage}
+                  contentFit="cover"
+                />
                 <View style={styles.propertyMeta}>
                   <ThemedText type="smallBold" style={styles.propertyTitle}>
-                    Studio Ban công - Quận 1
+                    {property.title}
                   </ThemedText>
                   <ThemedText type="small" style={styles.propertyLocation}>
-                    📍 Đa Kao, Quận 1, TP. HCM
+                    {property.location}
                   </ThemedText>
                   <View style={styles.tagRow}>
                     <Tag text="CTA SM LỚN" />
@@ -253,7 +263,12 @@ export default function BookingPage() {
 
           <Pressable
             style={styles.confirmButton}
-            onPress={() => router.push("/booking_success_page" as any)}
+            onPress={() =>
+              router.push({
+                pathname: "/booking_success_page",
+                params: { image: property.key },
+              } as any)
+            }
           >
             <ThemedText type="smallBold" style={styles.confirmText}>
               Xác nhận & Thanh toán →
