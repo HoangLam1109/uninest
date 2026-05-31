@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import authRouter from "./routes/auth.route.js";
+import roomRouter from "./routes/room.route.js";
 import connectDB from "./config/database.config.js";
 
 dotenv.config();
@@ -22,6 +23,7 @@ connectDB();
 
 app.use(express.json());
 app.use("/api/auth", authRouter);
+app.use("/api/rooms", roomRouter);
 
 app.get("/", (_req, res) => {
   res.send("JWT Authentication System is running!");
