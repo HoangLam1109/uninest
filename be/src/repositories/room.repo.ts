@@ -13,13 +13,14 @@ export const RoomRepository = {
 
   count: (filter: any) => RoomModel.countDocuments(filter),
 
-  findById: (id: string) => RoomModel.findById(id),
+  findById: (id: string, landlordId: string) =>
+    RoomModel.findOne({ _id: id, landlordId }),
 
   update: (id: string, landlordId: string, data: any) =>
     RoomModel.findOneAndUpdate(
       { _id: id, landlordId },
       { $set: data },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     ),
 
   delete: (id: string, landlordId: string) =>

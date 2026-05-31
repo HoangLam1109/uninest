@@ -12,6 +12,7 @@ import {
   LandlordDashboardPage,
   LandlordPlaceholderPage,
 } from '@/features/landlord'
+import { RoomManagementPage } from '@/features/room'
 import { NotFoundPage } from '@/pages/not-found'
 import { TenantDashboardPage } from '@/pages/tenant-dashboard'
 
@@ -28,10 +29,7 @@ export function AppRouter() {
         >
           <Route path={paths.landlordDashboard} element={<LandlordLayout />}>
             <Route index element={<LandlordDashboardPage />} />
-            <Route
-              path="phong"
-              element={<LandlordPlaceholderPage title="Quản lý phòng" />}
-            />
+            <Route path="phong" element={<RoomManagementPage />} />
             <Route
               path="nguoi-thue"
               element={<LandlordPlaceholderPage title="Người thuê" />}
