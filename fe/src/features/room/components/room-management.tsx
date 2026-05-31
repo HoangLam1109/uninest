@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import {
   BadgeDollarSign,
   Edit3,
   Plus,
+  RefreshCcw,
+  Search,
   Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -15,6 +17,7 @@ import {
   useGetRooms,
   useUpdateRoom,
 } from '../hooks/use-rooms'
+import { useRoomUiStore, type RoomSortOption } from '../stores/room-ui.store'
 import type { Room, RoomPayload, RoomStatus } from '../types/room.type'
 import { RoomFormModal } from './room-form-modal'
 
@@ -40,13 +43,56 @@ function formatCurrency(value?: number) {
   return currencyFormatter.format(value ?? 0)
 }
 
+function searchRooms(rooms: Room[], search: string) {
+  const keyword = search.trim().toLowerCase()
+  if (!keyword) return rooms
+
+  return rooms.filter((room) =>
+    [
+      room.title,
+      room.address,
+      room.city,
+      room.district,
+      room.description,
+      room.roomType,
+      room.status,
+    ]
+      .filter(Boolean)
+      .some((value) => value?.toLowerCase().includes(keyword)),
+  )
+}
+
+function sortRooms(rooms: Room[], sort: RoomSortOption) {
+  return [...rooms].sort((first, second) => {
+    if (sort === 'price-asc') return first.pricePerMonth - second.pricePerMonth
+    if (sort === 'price-desc') return second.pricePerMonth - first.pricePerMonth
+    if (sort === 'title-asc') return first.title.localeCompare(second.title)
+
+    const firstTime = new Date(first.createdAt ?? 0).getTime()
+    const secondTime = new Date(second.createdAt ?? 0).getTime()
+    return sort === 'oldest' ? firstTime - secondTime : secondTime - firstTime
+  })
+}
+
 export function RoomManagement() {
-  const [page, setPage] = useState(1)
-  const [status, setStatus] = useState<RoomStatus | ''>('')
-  const [city, setCity] = useState('')
-  const [district, setDistrict] = useState('')
-  const [editingRoomId, setEditingRoomId] = useState<string | null>(null)
-  const [formOpen, setFormOpen] = useState(false)
+  const search = useRoomUiStore((state) => state.search)
+  const status = useRoomUiStore((state) => state.status)
+  const city = useRoomUiStore((state) => state.city)
+  const district = useRoomUiStore((state) => state.district)
+  const sort = useRoomUiStore((state) => state.sort)
+  const page = useRoomUiStore((state) => state.page)
+  const formOpen = useRoomUiStore((state) => state.modalOpen)
+  const editingRoomId = useRoomUiStore((state) => state.editingRoomId)
+  const setSearch = useRoomUiStore((state) => state.setSearch)
+  const setStatus = useRoomUiStore((state) => state.setStatus)
+  const setCity = useRoomUiStore((state) => state.setCity)
+  const setDistrict = useRoomUiStore((state) => state.setDistrict)
+  const setSort = useRoomUiStore((state) => state.setSort)
+  const setPage = useRoomUiStore((state) => state.setPage)
+  const openCreateModal = useRoomUiStore((state) => state.openCreateModal)
+  const openEditModal = useRoomUiStore((state) => state.openEditModal)
+  const closeModal = useRoomUiStore((state) => state.closeModal)
+  const resetFilters = useRoomUiStore((state) => state.resetFilters)
 
   const params = useMemo(
     () => ({
@@ -69,11 +115,16 @@ export function RoomManagement() {
   const deleteRoom = useDeleteRoom()
 
   const rooms = roomsQuery.data?.data ?? []
+  const displayedRooms = useMemo(
+    () => sortRooms(searchRooms(rooms, search), sort),
+    [rooms, search, sort],
+  )
   const editingRoom =
     roomDetailQuery.data ??
     rooms.find((room) => room._id === editingRoomId) ??
     null
   const pagination = roomsQuery.data?.pagination
+
   const summary = useMemo(() => {
     return rooms.reduce(
       (acc, room) => {
@@ -85,31 +136,16 @@ export function RoomManagement() {
     )
   }, [rooms])
 
-  const closeForm = () => {
-    setFormOpen(false)
-    setEditingRoomId(null)
-  }
-
-  const openCreateForm = () => {
-    setEditingRoomId(null)
-    setFormOpen(true)
-  }
-
-  const openEditForm = (room: Room) => {
-    setEditingRoomId(room._id)
-    setFormOpen(true)
-  }
-
   const handleSubmit = (payload: RoomPayload) => {
     if (editingRoomId) {
       updateRoom.mutate(
         { id: editingRoomId, payload },
-        { onSuccess: closeForm },
+        { onSuccess: closeModal },
       )
       return
     }
 
-    createRoom.mutate(payload, { onSuccess: closeForm })
+    createRoom.mutate(payload, { onSuccess: closeModal })
   }
 
   return (
@@ -146,7 +182,22 @@ export function RoomManagement() {
 
       <section className="rounded-xl border border-primary/10 bg-white">
         <div className="flex flex-col gap-3 border-b border-primary/10 p-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="grid gap-3 sm:grid-cols-3 lg:flex-1">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:flex-1">
+            <label className="sm:col-span-2 lg:col-span-1">
+              <span className="mb-1.5 block text-xs font-semibold text-slate-500">
+                Tìm kiếm
+              </span>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  className="h-10 border border-primary/10 py-2 pl-9 pr-3 text-sm shadow-none"
+                  placeholder="Tên phòng, địa chỉ..."
+                />
+              </div>
+            </label>
+
             <label>
               <span className="mb-1.5 block text-xs font-semibold text-slate-500">
                 Trạng thái
@@ -154,10 +205,7 @@ export function RoomManagement() {
               <select
                 className="h-10 w-full rounded-lg border border-primary/10 bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={status}
-                onChange={(event) => {
-                  setPage(1)
-                  setStatus(event.target.value as RoomStatus | '')
-                }}
+                onChange={(event) => setStatus(event.target.value as RoomStatus | '')}
               >
                 <option value="">Tất cả</option>
                 <option value="AVAILABLE">Còn trống</option>
@@ -165,38 +213,55 @@ export function RoomManagement() {
                 <option value="MAINTENANCE">Bảo trì</option>
               </select>
             </label>
+
             <label>
               <span className="mb-1.5 block text-xs font-semibold text-slate-500">
                 Thành phố
               </span>
               <Input
                 value={city}
-                onChange={(event) => {
-                  setPage(1)
-                  setCity(event.target.value)
-                }}
+                onChange={(event) => setCity(event.target.value)}
                 className="h-10 border border-primary/10 px-3 text-sm shadow-none"
                 placeholder="VD: Hà Nội"
               />
             </label>
+
             <label>
               <span className="mb-1.5 block text-xs font-semibold text-slate-500">
                 Quận/Huyện
               </span>
               <Input
                 value={district}
-                onChange={(event) => {
-                  setPage(1)
-                  setDistrict(event.target.value)
-                }}
+                onChange={(event) => setDistrict(event.target.value)}
                 className="h-10 border border-primary/10 px-3 text-sm shadow-none"
                 placeholder="VD: Cầu Giấy"
               />
             </label>
+
+            <label>
+              <span className="mb-1.5 block text-xs font-semibold text-slate-500">
+                Sắp xếp
+              </span>
+              <select
+                className="h-10 w-full rounded-lg border border-primary/10 bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={sort}
+                onChange={(event) => setSort(event.target.value as RoomSortOption)}
+              >
+                <option value="newest">Mới nhất</option>
+                <option value="oldest">Cũ nhất</option>
+                <option value="price-asc">Giá thấp đến cao</option>
+                <option value="price-desc">Giá cao đến thấp</option>
+                <option value="title-asc">Tên A-Z</option>
+              </select>
+            </label>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row lg:shrink-0">
-            <Button type="button" onClick={openCreateForm}>
+            <Button type="button" variant="ghost" onClick={resetFilters}>
+              <RefreshCcw className="size-4" />
+              Đặt lại
+            </Button>
+            <Button type="button" onClick={openCreateModal}>
               <Plus className="size-4" />
               Thêm phòng
             </Button>
@@ -232,7 +297,9 @@ export function RoomManagement() {
                 </tr>
               ) : null}
 
-              {!roomsQuery.isLoading && !roomsQuery.isError && rooms.length === 0 ? (
+              {!roomsQuery.isLoading &&
+              !roomsQuery.isError &&
+              displayedRooms.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
                     Chưa có phòng nào phù hợp với bộ lọc hiện tại.
@@ -240,7 +307,7 @@ export function RoomManagement() {
                 </tr>
               ) : null}
 
-              {rooms.map((room) => (
+              {displayedRooms.map((room) => (
                 <tr key={room._id} className="align-top">
                   <td className="px-4 py-4">
                     <p className="font-semibold text-slate-900">{room.title}</p>
@@ -284,7 +351,7 @@ export function RoomManagement() {
                         size="icon"
                         variant="ghost"
                         aria-label="Sửa phòng"
-                        onClick={() => openEditForm(room)}
+                        onClick={() => openEditModal(room._id)}
                       >
                         <Edit3 className="size-4" />
                       </Button>
@@ -315,7 +382,7 @@ export function RoomManagement() {
               type="button"
               variant="outline"
               disabled={page <= 1 || roomsQuery.isFetching}
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              onClick={() => setPage(Math.max(1, page - 1))}
             >
               Trước
             </Button>
@@ -326,7 +393,7 @@ export function RoomManagement() {
                 roomsQuery.isFetching ||
                 Boolean(pagination && page >= pagination.totalPages)
               }
-              onClick={() => setPage((current) => current + 1)}
+              onClick={() => setPage(page + 1)}
             >
               Sau
             </Button>
@@ -342,7 +409,7 @@ export function RoomManagement() {
           updateRoom.isPending ||
           roomDetailQuery.isFetching
         }
-        onClose={closeForm}
+        onClose={closeModal}
         onSubmit={handleSubmit}
       />
     </div>
