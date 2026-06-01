@@ -40,7 +40,7 @@ export function getDashboardLabelForRole(role?: UserRole): string | null {
     case USER_ROLES.LANDLORD:
       return 'Bảng điều khiển chủ nhà'
     case USER_ROLES.TENANT:
-      return 'Cổng cư dân'
+      return 'Trang người thuê'
     case USER_ROLES.ADMIN:
       return 'Trang quản trị'
     case USER_ROLES.STAFF:
