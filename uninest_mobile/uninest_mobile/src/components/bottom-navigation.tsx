@@ -10,7 +10,8 @@ export function BottomNavigation({ activeTab }: { activeTab: BottomTab }) {
 
   return (
     <View
-      style={[styles.container, { paddingBottom: Math.max(insets.bottom, 10) }]}
+      className="absolute inset-x-0 bottom-0 flex-row items-center justify-between border-t border-brand-line bg-brand-surface px-2 pt-2.5 shadow-sm"
+      style={{ paddingBottom: Math.max(insets.bottom, 10) }}
     >
       <NavItem
         label="Trang chủ"
@@ -30,11 +31,7 @@ export function BottomNavigation({ activeTab }: { activeTab: BottomTab }) {
         active={activeTab === "saved"}
         onPress={() => router.push("/saved_page" as any)}
       />
-      <NavItem
-        label="Tin nhắn"
-        icon="message"
-        active={activeTab === "messages"}
-      />
+      <NavItem label="Tin nhắn" icon="message" active={activeTab === "messages"} />
       <NavItem label="Cá nhân" icon="person" active={activeTab === "profile"} />
     </View>
   );
@@ -54,12 +51,17 @@ function NavItem({
   const color = active ? "#F28C1B" : "#98A0AB";
 
   return (
-    <Pressable onPress={onPress} style={styles.item}>
-      <View style={styles.iconWrap}>
+    <Pressable
+      onPress={onPress}
+      className="min-w-0 flex-1 items-center justify-center gap-y-1 px-1"
+    >
+      <View className="relative h-[26px] w-[26px] items-center justify-center">
         <NavIcon icon={icon} color={color} active={active} />
       </View>
       <Text
-        style={[styles.label, active && styles.labelActive]}
+        className={`w-full text-center text-[9px] font-bold leading-[11px] ${
+          active ? "text-brand-orange" : "text-brand-muted"
+        }`}
         numberOfLines={1}
       >
         {label}
@@ -95,9 +97,7 @@ function NavIcon({
   }
 
   if (icon === "heart") {
-    return (
-      <Text style={[styles.heartIcon, { color }]}>{active ? "♥" : "♡"}</Text>
-    );
+    return <Text style={[styles.heartIcon, { color }]}>{active ? "♥" : "♡"}</Text>;
   }
 
   if (icon === "message") {
@@ -117,52 +117,6 @@ function NavIcon({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingTop: 10,
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E7E2DA",
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: -3 },
-    elevation: 10,
-  },
-  item: {
-    flex: 1,
-    minWidth: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-    paddingHorizontal: 4,
-  },
-  iconWrap: {
-    height: 26,
-    width: 26,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  label: {
-    width: "100%",
-    fontSize: 9,
-    lineHeight: 11,
-    textAlign: "center",
-    color: "#98A0AB",
-    fontWeight: "700",
-    includeFontPadding: false,
-  },
-  labelActive: {
-    color: "#F28C1B",
-  },
   homeIcon: {
     width: 24,
     height: 24,

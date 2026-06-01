@@ -202,7 +202,7 @@ function FeatureItem({ icon, label }: { icon: string; label: string }) {
   );
 }
 
-function NavItem({
+export function NavItem({
   icon,
   label,
   active,

@@ -147,9 +147,9 @@ export default function DetailPage() {
             </View>
 
             <ThemedText type="small" style={styles.quote}>
-              "Tôi mong muốn mang đến trải nghiệm lưu trú tốt nhất cho sinh viên
+              {"\""}Tôi mong muốn mang đến trải nghiệm lưu trú tốt nhất cho sinh viên
               tại thành phố. Phản hồi nhanh chóng và duy trì cơ sở vật chất luôn
-              là ưu tiên hàng đầu của tôi."
+              là ưu tiên hàng đầu của tôi.{"\""}
             </ThemedText>
 
             <Pressable style={styles.contactButton}>
