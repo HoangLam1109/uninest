@@ -24,6 +24,15 @@ export const landlordNavItems: LandlordNavItem[] = [
   { label: 'Cài đặt', href: '/chu-nha/cai-dat', icon: Settings },
 ]
 
+export const landlordSidebarConfig = {
+  baseHref: '/chu-nha',
+  label: 'Chủ nhà Dashboard',
+  navLabel: 'Điều hướng chủ nhà',
+  navItems: landlordNavItems,
+  ctaLabel: 'Thêm người thuê mới',
+  ctaIcon: UserPlus,
+}
+
 export const landlordStats = [
   {
     label: 'Doanh thu tháng này',

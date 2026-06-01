@@ -28,8 +28,9 @@ export function getDashboardPathForRole(role?: UserRole): string {
     case USER_ROLES.TENANT:
       return paths.tenantDashboard
     case USER_ROLES.ADMIN:
-    case USER_ROLES.STAFF:
       return paths.adminDashboard
+    case USER_ROLES.STAFF:
+      return paths.staffDashboard
     default:
       return paths.home
   }
