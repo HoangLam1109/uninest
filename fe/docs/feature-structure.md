@@ -1,261 +1,489 @@
 # Feature Structure Guide (UniNest FE)
 
-This document explains **where code lives** and **how to organize a new feature** in `fe/src`.
+Tài liệu này mô tả chuẩn tổ chức code trong `fe/src` khi xây dựng feature mới cho UniNest.
 
-Use it together with [api-fetching.md](./api-fetching.md) for HTTP and TanStack Query.
+Stack chuẩn của project:
+
+- **Zustand**: quản lý client-side state.
+- **Zod**: định nghĩa schema validation.
+- **React Hook Form**: quản lý form state và submit.
+- **TanStack Query**: quản lý server state, cache, loading/error, mutation.
+- **Axios**: HTTP client dùng trong feature API layer.
+
+Đọc thêm [api-fetching.md](./api-fetching.md) cho quy ước gọi API.
 
 ---
 
-## Big picture
+## Tổng Quan
 
-```
+```txt
 src/
-├── app/                 # App shell: providers, router (not business UI)
-├── assets/              # Static imports (images index, etc.)
+├── app/                 # App shell: providers, router, guards
+├── assets/              # Static imports: images, icons
 ├── components/
-│   ├── ui/              # Design system primitives (Button, Input, …)
-│   └── common/          # Shared app chrome (Navbar, Loading, …)
-├── config/              # env, routes (paths), app constants
-├── features/            # Business domains (auth, rooms, …) ← main work here
-├── hooks/               # Cross-feature React hooks
-├── layouts/             # Page shells shared across features
-├── lib/                 # axios, query-client, utils, zod re-export
-├── pages/               # Route entry components (thin composers)
-├── stores/              # Global Zustand stores (auth, theme)
-├── styles/              # globals.css, tailwind
-└── types/               # Shared TypeScript types (api wrapper, auth DTOs)
+│   ├── ui/              # UI primitives: Button, Input, Card, Modal
+│   └── common/          # Shared app components: Loading, Sidebar, etc.
+├── config/              # env, paths, app constants
+├── constants/           # app-wide constants: roles, static enums
+├── features/            # Business domains: auth, room, landlord
+├── hooks/               # Cross-feature hooks
+├── layouts/             # Shared page shells
+├── lib/                 # axios, query-client, zod, utils
+├── pages/               # Thin route entry components
+├── stores/              # Global Zustand stores
+├── styles/              # global CSS, Tailwind entry
+└── types/               # Shared TypeScript DTOs/types
 ```
 
-**Rule of thumb**
+Quy tắc nhanh:
 
-| Question | Put it in |
-|----------|-----------|
-| Used by one business area only? | `features/<name>/` |
-| Used everywhere (button, modal)? | `components/ui/` |
-| Used on many pages but not generic UI? | `components/common/` or `layouts/` |
-| Wired to a URL? | `pages/` + `app/router/` |
-| HTTP for one domain? | `features/<name>/api/` |
+| Câu hỏi | Đặt ở đâu |
+| --- | --- |
+| Chỉ dùng trong một nghiệp vụ? | `features/<feature>/` |
+| UI primitive dùng toàn app? | `components/ui/` |
+| Layout/chrome dùng nhiều page? | `layouts/` hoặc `components/common/` |
+| Route entry mỏng? | `pages/` hoặc `features/<feature>/pages/` |
+| API của một domain? | `features/<feature>/api/` |
+| Server state/cache? | `features/<feature>/hooks/` với TanStack Query |
+| Client UI state của một feature? | `features/<feature>/stores/` với Zustand |
+| Client state toàn app? | `src/stores/` với Zustand |
+| Form validation? | `features/<feature>/schemas/` với Zod |
 
 ---
 
-## Anatomy of a feature
+## Chuẩn Cấu Trúc Một Feature
 
-A **complete** feature looks like this:
+Feature đầy đủ nên có cấu trúc:
 
-```
+```txt
 features/<feature-name>/
 ├── api/
-│   └── <feature>.api.ts       # Axios calls only
+│   └── <feature>.api.ts          # Axios calls only
 ├── components/
-│   ├── <thing>-form.tsx       # Forms, cards, lists (feature-specific UI)
+│   ├── <entity>-form.tsx         # Feature UI, form, table, card
 │   └── ...
 ├── hooks/
-│   ├── use-<thing>.ts         # useQuery / useMutation
-│   └── <feature>.keys.ts      # optional: query key factory
+│   ├── use-<entity>.ts           # useQuery / useMutation
+│   └── <feature>.keys.ts         # optional query key factory
 ├── pages/
-│   ├── <page>-page.tsx        # Route-level screen (layout + composition)
-│   └── ...
+│   └── <page>-page.tsx           # Route-level screen
 ├── schemas/
-│   └── <feature>.schema.ts    # Zod schemas (forms)
+│   └── <feature>.schema.ts       # Zod schemas
+├── stores/
+│   └── <feature>-ui.store.ts     # Zustand client/UI state
 ├── types/
-│   └── <feature>.type.ts      # Form values, view models (z.infer, UI types)
-└── index.ts                   # Public exports for other modules
+│   └── <feature>.type.ts         # z.infer, DTOs, UI types
+├── data.ts                       # static/mock data for UI only
+└── index.ts                      # public exports
 ```
 
-Not every feature needs every folder on day one. Add folders when you have real code for them.
+Không phải feature nào cũng cần đủ folder ngay từ đầu. Chỉ tạo folder khi có code thật.
 
 ---
 
-## Folder responsibilities
+## Luồng Chuẩn
 
-### `api/` — HTTP layer
+### List/detail data
 
-- **Only** functions that call `api` from `@/lib/axios`.
-- No React, no hooks, no JSX.
-- Name file `*.api.ts` (e.g. `auth.api.ts`, `rooms.api.ts`).
-
-```ts
-// features/rooms/api/rooms.api.ts
-export const roomsApi = {
-  list: () => api.get<ApiResponse<Room[]>>('/rooms'),
-}
+```txt
+Component
+  → feature hook: useRooms()
+  → feature API: roomApi.getRooms()
+  → axios client
+  → backend
 ```
 
-See [api-fetching.md](./api-fetching.md).
+### Form mutation
+
+```txt
+Form component
+  → React Hook Form
+  → zodResolver(schema)
+  → useMutation hook
+  → feature API
+  → invalidate TanStack Query cache
+  → update Zustand UI state nếu cần
+```
+
+### Client UI state
+
+```txt
+Component
+  → useFeatureUiStore()
+  → Zustand store
+```
+
+Ví dụ: search/filter/sort/page/modal open/editing id nằm trong Zustand vì đây là client-side UI state, không phải dữ liệu backend.
 
 ---
 
-### `hooks/` — Data & side effects
+## `api/`: HTTP Layer
 
-- Wrap `*Api` with **TanStack Query** (`useQuery`, `useMutation`).
-- Handle navigation, toasts, cache invalidation, Zustand updates.
-- Components import hooks — **not** `api/` directly.
+Chỉ chứa function gọi `api` từ `@/lib/axios`.
+
+Không được đặt React hook, JSX, Zustand logic hoặc toast trong folder này.
 
 ```ts
-// features/auth/hooks/use-login.ts
-export function useLogin() {
-  return useMutation({ mutationFn: …, onSuccess: … })
+// features/room/api/room.api.ts
+import { api } from '@/lib/axios'
+import type { ApiResponse } from '@/types/api'
+import type { Room, RoomPayload } from '../types/room.type'
+
+export const roomApi = {
+  getRooms: (params?: Record<string, unknown>) =>
+    api.get<ApiResponse<Room[]>>('/rooms', { params }),
+
+  createRoom: (payload: RoomPayload) =>
+    api.post<ApiResponse<Room>>('/rooms', payload),
 }
 ```
 
-**Optional:** `*.keys.ts` for query key constants:
+Component không import trực tiếp `@/lib/axios`.
+
+---
+
+## `hooks/`: TanStack Query
+
+Feature hooks là nơi bọc API bằng `useQuery` và `useMutation`.
+
+Hook được phép xử lý:
+
+- query key
+- loading/error state từ TanStack Query
+- invalidate/refetch cache
+- toast
+- navigate
+- cập nhật Zustand global store khi cần
 
 ```ts
+// features/room/hooks/use-rooms.ts
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { roomApi } from '../api/room.api'
+import type { RoomPayload } from '../types/room.type'
+
 export const roomKeys = {
   all: ['rooms'] as const,
-  detail: (id: string) => ['rooms', id] as const,
+  list: (params?: Record<string, unknown>) => [...roomKeys.all, 'list', params] as const,
+  detail: (id: string) => [...roomKeys.all, 'detail', id] as const,
+}
+
+export function useGetRooms(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: roomKeys.list(params),
+    queryFn: async () => {
+      const { data } = await roomApi.getRooms(params)
+      return data.data
+    },
+  })
+}
+
+export function useCreateRoom() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: RoomPayload) => {
+      const { data } = await roomApi.createRoom(payload)
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: roomKeys.all })
+    },
+  })
 }
 ```
 
+Query key nên đặt cạnh hook, hoặc tách sang `<feature>.keys.ts` nếu feature lớn.
+
 ---
 
-### `schemas/` — Validation
+## `schemas/`: Zod Validation
 
-- **Zod** schemas for forms and API payloads.
-- Used with React Hook Form via `@hookform/resolvers/zod`.
+Zod schema là nguồn sự thật cho form validation.
 
 ```ts
 // features/auth/schemas/auth.schema.ts
-export const loginSchema = z.object({ … })
+import { z } from '@/lib/zod'
+
+export const loginSchema = z.object({
+  email: z
+    .string()
+    .min(1, { error: 'Vui lòng nhập email' })
+    .pipe(z.email({ error: 'Email không hợp lệ' })),
+  password: z.string().min(1, { error: 'Vui lòng nhập mật khẩu' }),
+})
 ```
+
+Quy ước:
+
+- Schema đặt trong `features/<feature>/schemas/`.
+- Không viết validate thủ công trong component nếu Zod xử lý được.
+- Nếu payload API khác form values, transform trong hook hoặc submit handler.
 
 ---
 
-### `types/` — TypeScript types
+## `types/`: TypeScript Types
 
-- `z.infer<typeof schema>` for form values.
-- Feature-specific interfaces that are **not** shared app-wide.
-- Shared DTOs used by many features can live in `src/types/` instead (e.g. `auth.ts`).
+Form type nên infer từ Zod schema.
 
 ```ts
 // features/auth/types/auth.type.ts
+import type { z } from '@/lib/zod'
+import type { loginSchema, registerSchema } from '../schemas/auth.schema'
+
 export type LoginFormValues = z.infer<typeof loginSchema>
+export type RegisterFormValues = z.infer<typeof registerSchema>
 ```
 
----
+Quy tắc:
 
-### `components/` — Feature UI
-
-- UI **only used inside this feature** (or mostly).
-- Forms, tables, cards, section blocks tied to the domain.
-- May use `components/ui/*` and `components/common/*`.
-- **No** route definitions here.
-
-| Example (auth) | Role |
-|----------------|------|
-| `login-form.tsx` | Form + RHF + `useLogin()` |
-| `auth-field.tsx` | Label + error wrapper |
-| `password-input.tsx` | Password field with show/hide |
-
-If a component is reused by **2+ features**, move it to `components/common/` or `components/ui/`.
+- Type chỉ dùng trong feature: `features/<feature>/types/`.
+- Type dùng nhiều feature: `src/types/`.
+- API DTO shared như `ApiResponse<T>`, `AuthUser` nên nằm trong `src/types/`.
 
 ---
 
-### `pages/` — Feature route screens
+## `components/`: Feature UI
 
-- One file per major route **when the screen belongs to the feature**.
-- **Thin:** pick a `layout`, pass copy/links, render 1–2 components.
-- Exported from `features/<name>/index.ts` and mounted in `app/router/index.tsx`.
+Component trong feature chỉ nên chứa UI và gọi hook/store cần thiết.
+
+Được phép:
+
+- dùng `useForm`
+- dùng `useQuery`/`useMutation` thông qua feature hook
+- dùng Zustand feature store
+- dùng component từ `components/ui`
+
+Không nên:
+
+- gọi axios trực tiếp
+- định nghĩa route
+- chứa business constants lớn nếu có thể đưa sang `data.ts`
+- lặp validation thay vì dùng schema
+
+Ví dụ form chuẩn:
 
 ```tsx
-// features/auth/pages/login-page.tsx
-export function LoginPage() {
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { loginSchema } from '../schemas/auth.schema'
+import type { LoginFormValues } from '../types/auth.type'
+import { useLogin } from '../hooks/use-login'
+
+export function LoginForm() {
+  const login = useLogin()
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  })
+
   return (
-    <AuthLayout title="…" footer={…}>
-      <LoginForm />
-    </AuthLayout>
+    <form onSubmit={handleSubmit((values) => login.mutate(values))} noValidate>
+      <Input
+        type="email"
+        aria-invalid={!!errors.email}
+        {...register('email')}
+      />
+      <Button type="submit" disabled={login.isPending}>
+        {login.isPending ? 'Đang xử lý...' : 'Đăng nhập'}
+      </Button>
+    </form>
   )
 }
 ```
 
 ---
 
-### `index.ts` — Public API of the feature
+## `stores/`: Zustand Client State
 
-Export only what other parts of the app should import:
+Dùng Zustand cho state nằm ở client và không phải cache backend.
+
+Nên dùng Zustand cho:
+
+- auth token/user persisted
+- theme
+- sidebar/mobile menu state
+- modal open/close
+- selected id đang edit
+- filter/search/sort/page của table
+- wizard step, tab đang chọn
+
+Không dùng Zustand cho:
+
+- list data từ backend
+- detail data từ backend
+- loading/error của API
+- dữ liệu cần refetch/invalidate
+
+Những phần đó thuộc TanStack Query.
+
+### Feature store
+
+Feature-specific UI state đặt trong:
+
+```txt
+features/<feature>/stores/<feature>-ui.store.ts
+```
+
+Ví dụ:
 
 ```ts
-export { LoginPage, RegisterPage } from './pages/…'
-export { loginSchema } from './schemas/…'
-export type { LoginFormValues } from './types/…'
+// features/room/stores/room-ui.store.ts
+import { create } from 'zustand'
+import type { RoomStatus } from '../types/room.type'
+
+export type RoomSortOption = 'newest' | 'oldest' | 'price-asc' | 'price-desc'
+
+type RoomUiState = {
+  search: string
+  status: RoomStatus | ''
+  sort: RoomSortOption
+  page: number
+  modalOpen: boolean
+  editingRoomId: string | null
+  setSearch: (search: string) => void
+  setStatus: (status: RoomStatus | '') => void
+  setSort: (sort: RoomSortOption) => void
+  setPage: (page: number) => void
+  openCreateModal: () => void
+  openEditModal: (roomId: string) => void
+  closeModal: () => void
+}
+
+export const useRoomUiStore = create<RoomUiState>((set) => ({
+  search: '',
+  status: '',
+  sort: 'newest',
+  page: 1,
+  modalOpen: false,
+  editingRoomId: null,
+  setSearch: (search) => set({ search, page: 1 }),
+  setStatus: (status) => set({ status, page: 1 }),
+  setSort: (sort) => set({ sort }),
+  setPage: (page) => set({ page }),
+  openCreateModal: () => set({ modalOpen: true, editingRoomId: null }),
+  openEditModal: (roomId) => set({ modalOpen: true, editingRoomId: roomId }),
+  closeModal: () => set({ modalOpen: false, editingRoomId: null }),
+}))
 ```
 
-Avoid deep imports like `@/features/auth/components/login-form` from outside the feature — export from `index.ts` when needed.
+### Global store
 
----
+Global client state đặt trong:
 
-## Layouts vs feature `pages/`
-
-| Layer | Location | Purpose |
-|-------|----------|---------|
-| **Layout** | `src/layouts/` | Reusable shell: navbar, footer, auth split panel |
-| **Page** | `src/pages/` or `features/*/pages/` | What the router renders |
-| **Section / form** | `features/*/components/` | Actual content |
-
-**Layouts** (`src/layouts/`)
-
-- `main-layout.tsx` — Navbar + `<main>` + footer (marketing pages).
-- `auth-layout.tsx` — Split hero + form card (login/register).
-
-**Pages** — two patterns in this repo:
-
-1. **Feature owns the page** (auth)  
-   `features/auth/pages/login-page.tsx` → router imports from `@/features/auth`.
-
-2. **App page composes features** (home)  
-   `pages/home.tsx` stitches `features/home/components/*` inside `MainLayout`.
-
-Both are valid. Prefer **feature `pages/`** when the route is clearly one domain (auth, dashboard, rooms admin).
-
----
-
-## Global folders (not inside a feature)
-
-### `components/ui/`
-
-Primitive, style-only building blocks: `button`, `input`, `card`, `select`, `modal`.
-
-- No business logic, no API calls.
-- Inspired by shadcn-style API.
-
-### `components/common/`
-
-Shared chrome used on multiple routes: `navbar`, `sidebar`, `loading`.
-
-- Still presentational; data comes via props or small hooks from `src/hooks/`.
-
-### `pages/` (app-level)
-
-Route entry when you compose **multiple features** or keep routing centralized:
-
-- `home.tsx` — landing (uses `features/home`).
-- `not-found.tsx`, `dashboard.tsx`.
-
-### `app/`
-
-- `providers/` — QueryClient, Router.
-- `router/index.tsx` — `<Routes>` list.
-- `router/protected-route.tsx` — auth guard.
-
-### `stores/`
-
-Global client state (Zustand): `auth.store`, `theme.store`.
-
-- Token / user session — not a substitute for React Query cache.
-
-### `hooks/` (root)
-
-Hooks used by **many** features: `use-debounce`, `use-modal`, `use-auth`.
-
-- Feature-specific hooks stay in `features/<name>/hooks/`.
-
----
-
-## Current features in the repo
-
-### `features/auth/` (full example)
-
+```txt
+src/stores/<domain>.store.ts
 ```
+
+Ví dụ hiện có:
+
+- `src/stores/auth.store.ts`
+- `src/stores/theme.store.ts`
+
+Chỉ dùng global store khi state thật sự dùng xuyên nhiều feature.
+
+---
+
+## `data.ts`: Static Data
+
+Dùng `data.ts` cho dữ liệu tĩnh hoặc mock UI:
+
+- nav items
+- dashboard cards mock
+- table demo khi chưa có API
+- label/status mapping
+- chart labels
+
+Không đặt state thay đổi theo người dùng vào `data.ts`.
+
+```ts
+// features/landlord/data.ts
+export const landlordNavItems = [
+  { label: 'Tổng quan', href: '/chu-nha' },
+  { label: 'Quản lý phòng', href: '/chu-nha/phong' },
+] as const
+```
+
+Khi dữ liệu chuyển sang backend, tạo `api/`, `hooks/`, `types/` và bỏ mock nếu không còn dùng.
+
+---
+
+## `pages/`: Route-Level Screens
+
+Page chỉ nên compose layout + feature components.
+
+```tsx
+// features/room/pages/room-management-page.tsx
+import { RoomManagement } from '../components/room-management'
+
+export function RoomManagementPage() {
+  return <RoomManagement />
+}
+```
+
+Route được mount ở `src/app/router/index.tsx`.
+
+Nếu page thuộc một feature rõ ràng, ưu tiên đặt trong `features/<feature>/pages/`.
+
+Nếu page compose nhiều feature, có thể đặt trong `src/pages/`.
+
+---
+
+## `index.ts`: Public API Của Feature
+
+Export những gì module khác được phép dùng.
+
+```ts
+export { LoginPage } from './pages/login-page'
+export { RegisterPage } from './pages/register-page'
+export type { LoginFormValues } from './types/auth.type'
+```
+
+Module ngoài feature nên import qua public API khi hợp lý:
+
+```ts
+// Tốt
+import { LoginPage } from '@/features/auth'
+
+// Tránh nếu import từ ngoài feature
+import { LoginForm } from '@/features/auth/components/login-form'
+```
+
+Trong nội bộ feature, dùng relative import.
+
+---
+
+## Layouts Và Pages
+
+| Layer | Location | Trách nhiệm |
+| --- | --- | --- |
+| Layout | `src/layouts/` | Shell dùng lại: navbar, sidebar, footer |
+| Page | `src/pages/` hoặc `features/*/pages/` | Route-level component |
+| Section/form/table | `features/*/components/` | Nội dung nghiệp vụ |
+
+Ví dụ:
+
+- `src/layouts/main-layout.tsx`: marketing shell.
+- `src/layouts/auth-layout.tsx`: auth split layout.
+- `src/layouts/landlord-layout.tsx`: dashboard shell có sidebar.
+- `features/auth/pages/login-page.tsx`: route login.
+- `features/room/pages/room-management-page.tsx`: route quản lý phòng.
+
+---
+
+## Current Features
+
+### `features/auth`
+
+```txt
 features/auth/
 ├── api/auth.api.ts
 ├── components/
@@ -264,8 +492,11 @@ features/auth/
 │   ├── password-input.tsx
 │   └── register-form.tsx
 ├── hooks/
+│   ├── use-auth-session.ts
 │   ├── use-login.ts
+│   ├── use-logout.ts
 │   └── use-register.ts
+├── lib/navigate-by-role.ts
 ├── pages/
 │   ├── login-page.tsx
 │   └── register-page.tsx
@@ -274,126 +505,197 @@ features/auth/
 └── index.ts
 ```
 
-**Flow:** `login-page` → `AuthLayout` → `LoginForm` → `useLogin` → `authApi`.
+Flow:
 
-### `features/home/` (sections only)
-
+```txt
+LoginPage
+  → AuthLayout
+  → LoginForm
+  → React Hook Form + loginSchema
+  → useLogin
+  → authApi.login
+  → useAuthStore.setAuth
+  → navigate by role
 ```
-features/home/
-├── components/     # HeroSection, FeaturedRoomsSection, …
-└── data.ts         # Static/mock content
+
+### `features/room`
+
+```txt
+features/room/
+├── api/room.api.ts
+├── components/
+│   ├── room-form-modal.tsx
+│   └── room-management.tsx
+├── hooks/use-rooms.ts
+├── pages/room-management-page.tsx
+├── schemas/room.schema.ts
+├── stores/room-ui.store.ts
+├── types/room.type.ts
+└── index.ts
 ```
 
-Route lives in `pages/home.tsx` (composer).  
-Footer is used inside `MainLayout`; navbar uses `data.ts` nav links.
+Chuẩn đang dùng:
 
-When home gets API-backed rooms, add:
+- TanStack Query trong `hooks/use-rooms.ts`.
+- Zod schema trong `schemas/room.schema.ts`.
+- React Hook Form trong `components/room-form-modal.tsx`.
+- Zustand UI state trong `stores/room-ui.store.ts`.
 
+### `features/landlord`
+
+```txt
+features/landlord/
+├── components/
+│   ├── landlord-charts.tsx
+│   ├── landlord-dashboard.tsx
+│   ├── landlord-sidebar.tsx
+│   └── ...
+├── data.ts
+└── index.ts
 ```
-features/home/
+
+Hiện chủ yếu là dashboard UI + static data. Khi có API riêng cho chủ nhà, thêm:
+
+```txt
+features/landlord/
 ├── api/
 ├── hooks/
-└── …
+├── stores/
+├── schemas/
+└── types/
 ```
 
-### `features/users/`, `features/products/`
+### `features/home`
 
-Placeholders — extend using the same template when you implement them.
+```txt
+features/home/
+├── components/
+└── data.ts
+```
 
----
-
-## Adding a new feature (checklist)
-
-Example: **rooms**
-
-1. Create folders:
-
-   ```
-   features/rooms/
-   ├── api/rooms.api.ts
-   ├── hooks/use-rooms.ts
-   ├── components/room-card.tsx
-   ├── pages/rooms-page.tsx
-   ├── types/room.type.ts
-   └── index.ts
-   ```
-
-2. Add route in `config/constants.ts` (`paths.rooms`) and `app/router/index.tsx`.
-
-3. Add types to `src/types/` only if shared with other features.
-
-4. Use `MainLayout` or a new layout in `layouts/` if needed.
-
-5. Document query keys and API in [api-fetching.md](./api-fetching.md).
+Home hiện là static/marketing sections. Route compose tại `src/pages/home.tsx`.
 
 ---
 
-## Import rules
+## Checklist Thêm Feature Mới
+
+Ví dụ thêm feature `booking`.
+
+1. Tạo cấu trúc:
+
+```txt
+features/booking/
+├── api/booking.api.ts
+├── components/booking-form.tsx
+├── hooks/use-bookings.ts
+├── pages/booking-page.tsx
+├── schemas/booking.schema.ts
+├── stores/booking-ui.store.ts
+├── types/booking.type.ts
+└── index.ts
+```
+
+2. Định nghĩa Zod schema trong `schemas/`.
+
+3. Infer form values trong `types/`.
+
+4. Tạo API functions trong `api/`.
+
+5. Tạo TanStack Query hooks trong `hooks/`.
+
+6. Tạo Zustand store nếu có UI state riêng.
+
+7. Build form bằng React Hook Form + `zodResolver`.
+
+8. Export page/component cần dùng qua `index.ts`.
+
+9. Thêm path ở `src/config/constants.ts`.
+
+10. Mount route ở `src/app/router/index.tsx`.
+
+---
+
+## Import Rules
 
 ```ts
-// ✅ Feature page imports its own components + shared layout
-import { RoomList } from '../components/room-list'
-import { MainLayout } from '@/layouts/main-layout'
-
-// ✅ Hook imports feature API
-import { roomsApi } from '../api/rooms.api'
-
-// ✅ Component imports UI + feature hook
+// Tốt: component dùng UI primitive + feature hook
 import { Button } from '@/components/ui/button'
-import { useRooms } from '../hooks/use-rooms'
+import { useGetRooms } from '../hooks/use-rooms'
 
-// ❌ Component imports axios directly
+// Tốt: hook dùng feature API
+import { roomApi } from '../api/room.api'
+
+// Tốt: form dùng schema + type của feature
+import { roomSchema } from '../schemas/room.schema'
+import type { RoomFormValues } from '../types/room.type'
+
+// Tốt: route dùng public export
+import { RoomManagementPage } from '@/features/room'
+
+// Tránh: component gọi axios trực tiếp
 import { api } from '@/lib/axios'
 
-// ❌ Another feature imports internal component path
+// Tránh: feature này import sâu component nội bộ của feature khác
 import { LoginForm } from '@/features/auth/components/login-form'
-// Prefer: import { LoginPage } from '@/features/auth'
 ```
 
 ---
 
-## Naming conventions
+## Naming Conventions
 
 | Item | Convention | Example |
-|------|------------|---------|
-| Feature folder | kebab-case, plural noun | `rooms`, `auth` |
-| API file | `<domain>.api.ts` | `rooms.api.ts` |
-| Hook file | `use-<action>.ts` | `use-rooms.ts` |
-| Page file | `<name>-page.tsx` | `login-page.tsx` |
-| Schema file | `<domain>.schema.ts` | `auth.schema.ts` |
-| Component file | kebab-case | `room-card.tsx` |
+| --- | --- | --- |
+| Feature folder | kebab-case hoặc noun rõ nghĩa | `room`, `auth`, `landlord` |
+| API file | `<domain>.api.ts` | `room.api.ts` |
+| Hook file | `use-<domain>.ts` hoặc `use-<action>.ts` | `use-rooms.ts`, `use-login.ts` |
+| Page file | `<name>-page.tsx` | `room-management-page.tsx` |
+| Schema file | `<domain>.schema.ts` | `room.schema.ts` |
+| Store file | `<domain>-ui.store.ts` | `room-ui.store.ts` |
+| Type file | `<domain>.type.ts` | `room.type.ts` |
+| Component file | kebab-case | `room-form-modal.tsx` |
 
 ---
 
-## Decision tree
+## Decision Tree
 
-```
-New code for UniNest
-        │
-        ├─ Is it a Button/Input/Modal primitive?
-        │     └─ components/ui/
-        │
-        ├─ Is it Navbar/Footer/Loading for whole app?
-        │     └─ components/common/ or layouts/
-        │
-        ├─ Is it only for one business area (auth, rooms, …)?
-        │     ├─ HTTP?          → features/<x>/api/
-        │     ├─ Fetch/cache?   → features/<x>/hooks/
-        │     ├─ Form rules?    → features/<x>/schemas/
-        │     ├─ UI block?      → features/<x>/components/
-        │     └─ Full route?    → features/<x>/pages/ + router
-        │
-        ├─ Is it a route that composes many features?
-        │     └─ pages/<name>.tsx
-        │
-        └─ Token/theme used everywhere?
-              └─ stores/ + src/hooks/
+```txt
+New code
+  ├─ UI primitive?
+  │  └─ components/ui/
+  ├─ Shared app chrome/layout?
+  │  └─ components/common/ hoặc layouts/
+  ├─ One business domain?
+  │  ├─ HTTP calls?         → features/<x>/api/
+  │  ├─ Server state?       → features/<x>/hooks/ (TanStack Query)
+  │  ├─ Client UI state?    → features/<x>/stores/ (Zustand)
+  │  ├─ Form validation?    → features/<x>/schemas/ (Zod)
+  │  ├─ Form state?         → components/ dùng React Hook Form
+  │  ├─ Domain UI?          → features/<x>/components/
+  │  └─ Route screen?       → features/<x>/pages/
+  ├─ Route composes many domains?
+  │  └─ src/pages/
+  └─ State used across whole app?
+     └─ src/stores/
 ```
 
 ---
 
-## Related docs
+## Anti-Patterns
 
-- [api-fetching.md](./api-fetching.md) — Axios, TanStack Query, mutations
-- `src/config/constants.ts` — route paths
-- `src/app/router/index.tsx` — route table
+- Không gọi `api.get/post` trong component.
+- Không dùng Zustand để cache list/detail từ backend.
+- Không duplicate cùng dữ liệu giữa Zustand và TanStack Query.
+- Không validate form bằng nhiều nơi khác nhau; dùng Zod schema.
+- Không để form payload type viết tay nếu có thể `z.infer`.
+- Không import sâu nội bộ feature khác nếu feature đã export qua `index.ts`.
+- Không đưa dữ liệu động theo user vào `data.ts`.
+
+---
+
+## Related Docs
+
+- [api-fetching.md](./api-fetching.md): Axios, TanStack Query, mutation, auth token flow.
+- `src/config/constants.ts`: route paths.
+- `src/app/router/index.tsx`: route table.
+- `src/lib/query-client.ts`: QueryClient config.
+- `src/lib/zod.ts`: Zod re-export.
