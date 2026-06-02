@@ -187,3 +187,206 @@ export const deleteRoom = async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
+
+/**
+ * PUBLISH ROOM
+ */
+export const publishRoom = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const landlordId = req.userId;
+
+    if (!landlordId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    if (!mongoose.Types.ObjectId.isValid(id as string))
+      return res.status(400).json({ success: false, message: "Invalid id" });
+
+    const room = await RoomService.publishRoom(id as string, landlordId);
+
+    if (!room)
+      return res.status(404).json({ success: false, message: "Not found" });
+
+    return res.json({
+      success: true,
+      message: "Room published successfully",
+      data: room,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * UNPUBLISH ROOM
+ */
+export const unpublishRoom = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const landlordId = req.userId;
+
+    if (!landlordId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    if (!mongoose.Types.ObjectId.isValid(id as string))
+      return res.status(400).json({ success: false, message: "Invalid id" });
+
+    const room = await RoomService.unpublishRoom(id as string, landlordId);
+
+    if (!room)
+      return res.status(404).json({ success: false, message: "Not found" });
+
+    return res.json({
+      success: true,
+      message: "Room unpublished successfully",
+      data: room,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * UPLOAD ROOM IMAGE
+ */
+export const uploadRoomImage = async (req: Request, res: Response) => {
+  try {
+    const { id: roomId } = req.params;
+    const landlordId = req.userId;
+
+    if (!landlordId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    if (!mongoose.Types.ObjectId.isValid(roomId as string))
+      return res.status(400).json({ success: false, message: "Invalid room id" });
+
+    // Verify room exists and belongs to landlord
+    const room = await RoomService.getRoomById(roomId as string, landlordId);
+    if (!room)
+      return res.status(404).json({ success: false, message: "Room not found" });
+
+    const { url, caption, order, isPrimary } = req.body;
+
+    if (!url) {
+      return res.status(400).json({
+        success: false,
+        message: "Image URL is required",
+      });
+    }
+
+    const image = await RoomService.uploadRoomImage(roomId as string, {
+      url,
+      caption,
+      order: order || 0,
+      isPrimary: isPrimary || false,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Image uploaded successfully",
+      data: image,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * GET ROOM IMAGES
+ */
+export const getRoomImages = async (req: Request, res: Response) => {
+  try {
+    const { id: roomId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(roomId as string))
+      return res.status(400).json({ success: false, message: "Invalid room id" });
+
+    const images = await RoomService.getRoomImages(roomId as string);
+
+    return res.json({
+      success: true,
+      data: images,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * DELETE ROOM IMAGE
+ */
+export const deleteRoomImage = async (req: Request, res: Response) => {
+  try {
+    const { id: roomId, imageId } = req.params;
+    const landlordId = req.userId;
+
+    if (!landlordId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    if (!mongoose.Types.ObjectId.isValid(roomId as string))
+      return res.status(400).json({ success: false, message: "Invalid room id" });
+
+    if (!mongoose.Types.ObjectId.isValid(imageId as string))
+      return res.status(400).json({ success: false, message: "Invalid image id" });
+
+    // Verify room exists and belongs to landlord
+    const room = await RoomService.getRoomById(roomId as string, landlordId);
+    if (!room)
+      return res.status(404).json({ success: false, message: "Room not found" });
+
+    const image = await RoomService.deleteRoomImage(
+      imageId as string,
+      roomId as string
+    );
+
+    if (!image)
+      return res.status(404).json({ success: false, message: "Image not found" });
+
+    return res.json({
+      success: true,
+      message: "Image deleted successfully",
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * SET PRIMARY IMAGE
+ */
+export const setPrimaryImage = async (req: Request, res: Response) => {
+  try {
+    const { id: roomId, imageId } = req.params;
+    const landlordId = req.userId;
+
+    if (!landlordId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    if (!mongoose.Types.ObjectId.isValid(roomId as string))
+      return res.status(400).json({ success: false, message: "Invalid room id" });
+
+    if (!mongoose.Types.ObjectId.isValid(imageId as string))
+      return res.status(400).json({ success: false, message: "Invalid image id" });
+
+    // Verify room exists and belongs to landlord
+    const room = await RoomService.getRoomById(roomId as string, landlordId);
+    if (!room)
+      return res.status(404).json({ success: false, message: "Room not found" });
+
+    const image = await RoomService.setPrimaryImage(
+      imageId as string,
+      roomId as string
+    );
+
+    if (!image)
+      return res.status(404).json({ success: false, message: "Image not found" });
+
+    return res.json({
+      success: true,
+      message: "Primary image set successfully",
+      data: image,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};

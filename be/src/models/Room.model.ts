@@ -14,34 +14,45 @@ export enum ROOM_STATUS {
 }
 
 export interface IRoom extends Document {
+  propertyId?: Types.ObjectId;
   landlordId: Types.ObjectId;
-  amenities: Types.ObjectId[];
+  amenityIds: Types.ObjectId[];
   title: string;
   description?: string;
   address: string;
   city?: string;
   district?: string;
+  ward?: string;
   latitude?: number;
   longitude?: number;
   pricePerMonth: number;
   depositAmount?: number;
+  electricityRate?: number;
+  waterRate?: number;
   areaSqm?: number;
   maxOccupants: number;
   roomType?: ROOM_TYPE;
   status: ROOM_STATUS;
   isPublished: boolean;
+  embedding?: number[];
+  deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
 const RoomSchema = new Schema<IRoom>(
   {
+    propertyId: {
+      type: Schema.Types.ObjectId,
+      ref: "Property",
+      default: null,
+    },
     landlordId: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    amenities: {
+    amenityIds: {
       type: [Schema.Types.ObjectId],
       ref: "Amenity",
     },
@@ -59,6 +70,7 @@ const RoomSchema = new Schema<IRoom>(
     },
     city: String,
     district: String,
+    ward: String,
     latitude: Number,
     longitude: Number,
     pricePerMonth: {
@@ -66,6 +78,12 @@ const RoomSchema = new Schema<IRoom>(
       required: true,
     },
     depositAmount: {
+      type: Number,
+    },
+    electricityRate: {
+      type: Number,
+    },
+    waterRate: {
       type: Number,
     },
     areaSqm: {
@@ -87,6 +105,14 @@ const RoomSchema = new Schema<IRoom>(
     isPublished: {
       type: Boolean,
       default: false,
+    },
+    embedding: {
+      type: [Number],
+      default: [],
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
     },
   },
   {
