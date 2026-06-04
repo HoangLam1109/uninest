@@ -49,6 +49,26 @@ export type RoomImage = {
   uploadedAt?: string
 }
 
+export type RoomFavorite = {
+  _id: string
+  tenantId: string
+  roomId: string | RoomFavoriteRoom
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type RoomFavoriteRoom = Pick<
+  Room,
+  | '_id'
+  | 'title'
+  | 'address'
+  | 'city'
+  | 'district'
+  | 'status'
+  | 'pricePerMonth'
+  | 'isPublished'
+>
+
 export type RoomListParams = {
   page?: number
   limit?: number
@@ -88,6 +108,28 @@ export type RoomImageListResponse = {
 export type RoomImageResponse = {
   success: boolean
   data: RoomImage
+  message?: string
+}
+
+export type RoomFavoriteResponse = {
+  success: boolean
+  data: RoomFavorite
+  message?: string
+}
+
+export type RoomFavoriteListResponse = {
+  success: boolean
+  data: RoomFavorite[]
+  pagination: RoomPagination
+  message?: string
+}
+
+export type RoomFavoriteCheckResponse = {
+  success: boolean
+  data: {
+    roomId: string
+    isFavorited: boolean
+  }
   message?: string
 }
 

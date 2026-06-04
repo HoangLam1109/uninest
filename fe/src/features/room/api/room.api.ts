@@ -1,5 +1,8 @@
 import { api } from '@/lib/axios'
 import type {
+  RoomFavoriteCheckResponse,
+  RoomFavoriteListResponse,
+  RoomFavoriteResponse,
   RoomListParams,
   RoomListResponse,
   RoomImageListResponse,
@@ -17,6 +20,18 @@ export const roomApi = {
     api.get<RoomListResponse>('/rooms/my', { params }),
 
   getById: (id: string) => api.get<RoomResponse>(`/rooms/getById/${id}`),
+
+  listFavorites: (params: Pick<RoomListParams, 'page' | 'limit'>) =>
+    api.get<RoomFavoriteListResponse>('/favorites', { params }),
+
+  checkFavorite: (roomId: string) =>
+    api.get<RoomFavoriteCheckResponse>(`/favorites/${roomId}/check`),
+
+  addFavorite: (roomId: string) =>
+    api.post<RoomFavoriteResponse>(`/favorites/${roomId}`),
+
+  removeFavorite: (roomId: string) =>
+    api.delete<{ success: boolean; message?: string }>(`/favorites/${roomId}`),
 
   create: (payload: RoomPayload) =>
     api.post<RoomResponse>('/rooms/create', payload),

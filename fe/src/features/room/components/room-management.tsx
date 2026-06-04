@@ -18,32 +18,15 @@ import {
   useGetRoomById,
   useUpdateRoom,
 } from '../hooks/use-rooms'
+import {
+  formatRoomCurrency,
+  roomStatusClasses,
+  roomStatusLabels,
+} from '../../../utils/room-display'
 import { useRoomUiStore, type RoomSortOption } from '../stores/room-ui.store'
 import type { Room, RoomPayload, RoomStatus } from '../types/room.type'
 import { RoomFormModal } from './room-form-modal'
 import { RoomImageModal } from './room-image-modal'
-
-const statusLabels: Record<RoomStatus, string> = {
-  AVAILABLE: 'Còn trống',
-  RENTED: 'Đã thuê',
-  MAINTENANCE: 'Bảo trì',
-}
-
-const statusClasses: Record<RoomStatus, string> = {
-  AVAILABLE: 'bg-green-500/10 text-green-700',
-  RENTED: 'bg-primary/10 text-primary',
-  MAINTENANCE: 'bg-red-500/10 text-red-600',
-}
-
-const currencyFormatter = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-  maximumFractionDigits: 0,
-})
-
-function formatCurrency(value?: number) {
-  return currencyFormatter.format(value ?? 0)
-}
 
 function getRoomLandlordId(room: Room) {
   if (typeof room.landlordId === 'string') return room.landlordId
@@ -338,19 +321,19 @@ export function RoomManagement() {
                   <td className="px-4 py-4">
                     <p className="inline-flex items-center gap-1 font-semibold text-slate-900">
                       <BadgeDollarSign className="size-4 text-primary" />
-                      {formatCurrency(room.pricePerMonth)}
+                      {formatRoomCurrency(room.pricePerMonth)}
                     </p>
                     {room.depositAmount ? (
                       <p className="mt-1 text-xs text-slate-500">
-                        Cọc {formatCurrency(room.depositAmount)}
+                        Cọc {formatRoomCurrency(room.depositAmount)}
                       </p>
                     ) : null}
                   </td>
                   <td className="px-4 py-4">
                     <span
-                      className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-bold ${statusClasses[room.status]}`}
+                      className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-bold ${roomStatusClasses[room.status]}`}
                     >
-                      {statusLabels[room.status]}
+                      {roomStatusLabels[room.status]}
                     </span>
                   </td>
                   <td className="px-4 py-4 text-sm text-slate-600">

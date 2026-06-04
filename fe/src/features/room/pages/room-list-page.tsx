@@ -1,35 +1,68 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, MapPin, Search } from 'lucide-react'
+import { ArrowRight, Heart, MapPin, Search } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { MainLayout } from '@/layouts/main-layout'
-import { useGetRoomImages, useGetRooms } from '../hooks/use-rooms'
-import type { Room, RoomImage } from '../types/room.type'
-
-const currencyFormatter = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-  maximumFractionDigits: 0,
-})
-
-function formatLocation(room: Room) {
-  return (
-    [room.ward, room.district, room.city].filter(Boolean).join(', ') ||
-    room.address
-  )
-}
-
-function getPrimaryImage(images: RoomImage[]) {
-  return images.find((image) => image.isPrimary)
-}
+import { useAuthStore } from '@/stores/auth.store'
+import {
+  useAddRoomFavorite,
+  useCheckRoomFavorite,
+  useGetRoomImages,
+  useGetRooms,
+  useRemoveRoomFavorite,
+} from '../hooks/use-rooms'
+import {
+  formatRoomCurrency,
+  formatRoomLocation,
+  getPrimaryRoomImage,
+} from '../../../utils/room-display'
+import type { Room } from '../types/room.type'
 
 function RoomListCard({ room }: { room: Room }) {
+  const accessToken = useAuthStore((state) => state.accessToken)
   const imagesQuery = useGetRoomImages(room._id)
-  const primaryImage = getPrimaryImage(imagesQuery.data ?? [])
+  const favoriteQuery = useCheckRoomFavorite(room._id, Boolean(accessToken))
+  const addFavorite = useAddRoomFavorite()
+  const removeFavorite = useRemoveRoomFavorite()
+  const primaryImage = getPrimaryRoomImage(imagesQuery.data ?? [])
+  const isFavorited = favoriteQuery.data?.isFavorited ?? false
+  const isFavoritePending =
+    favoriteQuery.isFetching || addFavorite.isPending || removeFavorite.isPending
+
+  function handleToggleFavorite() {
+    if (!accessToken) {
+      toast.error('Vui long dang nhap de luu phong yeu thich')
+      return
+    }
+
+    if (isFavorited) {
+      removeFavorite.mutate(room._id)
+      return
+    }
+
+    addFavorite.mutate(room._id)
+  }
 
   return (
-    <Card className="group flex flex-col overflow-hidden">
+    <Card className="group relative flex flex-col overflow-hidden">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label={isFavorited ? 'Bo luu phong yeu thich' : 'Luu phong yeu thich'}
+        aria-pressed={isFavorited}
+        disabled={isFavoritePending}
+        onClick={handleToggleFavorite}
+        className="absolute right-3 top-3 z-10 bg-white/90 text-foreground shadow-sm hover:bg-white"
+      >
+        <Heart
+          className={`size-5 ${
+            isFavorited ? 'fill-red-500 text-red-500' : 'text-foreground'
+          }`}
+        />
+      </Button>
       <Link to={`/phong/${room._id}`} className="relative block h-56 bg-border/60">
         {primaryImage ? (
           <img
@@ -53,7 +86,7 @@ function RoomListCard({ room }: { room: Room }) {
           </Link>
           <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
             <MapPin className="size-3 shrink-0" />
-            {formatLocation(room)}
+            {formatRoomLocation(room)}
           </p>
         </div>
 
@@ -66,7 +99,7 @@ function RoomListCard({ room }: { room: Room }) {
 
         <div className="mt-auto flex items-center justify-between gap-3">
           <p className="text-lg font-bold text-primary">
-            {currencyFormatter.format(room.pricePerMonth)}
+            {formatRoomCurrency(room.pricePerMonth)}
             <span className="text-xs font-normal text-muted-foreground">/thang</span>
           </p>
           <Button asChild variant="ghost" size="icon" className="bg-border/60">

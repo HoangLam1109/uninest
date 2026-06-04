@@ -19,7 +19,11 @@ import {
   RoomManagementPage,
 } from '@/features/room'
 import { staffSidebarConfig, StaffDashboardPage } from '@/features/staff'
-import { tenantSidebarConfig, TenantDashboardPage } from '@/features/tenant'
+import {
+  tenantSidebarConfig,
+  TenantDashboardPage,
+  TenantFavoriteRoomsPage,
+} from '@/features/tenant'
 import { NotFoundPage } from '@/pages/not-found'
 
 export function AppRouter() {
@@ -66,7 +70,7 @@ export function AppRouter() {
             <Route index element={<TenantDashboardPage />} />
             <Route path="hoa-don" element={<TenantDashboardPage />} />
             <Route path="bao-tri" element={<TenantDashboardPage />} />
-            <Route path="phong-da-luu" element={<TenantDashboardPage />} />
+            <Route path="phong-da-luu" element={<TenantFavoriteRoomsPage />} />
             <Route path="hop-dong" element={<TenantDashboardPage />} />
           </Route>
         </Route>

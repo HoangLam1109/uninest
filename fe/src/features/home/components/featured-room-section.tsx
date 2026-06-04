@@ -7,25 +7,13 @@ import {
   useGetRoomImages,
   useGetRooms,
 } from '@/features/room/hooks/use-rooms'
-import type { Room, RoomImage } from '@/features/room/types/room.type'
+import {
+  formatRoomCurrency,
+  formatRoomLocation,
+  getPrimaryRoomImage,
+} from '@/utils/room-display'
+import type { Room } from '@/features/room/types/room.type'
 import { images } from '../data'
-
-const currencyFormatter = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-  maximumFractionDigits: 0,
-})
-
-function formatLocation(room: Room) {
-  return (
-    [room.ward, room.district, room.city].filter(Boolean).join(', ') ||
-    room.address
-  )
-}
-
-function getPrimaryImage(images: RoomImage[]) {
-  return images.find((image) => image.isPrimary)
-}
 
 type FeaturedRoomCardProps = {
   room: Room
@@ -34,7 +22,7 @@ type FeaturedRoomCardProps = {
 
 function FeaturedRoomCard({ room, fallbackImage }: FeaturedRoomCardProps) {
   const imagesQuery = useGetRoomImages(room._id)
-  const primaryImage = getPrimaryImage(imagesQuery.data ?? [])
+  const primaryImage = getPrimaryRoomImage(imagesQuery.data ?? [])
   const imageUrl = primaryImage?.url ?? fallbackImage
 
   return (
@@ -61,13 +49,13 @@ function FeaturedRoomCard({ room, fallbackImage }: FeaturedRoomCardProps) {
           </Link>
           <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
             <MapPin className="size-3 shrink-0" />
-            {formatLocation(room)}
+            {formatRoomLocation(room)}
           </p>
         </div>
         <div className="mt-auto flex items-center justify-between">
           <p>
             <span className="text-lg font-bold text-primary">
-              {currencyFormatter.format(room.pricePerMonth)}
+              {formatRoomCurrency(room.pricePerMonth)}
             </span>
             <span className="text-xs text-muted-foreground">/thang</span>
           </p>

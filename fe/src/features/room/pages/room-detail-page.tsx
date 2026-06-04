@@ -4,13 +4,8 @@ import { ArrowLeft, CheckCircle2, MapPin, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MainLayout } from '@/layouts/main-layout'
 import { useGetRoomById, useGetRoomImages } from '../hooks/use-rooms'
+import { formatRoomCurrency, formatRoomFullLocation } from '../../../utils/room-display'
 import type { RoomImage } from '../types/room.type'
-
-const currencyFormatter = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-  maximumFractionDigits: 0,
-})
 
 function sortImages(images: RoomImage[]) {
   return [...images].sort((first, second) => {
@@ -121,15 +116,13 @@ export function RoomDetailPage() {
                 </h1>
                 <p className="mt-3 flex items-start gap-2 text-sm text-muted-foreground">
                   <MapPin className="mt-0.5 size-4 shrink-0" />
-                  {[room.address, room.ward, room.district, room.city]
-                    .filter(Boolean)
-                    .join(', ')}
+                  {formatRoomFullLocation(room)}
                 </p>
 
                 <div className="mt-6 rounded-xl bg-primary/10 p-4">
                   <p className="text-sm font-semibold text-primary">Giá thuê</p>
                   <p className="mt-1 text-2xl font-bold text-primary">
-                    {currencyFormatter.format(room.pricePerMonth)}
+                    {formatRoomCurrency(room.pricePerMonth)}
                     <span className="text-sm font-normal">/tháng</span>
                   </p>
                 </div>
@@ -151,7 +144,7 @@ export function RoomDetailPage() {
                   <div className="rounded-lg bg-surface p-3">
                     <p className="text-muted-foreground">Tiền cọc</p>
                     <p className="mt-1 font-bold text-foreground">
-                      {currencyFormatter.format(room.depositAmount ?? 0)}
+                      {formatRoomCurrency(room.depositAmount)}
                     </p>
                   </div>
                   <div className="rounded-lg bg-surface p-3">
@@ -166,13 +159,13 @@ export function RoomDetailPage() {
                   {room.electricityRate ? (
                     <p className="flex items-center gap-2">
                       <CheckCircle2 className="size-4 text-primary" />
-                      Dien: {currencyFormatter.format(room.electricityRate)}
+                      Dien: {formatRoomCurrency(room.electricityRate)}
                     </p>
                   ) : null}
                   {room.waterRate ? (
                     <p className="flex items-center gap-2">
                       <CheckCircle2 className="size-4 text-primary" />
-                      Nuoc: {currencyFormatter.format(room.waterRate)}
+                      Nuoc: {formatRoomCurrency(room.waterRate)}
                     </p>
                   ) : null}
                 </div>

@@ -16,6 +16,14 @@ export const roomKeys = {
   myList: (params: RoomListParams) => [...roomKeys.myLists(), params] as const,
   detail: (id: string) => [...roomKeys.all, 'detail', id] as const,
   images: (roomId: string) => [...roomKeys.all, 'images', roomId] as const,
+  favorites: () => [...roomKeys.all, 'favorites'] as const,
+  favoritesList: (params: Pick<RoomListParams, 'page' | 'limit'>) =>
+    [...roomKeys.favorites(), params] as const,
+  favorite: (roomId: string) => [...roomKeys.all, 'favorite', roomId] as const,
+}
+
+function getFavoriteRoomId(roomId: string | { _id: string }) {
+  return typeof roomId === 'string' ? roomId : roomId._id
 }
 
 export function useGetRooms(params: RoomListParams) {
@@ -45,6 +53,69 @@ export function useGetRoomById(id: string | null, enabled = true) {
     queryFn: async () => {
       const { data } = await roomApi.getById(id as string)
       return data.data
+    },
+  })
+}
+
+export function useGetTenantFavoriteRooms(
+  params: Pick<RoomListParams, 'page' | 'limit'>,
+) {
+  return useQuery({
+    queryKey: roomKeys.favoritesList(params),
+    queryFn: async () => {
+      const { data } = await roomApi.listFavorites(params)
+      return data
+    },
+  })
+}
+
+export function useCheckRoomFavorite(roomId: string | null, enabled = true) {
+  return useQuery({
+    queryKey: roomKeys.favorite(roomId ?? ''),
+    enabled: Boolean(roomId) && enabled,
+    queryFn: async () => {
+      const { data } = await roomApi.checkFavorite(roomId as string)
+      return data.data
+    },
+  })
+}
+
+export function useAddRoomFavorite() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (roomId: string) => {
+      const { data } = await roomApi.addFavorite(roomId)
+      return data.data
+    },
+    onSuccess: (favorite) => {
+      const roomId = getFavoriteRoomId(favorite.roomId)
+      queryClient.invalidateQueries({ queryKey: roomKeys.favorite(roomId) })
+      queryClient.invalidateQueries({ queryKey: roomKeys.favorites() })
+      toast.success('Da luu phong vao yeu thich')
+    },
+    onError: (error) => {
+      toast.error('Khong the luu phong', {
+        description: getApiErrorMessage(error, 'Vui long thu lai sau.'),
+      })
+    },
+  })
+}
+
+export function useRemoveRoomFavorite() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (roomId: string) => roomApi.removeFavorite(roomId),
+    onSuccess: (_response, roomId) => {
+      queryClient.invalidateQueries({ queryKey: roomKeys.favorite(roomId) })
+      queryClient.invalidateQueries({ queryKey: roomKeys.favorites() })
+      toast.success('Da bo luu phong')
+    },
+    onError: (error) => {
+      toast.error('Khong the bo luu phong', {
+        description: getApiErrorMessage(error, 'Vui long thu lai sau.'),
+      })
     },
   })
 }
