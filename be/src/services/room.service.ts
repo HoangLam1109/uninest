@@ -29,7 +29,7 @@ export const RoomService = {
     return { rooms, total };
   },
 
-  getRoomById: async (id: string, landlordId: string) => {
+  getRoomById: async (id: string, landlordId?: string) => {
     return await RoomRepository.findById(id, landlordId);
   },
 
@@ -55,6 +55,7 @@ export const RoomService = {
     return await RoomImageRepository.create({
       roomId,
       url: imageData.url,
+      publicId: imageData.publicId,
       caption: imageData.caption,
       order: imageData.order || 0,
       isPrimary: imageData.isPrimary || false,

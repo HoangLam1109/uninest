@@ -47,7 +47,7 @@ function FeaturedRoomCard({ room, fallbackImage }: FeaturedRoomCardProps) {
         />
         {room.isPublished ? (
           <span className="absolute left-3 top-3 rounded bg-primary px-2 py-1 text-[10px] font-bold text-white">
-            Noi bat
+            Nổi bật
           </span>
         ) : null}
       </Link>
@@ -100,17 +100,17 @@ export function FeaturedRoomsSection() {
         <div className="mb-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.14em] text-primary">
-              Goi y hang dau
+                Gợi ý cho bạn
             </p>
             <h2 className="mt-2 font-serif text-3xl font-bold text-foreground lg:text-4xl">
-              Danh muc phong noi bat
+              Danh mục phòng nổi bật
             </h2>
           </div>
           <Link
             to="/phong"
             className="inline-flex items-center gap-1 text-base font-bold text-primary transition-opacity hover:opacity-80"
           >
-            Xem tat ca
+            Xem tất cả
             <ArrowRight className="size-4" />
           </Link>
         </div>
@@ -128,13 +128,13 @@ export function FeaturedRoomsSection() {
 
         {roomsQuery.isError ? (
           <div className="rounded-xl border border-primary/10 bg-white p-6 text-center text-sm text-red-600">
-            Khong the tai danh sach phong noi bat.
+            Không thể tải danh sách phòng nổi bật.
           </div>
         ) : null}
 
         {!roomsQuery.isLoading && !roomsQuery.isError && rooms.length === 0 ? (
           <div className="rounded-xl border border-primary/10 bg-white p-6 text-center text-sm text-muted-foreground">
-            Chua co phong noi bat de hien thi.
+            Chưa có phòng nổi bật để hiển thị.
           </div>
         ) : null}
 

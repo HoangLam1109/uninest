@@ -12,6 +12,8 @@ export const roomKeys = {
   all: ['rooms'] as const,
   lists: () => [...roomKeys.all, 'list'] as const,
   list: (params: RoomListParams) => [...roomKeys.lists(), params] as const,
+  myLists: () => [...roomKeys.all, 'my-list'] as const,
+  myList: (params: RoomListParams) => [...roomKeys.myLists(), params] as const,
   detail: (id: string) => [...roomKeys.all, 'detail', id] as const,
   images: (roomId: string) => [...roomKeys.all, 'images', roomId] as const,
 }
@@ -21,6 +23,16 @@ export function useGetRooms(params: RoomListParams) {
     queryKey: roomKeys.list(params),
     queryFn: async () => {
       const { data } = await roomApi.list(params)
+      return data
+    },
+  })
+}
+
+export function useGetMyRooms(params: RoomListParams) {
+  return useQuery({
+    queryKey: roomKeys.myList(params),
+    queryFn: async () => {
+      const { data } = await roomApi.my(params)
       return data
     },
   })
@@ -47,6 +59,7 @@ export function useCreateRoom() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: roomKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: roomKeys.myLists() })
       toast.success('Đã thêm phòng')
     },
     onError: (error) => {
@@ -84,6 +97,7 @@ export function useDeleteRoom() {
     mutationFn: (id: string) => roomApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: roomKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: roomKeys.myLists() })
       toast.success('Đã xóa phòng')
     },
     onError: (error) => {
@@ -119,13 +133,13 @@ export function useUploadRoomImage() {
       const { data } = await roomApi.uploadImage(roomId, payload)
       return data.data
     },
-    onSuccess: (image) => {
-      queryClient.invalidateQueries({ queryKey: roomKeys.images(image.roomId) })
+    onSuccess: (_image, variables) => {
+      queryClient.invalidateQueries({ queryKey: roomKeys.images(variables.roomId) })
       toast.success('Da them anh phong')
     },
     onError: (error) => {
       toast.error('Khong the them anh phong', {
-        description: getApiErrorMessage(error, 'Vui long kiem tra lai URL anh.'),
+        description: getApiErrorMessage(error, 'Vui long chon file anh hop le.'),
       })
     },
   })

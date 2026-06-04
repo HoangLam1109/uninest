@@ -2,10 +2,17 @@ export type RoomType = 'STUDIO' | 'SINGLE' | 'SHARED' | 'APARTMENT'
 
 export type RoomStatus = 'AVAILABLE' | 'RENTED' | 'MAINTENANCE'
 
+export type RoomLandlord = {
+  _id: string
+  fullName?: string
+  email?: string
+  phone?: string
+}
+
 export type Room = {
   _id: string
   propertyId?: string | null
-  landlordId?: string
+  landlordId?: string | RoomLandlord
   amenityIds?: string[]
   amenities?: string[]
   title: string
@@ -35,6 +42,7 @@ export type RoomImage = {
   _id: string
   roomId: string
   url: string
+  publicId?: string
   caption?: string
   order: number
   isPrimary: boolean
@@ -109,7 +117,7 @@ export type RoomPayload = {
 }
 
 export type RoomImagePayload = {
-  url: string
+  image: File
   caption?: string
   order?: number
   isPrimary?: boolean

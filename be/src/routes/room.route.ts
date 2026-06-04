@@ -4,6 +4,7 @@ import {
   deleteRoom,
   deleteRoomImage,
   getAllRooms,
+  getMyRooms,
   getRoomById,
   getRoomImages,
   publishRoom,
@@ -13,12 +14,14 @@ import {
   uploadRoomImage,
 } from "../controllers/room.controller.js";
 import authenticateMiddleware from "../middlewares/authenticate.middleware.js";
+import { uploadSingleImage } from "../middlewares/upload.middleware.js";
 
 const router = express.Router();
 
 router.post("/create", authenticateMiddleware.authenticateUser, createRoom);
-router.get("/getAll", authenticateMiddleware.authenticateUser, getAllRooms);
-router.get("/getById/:id", authenticateMiddleware.authenticateUser, getRoomById);
+router.get("/getAll", getAllRooms);
+router.get("/my", authenticateMiddleware.authenticateUser, getMyRooms);
+router.get("/getById/:id", getRoomById);
 router.put("/update/:id", authenticateMiddleware.authenticateUser, updateRoom);
 router.delete("/delete/:id", authenticateMiddleware.authenticateUser, deleteRoom);
 
@@ -38,6 +41,7 @@ router.patch(
 router.post(
   "/:id/images",
   authenticateMiddleware.authenticateUser,
+  uploadSingleImage,
   uploadRoomImage
 );
 router.get("/:id/images", getRoomImages);

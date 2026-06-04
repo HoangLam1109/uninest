@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, MapPin, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -25,7 +26,9 @@ export function RoomDetailPage() {
   const imagesQuery = useGetRoomImages(id ?? null)
   const room = roomQuery.data
   const images = sortImages(imagesQuery.data ?? [])
-  const primaryImage = images[0]
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
+  const selectedImage =
+    images.find((image) => image._id === selectedImageId) ?? images[0]
 
   return (
     <MainLayout>
@@ -34,7 +37,7 @@ export function RoomDetailPage() {
           <Button asChild variant="ghost" className="mb-6">
             <Link to="/phong">
               <ArrowLeft className="size-4" />
-              Quay lai danh sach
+              Quay lai danh sách
             </Link>
           </Button>
 
@@ -47,61 +50,71 @@ export function RoomDetailPage() {
 
           {roomQuery.isError ? (
             <div className="rounded-xl border border-red-500/20 bg-white p-8 text-center text-sm text-red-600">
-              Khong the tai thong tin phong.
+              Không thể tải thông tin phòng.
             </div>
           ) : null}
 
           {!roomQuery.isLoading && !roomQuery.isError && !room ? (
             <div className="rounded-xl border border-primary/10 bg-white p-8 text-center text-sm text-muted-foreground">
-              Khong tim thay phong.
+              Không tìm thấy phòng.
             </div>
           ) : null}
 
           {room ? (
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
               <div className="space-y-4">
-                <div className="overflow-hidden rounded-xl bg-border/60">
-                  {primaryImage ? (
+                <div className="flex h-[460px] items-center justify-center overflow-hidden rounded-xl bg-border/60">
+                  {selectedImage ? (
                     <img
-                      src={primaryImage.url}
-                      alt={primaryImage.caption || room.title}
-                      className="h-[460px] w-full object-cover"
+                      src={selectedImage.url}
+                      alt={selectedImage.caption || room.title}
+                      className="max-h-full max-w-full object-contain"
+                      decoding="async"
                     />
                   ) : (
-                    <div className="flex h-[460px] items-center justify-center text-sm font-semibold text-muted-foreground">
-                      Phong chua co anh dai dien
+                    <div className="text-sm font-semibold text-muted-foreground">
+                      Phòng chưa có ảnh đại diện
                     </div>
                   )}
                 </div>
 
                 {images.length > 1 ? (
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                    {images.slice(1, 5).map((image) => (
-                      <div
-                        key={image._id}
-                        className="aspect-[4/3] overflow-hidden rounded-lg bg-border/60"
-                      >
-                        <img
-                          src={image.url}
-                          alt={image.caption || room.title}
-                          className="size-full object-cover"
-                        />
-                      </div>
-                    ))}
+                    {images.slice(0, 5).map((image) => {
+                      const isSelected = image._id === selectedImage?._id
+
+                      return (
+                        <button
+                          key={image._id}
+                          type="button"
+                          aria-pressed={isSelected}
+                          onClick={() => setSelectedImageId(image._id)}
+                          className={`aspect-[4/3] overflow-hidden rounded-lg bg-border/60 ring-offset-2 transition hover:ring-2 hover:ring-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                            isSelected ? 'ring-2 ring-primary' : ''
+                          }`}
+                        >
+                          <img
+                            src={image.url}
+                            alt={image.caption || room.title}
+                            className="size-full object-cover"
+                          />
+                        </button>
+                      )
+                    })}
                   </div>
                 ) : null}
 
                 <article className="rounded-xl border border-primary/10 bg-white p-5">
-                  <h2 className="text-xl font-bold text-foreground">Mo ta phong</h2>
+                  <h2 className="text-xl font-bold text-foreground">Mô tả phòng</h2>
                   <p className="mt-3 whitespace-pre-line text-sm leading-6 text-muted-foreground">
-                    {room.description || 'Phong nay chua co mo ta chi tiet.'}
+                    {room.description || 'Phòng này chưa có mô tả chi tiết.'}
                   </p>
                 </article>
               </div>
 
               <aside className="h-fit rounded-xl border border-primary/10 bg-white p-5">
                 <p className="text-sm font-bold uppercase tracking-[0.14em] text-primary">
-                  Chi tiet phong
+                  Chi tiết phòng
                 </p>
                 <h1 className="mt-2 text-3xl font-bold text-foreground">
                   {room.title}
@@ -114,37 +127,37 @@ export function RoomDetailPage() {
                 </p>
 
                 <div className="mt-6 rounded-xl bg-primary/10 p-4">
-                  <p className="text-sm font-semibold text-primary">Gia thue</p>
+                  <p className="text-sm font-semibold text-primary">Giá thuê</p>
                   <p className="mt-1 text-2xl font-bold text-primary">
                     {currencyFormatter.format(room.pricePerMonth)}
-                    <span className="text-sm font-normal">/thang</span>
+                    <span className="text-sm font-normal">/tháng</span>
                   </p>
                 </div>
 
                 <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
                   <div className="rounded-lg bg-surface p-3">
-                    <p className="text-muted-foreground">Dien tich</p>
+                    <p className="text-muted-foreground">Diện tích</p>
                     <p className="mt-1 font-bold text-foreground">
                       {room.areaSqm ?? 0} m2
                     </p>
                   </div>
                   <div className="rounded-lg bg-surface p-3">
-                    <p className="text-muted-foreground">So nguoi</p>
+                    <p className="text-muted-foreground">Số người</p>
                     <p className="mt-1 flex items-center gap-1 font-bold text-foreground">
                       <Users className="size-4" />
                       {room.maxOccupants}
                     </p>
                   </div>
                   <div className="rounded-lg bg-surface p-3">
-                    <p className="text-muted-foreground">Tien coc</p>
+                    <p className="text-muted-foreground">Tiền cọc</p>
                     <p className="mt-1 font-bold text-foreground">
                       {currencyFormatter.format(room.depositAmount ?? 0)}
                     </p>
                   </div>
                   <div className="rounded-lg bg-surface p-3">
-                    <p className="text-muted-foreground">Loai phong</p>
+                    <p className="text-muted-foreground">Loại phòng</p>
                     <p className="mt-1 font-bold text-foreground">
-                      {room.roomType ?? 'Chua chon'}
+                      {room.roomType ?? 'Chưa chọn'}
                     </p>
                   </div>
                 </div>
@@ -164,7 +177,7 @@ export function RoomDetailPage() {
                   ) : null}
                 </div>
 
-                <Button className="mt-6 w-full">Lien he tu van</Button>
+                <Button className="mt-6 w-full">Liên hệ tư vấn</Button>
               </aside>
             </div>
           ) : null}

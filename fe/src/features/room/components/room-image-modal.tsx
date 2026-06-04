@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { ImageOff, Star, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +13,12 @@ import {
 const inputClassName =
   'h-11 rounded-lg border border-primary/10 px-3 text-sm shadow-none focus-visible:ring-2'
 
+function formatFileSize(size: number) {
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / 1024 / 1024).toFixed(2)} MB`
+}
+
 type RoomImageModalProps = {
   open: boolean
   roomId: string | null
@@ -26,10 +32,11 @@ export function RoomImageModal({
   roomTitle,
   onClose,
 }: RoomImageModalProps) {
-  const [url, setUrl] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [caption, setCaption] = useState('')
   const [order, setOrder] = useState(0)
   const [isPrimary, setIsPrimary] = useState(false)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   const imagesQuery = useGetRoomImages(roomId, open)
   const uploadImage = useUploadRoomImage()
@@ -40,7 +47,8 @@ export function RoomImageModal({
     uploadImage.isPending || deleteImage.isPending || setPrimaryImage.isPending
 
   const resetForm = () => {
-    setUrl('')
+    setImageFile(null)
+    if (imageInputRef.current) imageInputRef.current.value = ''
     setCaption('')
     setOrder(0)
     setIsPrimary(false)
@@ -53,13 +61,13 @@ export function RoomImageModal({
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!roomId || !url.trim()) return
+    if (!roomId || !imageFile) return
 
     uploadImage.mutate(
       {
         roomId,
         payload: {
-          url: url.trim(),
+          image: imageFile,
           caption: caption.trim() || undefined,
           order,
           isPrimary,
@@ -167,15 +175,23 @@ export function RoomImageModal({
         <form className="space-y-4" onSubmit={handleSubmit}>
           <label>
             <span className="mb-1.5 block text-sm font-semibold text-slate-700">
-              URL ảnh
+              Ảnh phòng
             </span>
             <Input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
               className={inputClassName}
-              placeholder="https://..."
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
+              onChange={(event) =>
+                setImageFile(event.target.files?.[0] ?? null)
+              }
               required
             />
+            {imageFile ? (
+              <p className="mt-1 text-xs text-slate-500">
+                {imageFile.name} - {formatFileSize(imageFile.size)}
+              </p>
+            ) : null}
           </label>
 
           <label>
@@ -216,8 +232,8 @@ export function RoomImageModal({
             <Button type="button" variant="ghost" onClick={handleClose}>
               Dong
             </Button>
-            <Button type="submit" disabled={isPending || !roomId || !url.trim()}>
-              {uploadImage.isPending ? 'Đang thêm..' : 'Thêm ảnh'}
+            <Button type="submit" disabled={isPending || !roomId || !imageFile}>
+              {uploadImage.isPending ? 'Đang tải lên...' : 'Thêm ảnh'}
             </Button>
           </div>
         </form>

@@ -10,11 +10,12 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { LandlordDashboardHeader } from '@/features/landlord'
+import { useAuthStore } from '@/stores/auth.store'
 import {
   useCreateRoom,
   useDeleteRoom,
+  useGetMyRooms,
   useGetRoomById,
-  useGetRooms,
   useUpdateRoom,
 } from '../hooks/use-rooms'
 import { useRoomUiStore, type RoomSortOption } from '../stores/room-ui.store'
@@ -42,6 +43,11 @@ const currencyFormatter = new Intl.NumberFormat('vi-VN', {
 
 function formatCurrency(value?: number) {
   return currencyFormatter.format(value ?? 0)
+}
+
+function getRoomLandlordId(room: Room) {
+  if (typeof room.landlordId === 'string') return room.landlordId
+  return room.landlordId?._id
 }
 
 function searchRooms(rooms: Room[], search: string) {
@@ -76,6 +82,7 @@ function sortRooms(rooms: Room[], sort: RoomSortOption) {
 }
 
 export function RoomManagement() {
+  const currentUserId = useAuthStore((state) => state.user?.id)
   const search = useRoomUiStore((state) => state.search)
   const status = useRoomUiStore((state) => state.status)
   const city = useRoomUiStore((state) => state.city)
@@ -109,7 +116,7 @@ export function RoomManagement() {
     [city, district, page, status],
   )
 
-  const roomsQuery = useGetRooms(params)
+  const roomsQuery = useGetMyRooms(params)
   const roomDetailQuery = useGetRoomById(
     editingRoomId,
     formOpen && Boolean(editingRoomId),
@@ -118,7 +125,11 @@ export function RoomManagement() {
   const updateRoom = useUpdateRoom()
   const deleteRoom = useDeleteRoom()
 
-  const rooms = useMemo(() => roomsQuery.data?.data ?? [], [roomsQuery.data?.data])
+  const rooms = useMemo(() => {
+    const data = roomsQuery.data?.data ?? []
+    if (!currentUserId) return []
+    return data.filter((room) => getRoomLandlordId(room) === currentUserId)
+  }, [currentUserId, roomsQuery.data?.data])
   const displayedRooms = useMemo(
     () => sortRooms(searchRooms(rooms, search), sort),
     [rooms, search, sort],
