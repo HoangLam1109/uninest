@@ -20,7 +20,6 @@ const router = express.Router();
 
 router.post("/create", authenticateMiddleware.authenticateUser, createRoom);
 router.get("/getAll", authenticateMiddleware.authenticateUser, getAllRooms);
-router.get("/getTenantByLandlord", authenticateMiddleware.authenticateUser, getTenantListByLandlord);
 router.get("/search", authenticateMiddleware.authenticateUser, searchRooms);
 router.get("/getById/:id", authenticateMiddleware.authenticateUser, getRoomById);
 router.put("/update/:id", authenticateMiddleware.authenticateUser, updateRoom);

@@ -11,6 +11,7 @@ import contractRouter from "./routes/contract.route.js";
 import invoiceRouter from "./routes/invoice.route.js";
 import reviewRouter from "./routes/review.route.js";
 import connectDB from "./config/database.config.js";
+import { setupSwagger } from "./swagger.js";
 
 dotenv.config();
 
@@ -38,6 +39,8 @@ app.use("/api/bookings", bookingRouter);
 app.use("/api/contracts", contractRouter);
 app.use("/api/invoices", invoiceRouter);
 app.use("/api/reviews", reviewRouter);
+
+setupSwagger(app);
 
 app.get("/", (_req, res) => {
   res.send("JWT Authentication System is running!");
