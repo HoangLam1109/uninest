@@ -14,7 +14,7 @@ import type { Room, RoomPayload, RoomStatus, RoomType } from '../types/room.type
 const roomTypeOptions: Array<{ value: RoomType; label: string }> = [
   { value: 'STUDIO', label: 'Studio' },
   { value: 'SINGLE', label: 'Phòng đơn' },
-  { value: 'SHARED', label: 'Phòng ghép' },
+  { value: 'SHARED', label: 'Phòng ghéo' },
   { value: 'APARTMENT', label: 'Căn hộ' },
 ]
 
@@ -29,13 +29,20 @@ const inputClassName =
 
 function toDefaultValues(room?: Room | null): RoomFormInput {
   return {
+    propertyId: room?.propertyId ?? '',
+    amenityIds: room?.amenityIds?.join(', ') ?? '',
     title: room?.title ?? '',
     description: room?.description ?? '',
     address: room?.address ?? '',
     city: room?.city ?? '',
     district: room?.district ?? '',
+    ward: room?.ward ?? '',
+    latitude: room?.latitude,
+    longitude: room?.longitude,
     pricePerMonth: room?.pricePerMonth ?? 0,
     depositAmount: room?.depositAmount,
+    electricityRate: room?.electricityRate,
+    waterRate: room?.waterRate,
     areaSqm: room?.areaSqm,
     maxOccupants: room?.maxOccupants ?? 1,
     roomType: room?.roomType,
@@ -47,9 +54,11 @@ function toDefaultValues(room?: Room | null): RoomFormInput {
 function toPayload(values: RoomFormValues): RoomPayload {
   return {
     ...values,
+    propertyId: values.propertyId || undefined,
     description: values.description || undefined,
     city: values.city || undefined,
     district: values.district || undefined,
+    ward: values.ward || undefined,
   }
 }
 
@@ -108,9 +117,13 @@ export function RoomFormModal({
           ) : null}
         </label>
 
+       
+
+       
+
         <label>
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
-            Giá thuê / tháng
+            Giá thuê/tháng
           </span>
           <Input
             type="number"
@@ -139,6 +152,30 @@ export function RoomFormModal({
 
         <label>
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
+            Mức điện
+          </span>
+          <Input
+            type="number"
+            className={inputClassName}
+            min={0}
+            {...register('electricityRate')}
+          />
+        </label>
+
+        <label>
+          <span className="mb-1.5 block text-sm font-semibold text-slate-700">
+            Hóa đơn nước
+          </span>
+          <Input
+            type="number"
+            className={inputClassName}
+            min={0}
+            {...register('waterRate')}
+          />
+        </label>
+
+        <label>
+          <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Diện tích
           </span>
           <Input
@@ -152,7 +189,7 @@ export function RoomFormModal({
 
         <label>
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
-            Số người tối đa
+            Số người thuê
           </span>
           <Input
             type="number"
@@ -208,9 +245,40 @@ export function RoomFormModal({
 
         <label>
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
-            Quận/Huyện
+            Quận/huyện
           </span>
           <Input className={inputClassName} {...register('district')} />
+        </label>
+
+        <label>
+          <span className="mb-1.5 block text-sm font-semibold text-slate-700">
+            Phường/xã
+          </span>
+          <Input className={inputClassName} {...register('ward')} />
+        </label>
+
+        <label>
+          <span className="mb-1.5 block text-sm font-semibold text-slate-700">
+            Bề ngang
+          </span>
+          <Input
+            type="number"
+            className={inputClassName}
+            step="any"
+            {...register('latitude')}
+          />
+        </label>
+
+        <label>
+          <span className="mb-1.5 block text-sm font-semibold text-slate-700">
+            Bề dài
+          </span>
+          <Input
+            type="number"
+            className={inputClassName}
+            step="any"
+            {...register('longitude')}
+          />
         </label>
 
         <label className="md:col-span-2">
@@ -244,7 +312,7 @@ export function RoomFormModal({
 
         <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end md:col-span-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Hủy
+            Huy
           </Button>
           <Button type="submit" disabled={isPending}>
             {isPending ? 'Đang lưu...' : 'Lưu phòng'}

@@ -1,4 +1,4 @@
 export const env = {
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api',
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL ,
   appName: import.meta.env.VITE_APP_NAME ?? 'UniNest',
 } as const

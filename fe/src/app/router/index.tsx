@@ -13,7 +13,11 @@ import {
   LandlordDashboardPage,
   LandlordPlaceholderPage,
 } from '@/features/landlord'
-import { RoomManagementPage } from '@/features/room'
+import {
+  RoomDetailPage,
+  RoomListPage,
+  RoomManagementPage,
+} from '@/features/room'
 import { staffSidebarConfig, StaffDashboardPage } from '@/features/staff'
 import { tenantSidebarConfig, TenantDashboardPage } from '@/features/tenant'
 import { NotFoundPage } from '@/pages/not-found'
@@ -22,6 +26,8 @@ export function AppRouter() {
   return (
     <Routes>
       <Route path={paths.home} element={<HomePage />} />
+      <Route path={paths.rooms} element={<RoomListPage />} />
+      <Route path={paths.roomDetail} element={<RoomDetailPage />} />
       <Route path={paths.login} element={<LoginPage />} />
       <Route path={paths.register} element={<RegisterPage />} />
       <Route path={paths.dashboard} element={<DashboardRedirectPage />} />

@@ -17,6 +17,8 @@ type RoomUiState = {
   page: number
   modalOpen: boolean
   editingRoomId: string | null
+  imageModalOpen: boolean
+  imageRoomId: string | null
   setSearch: (search: string) => void
   setStatus: (status: RoomStatus | '') => void
   setCity: (city: string) => void
@@ -26,6 +28,8 @@ type RoomUiState = {
   openCreateModal: () => void
   openEditModal: (roomId: string) => void
   closeModal: () => void
+  openImageModal: (roomId: string) => void
+  closeImageModal: () => void
   resetFilters: () => void
 }
 
@@ -38,6 +42,8 @@ export const useRoomUiStore = create<RoomUiState>((set) => ({
   page: 1,
   modalOpen: false,
   editingRoomId: null,
+  imageModalOpen: false,
+  imageRoomId: null,
   setSearch: (search) => set({ search, page: 1 }),
   setStatus: (status) => set({ status, page: 1 }),
   setCity: (city) => set({ city, page: 1 }),
@@ -47,6 +53,8 @@ export const useRoomUiStore = create<RoomUiState>((set) => ({
   openCreateModal: () => set({ modalOpen: true, editingRoomId: null }),
   openEditModal: (roomId) => set({ modalOpen: true, editingRoomId: roomId }),
   closeModal: () => set({ modalOpen: false, editingRoomId: null }),
+  openImageModal: (roomId) => set({ imageModalOpen: true, imageRoomId: roomId }),
+  closeImageModal: () => set({ imageModalOpen: false, imageRoomId: null }),
   resetFilters: () =>
     set({
       search: '',

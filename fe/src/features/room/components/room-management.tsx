@@ -2,8 +2,8 @@ import { useMemo } from 'react'
 import {
   BadgeDollarSign,
   Edit3,
+  Images,
   Plus,
-  RefreshCcw,
   Search,
   Trash2,
 } from 'lucide-react'
@@ -20,6 +20,7 @@ import {
 import { useRoomUiStore, type RoomSortOption } from '../stores/room-ui.store'
 import type { Room, RoomPayload, RoomStatus } from '../types/room.type'
 import { RoomFormModal } from './room-form-modal'
+import { RoomImageModal } from './room-image-modal'
 
 const statusLabels: Record<RoomStatus, string> = {
   AVAILABLE: 'Còn trống',
@@ -83,6 +84,8 @@ export function RoomManagement() {
   const page = useRoomUiStore((state) => state.page)
   const formOpen = useRoomUiStore((state) => state.modalOpen)
   const editingRoomId = useRoomUiStore((state) => state.editingRoomId)
+  const imageModalOpen = useRoomUiStore((state) => state.imageModalOpen)
+  const imageRoomId = useRoomUiStore((state) => state.imageRoomId)
   const setSearch = useRoomUiStore((state) => state.setSearch)
   const setStatus = useRoomUiStore((state) => state.setStatus)
   const setCity = useRoomUiStore((state) => state.setCity)
@@ -92,7 +95,8 @@ export function RoomManagement() {
   const openCreateModal = useRoomUiStore((state) => state.openCreateModal)
   const openEditModal = useRoomUiStore((state) => state.openEditModal)
   const closeModal = useRoomUiStore((state) => state.closeModal)
-  const resetFilters = useRoomUiStore((state) => state.resetFilters)
+  const openImageModal = useRoomUiStore((state) => state.openImageModal)
+  const closeImageModal = useRoomUiStore((state) => state.closeImageModal)
 
   const params = useMemo(
     () => ({
@@ -114,7 +118,7 @@ export function RoomManagement() {
   const updateRoom = useUpdateRoom()
   const deleteRoom = useDeleteRoom()
 
-  const rooms = roomsQuery.data?.data ?? []
+  const rooms = useMemo(() => roomsQuery.data?.data ?? [], [roomsQuery.data?.data])
   const displayedRooms = useMemo(
     () => sortRooms(searchRooms(rooms, search), sort),
     [rooms, search, sort],
@@ -123,6 +127,7 @@ export function RoomManagement() {
     roomDetailQuery.data ??
     rooms.find((room) => room._id === editingRoomId) ??
     null
+  const imageRoom = rooms.find((room) => room._id === imageRoomId) ?? null
   const pagination = roomsQuery.data?.pagination
 
   const summary = useMemo(() => {
@@ -257,10 +262,6 @@ export function RoomManagement() {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row lg:shrink-0">
-            <Button type="button" variant="ghost" onClick={resetFilters}>
-              <RefreshCcw className="size-4" />
-              Đặt lại
-            </Button>
             <Button type="button" onClick={openCreateModal}>
               <Plus className="size-4" />
               Thêm phòng
@@ -350,6 +351,15 @@ export function RoomManagement() {
                         type="button"
                         size="icon"
                         variant="ghost"
+                        aria-label="Quan ly anh phong"
+                        onClick={() => openImageModal(room._id)}
+                      >
+                        <Images className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
                         aria-label="Sửa phòng"
                         onClick={() => openEditModal(room._id)}
                       >
@@ -411,6 +421,12 @@ export function RoomManagement() {
         }
         onClose={closeModal}
         onSubmit={handleSubmit}
+      />
+      <RoomImageModal
+        open={imageModalOpen}
+        roomId={imageRoomId}
+        roomTitle={imageRoom?.title}
+        onClose={closeImageModal}
       />
     </div>
   )

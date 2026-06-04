@@ -2,6 +2,9 @@ import { api } from '@/lib/axios'
 import type {
   RoomListParams,
   RoomListResponse,
+  RoomImageListResponse,
+  RoomImagePayload,
+  RoomImageResponse,
   RoomPayload,
   RoomResponse,
 } from '../types/room.type'
@@ -21,4 +24,18 @@ export const roomApi = {
   delete: (id: string) => api.delete<{ success: boolean; message?: string }>(
     `/rooms/delete/${id}`,
   ),
+
+  listImages: (roomId: string) =>
+    api.get<RoomImageListResponse>(`/rooms/${roomId}/images`),
+
+  uploadImage: (roomId: string, payload: RoomImagePayload) =>
+    api.post<RoomImageResponse>(`/rooms/${roomId}/images`, payload),
+
+  setPrimaryImage: (roomId: string, imageId: string) =>
+    api.patch<RoomImageResponse>(`/rooms/${roomId}/images/${imageId}/primary`),
+
+  deleteImage: (roomId: string, imageId: string) =>
+    api.delete<{ success: boolean; message?: string }>(
+      `/rooms/${roomId}/images/${imageId}`,
+    ),
 }
