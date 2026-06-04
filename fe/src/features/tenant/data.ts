@@ -11,6 +11,7 @@ import {
 
 export const tenantNavItems = [
   { label: 'Tổng quan', href: '/cu-dan', icon: LayoutGrid },
+  { label: 'Đặt phòng', href: '/cu-dan/dat-phong', icon: CalendarDays },
   { label: 'Hóa đơn', href: '/cu-dan/hoa-don', icon: FileText },
   { label: 'Bảo trì', href: '/cu-dan/bao-tri', icon: Wrench },
   { label: 'Phòng đã lưu', href: '/cu-dan/phong-da-luu', icon: Heart },

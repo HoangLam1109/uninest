@@ -1,117 +1,8 @@
-import { Link } from 'react-router-dom'
-import { ArrowRight, Heart, MapPin, Search } from 'lucide-react'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { MainLayout } from '@/layouts/main-layout'
-import { useAuthStore } from '@/stores/auth.store'
-import {
-  useAddRoomFavorite,
-  useCheckRoomFavorite,
-  useGetRoomImages,
-  useGetRooms,
-  useRemoveRoomFavorite,
-} from '../hooks/use-rooms'
-import {
-  formatRoomCurrency,
-  formatRoomLocation,
-  getPrimaryRoomImage,
-} from '../../../utils/room-display'
-import type { Room } from '../types/room.type'
-
-function RoomListCard({ room }: { room: Room }) {
-  const accessToken = useAuthStore((state) => state.accessToken)
-  const imagesQuery = useGetRoomImages(room._id)
-  const favoriteQuery = useCheckRoomFavorite(room._id, Boolean(accessToken))
-  const addFavorite = useAddRoomFavorite()
-  const removeFavorite = useRemoveRoomFavorite()
-  const primaryImage = getPrimaryRoomImage(imagesQuery.data ?? [])
-  const isFavorited = favoriteQuery.data?.isFavorited ?? false
-  const isFavoritePending =
-    favoriteQuery.isFetching || addFavorite.isPending || removeFavorite.isPending
-
-  function handleToggleFavorite() {
-    if (!accessToken) {
-      toast.error('Vui long dang nhap de luu phong yeu thich')
-      return
-    }
-
-    if (isFavorited) {
-      removeFavorite.mutate(room._id)
-      return
-    }
-
-    addFavorite.mutate(room._id)
-  }
-
-  return (
-    <Card className="group relative flex flex-col overflow-hidden">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label={isFavorited ? 'Bo luu phong yeu thich' : 'Luu phong yeu thich'}
-        aria-pressed={isFavorited}
-        disabled={isFavoritePending}
-        onClick={handleToggleFavorite}
-        className="absolute right-3 top-3 z-10 bg-white/90 text-foreground shadow-sm hover:bg-white"
-      >
-        <Heart
-          className={`size-5 ${
-            isFavorited ? 'fill-red-500 text-red-500' : 'text-foreground'
-          }`}
-        />
-      </Button>
-      <Link to={`/phong/${room._id}`} className="relative block h-56 bg-border/60">
-        {primaryImage ? (
-          <img
-            src={primaryImage.url}
-            alt={primaryImage.caption || room.title}
-            className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex size-full items-center justify-center text-sm font-semibold text-muted-foreground">
-            Chua co anh dai dien
-          </div>
-        )}
-      </Link>
-      <CardContent className="flex flex-1 flex-col gap-3">
-        <div>
-          <Link
-            to={`/phong/${room._id}`}
-            className="text-lg font-bold text-foreground transition-colors hover:text-primary"
-          >
-            {room.title}
-          </Link>
-          <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-            <MapPin className="size-3 shrink-0" />
-            {formatRoomLocation(room)}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-          <span>{room.areaSqm ?? 0} m2</span>
-          <span>{room.maxOccupants} nguoi</span>
-          <span>{room.roomType ?? 'Chua chon'}</span>
-          <span>{room.status}</span>
-        </div>
-
-        <div className="mt-auto flex items-center justify-between gap-3">
-          <p className="text-lg font-bold text-primary">
-            {formatRoomCurrency(room.pricePerMonth)}
-            <span className="text-xs font-normal text-muted-foreground">/thang</span>
-          </p>
-          <Button asChild variant="ghost" size="icon" className="bg-border/60">
-            <Link to={`/phong/${room._id}`} aria-label="Xem chi tiet phong">
-              <ArrowRight className="size-4 text-foreground" />
-            </Link>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
+import { RoomListCard } from '../components/room-list-card'
+import { useGetRooms } from '../hooks/use-rooms'
 
 export function RoomListPage() {
   const roomsQuery = useGetRooms({
@@ -157,7 +48,7 @@ export function RoomListPage() {
 
           {roomsQuery.isError ? (
             <div className="rounded-xl border border-red-500/20 bg-white p-8 text-center text-sm text-red-600">
-              Khong the tai danh sach phong.
+              Khong the tai danh sach phong. Vui long thu lai sau.
             </div>
           ) : null}
 

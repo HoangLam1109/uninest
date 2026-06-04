@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   Building2,
+  CalendarDays,
   FileText,
   LayoutGrid,
   Settings,
@@ -18,6 +19,7 @@ export type LandlordNavItem = {
 export const landlordNavItems: LandlordNavItem[] = [
   { label: 'Tổng quan', href: '/chu-nha', icon: LayoutGrid },
   { label: 'Quản lý phòng', href: '/chu-nha/phong', icon: Building2 },
+  { label: 'Đặt phòng', href: '/chu-nha/dat-phong', icon: CalendarDays },
   { label: 'Người thuê', href: '/chu-nha/nguoi-thue', icon: Users },
   { label: 'Hóa đơn', href: '/chu-nha/hoa-don', icon: FileText },
   { label: 'Tiện ích', href: '/chu-nha/tien-ich', icon: Zap },

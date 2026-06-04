@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, MapPin, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MainLayout } from '@/layouts/main-layout'
+import { BookingRequestModal } from '@/features/booking'
 import { useGetRoomById, useGetRoomImages } from '../hooks/use-rooms'
 import { formatRoomCurrency, formatRoomFullLocation } from '../../../utils/room-display'
 import type { RoomImage } from '../types/room.type'
@@ -22,6 +23,7 @@ export function RoomDetailPage() {
   const room = roomQuery.data
   const images = sortImages(imagesQuery.data ?? [])
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
   const selectedImage =
     images.find((image) => image._id === selectedImageId) ?? images[0]
 
@@ -169,13 +171,27 @@ export function RoomDetailPage() {
                     </p>
                   ) : null}
                 </div>
-
+                <Button
+                  type="button"
+                  className="mt-6 w-full"
+                  onClick={() => setIsBookingModalOpen(true)}
+                >
+                  Đặt phòng
+                </Button>
                 <Button className="mt-6 w-full">Liên hệ tư vấn</Button>
               </aside>
             </div>
           ) : null}
         </div>
       </section>
+      {room ? (
+        <BookingRequestModal
+          open={isBookingModalOpen}
+          onClose={() => setIsBookingModalOpen(false)}
+          roomId={room._id}
+          roomTitle={room.title}
+        />
+      ) : null}
     </MainLayout>
   )
 }

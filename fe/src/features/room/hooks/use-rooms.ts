@@ -92,11 +92,11 @@ export function useAddRoomFavorite() {
       const roomId = getFavoriteRoomId(favorite.roomId)
       queryClient.invalidateQueries({ queryKey: roomKeys.favorite(roomId) })
       queryClient.invalidateQueries({ queryKey: roomKeys.favorites() })
-      toast.success('Da luu phong vao yeu thich')
+      toast.success('Đã lưu phòng vào yêu thích')
     },
     onError: (error) => {
-      toast.error('Khong the luu phong', {
-        description: getApiErrorMessage(error, 'Vui long thu lai sau.'),
+      toast.error('Không thể lưu phòng', {
+        description: getApiErrorMessage(error, 'Vui lòng thử lại sau.'),
       })
     },
   })
@@ -110,11 +110,11 @@ export function useRemoveRoomFavorite() {
     onSuccess: (_response, roomId) => {
       queryClient.invalidateQueries({ queryKey: roomKeys.favorite(roomId) })
       queryClient.invalidateQueries({ queryKey: roomKeys.favorites() })
-      toast.success('Da bo luu phong')
+      toast.success('Đã bỏ lưu phòng')
     },
     onError: (error) => {
-      toast.error('Khong the bo luu phong', {
-        description: getApiErrorMessage(error, 'Vui long thu lai sau.'),
+      toast.error('Không thể bỏ lưu phòng', {
+        description: getApiErrorMessage(error, 'Vui lòng thử lại sau.'),
       })
     },
   })

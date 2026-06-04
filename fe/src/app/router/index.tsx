@@ -3,6 +3,7 @@ import { USER_ROLES } from '@/constants/roles'
 import { paths } from '@/config/constants'
 import { adminSidebarConfig, AdminDashboardPage } from '@/features/admin'
 import { LoginPage, RegisterPage } from '@/features/auth'
+import { LandlordBookingsPage, TenantBookingsPage } from '@/features/booking'
 import { ProtectedRoute } from '@/app/router/protected-route'
 import { RoleRoute } from '@/app/router/role-route'
 import { DashboardLayout } from '@/layouts/dashboard-layout'
@@ -42,6 +43,7 @@ export function AppRouter() {
           <Route path={paths.landlordDashboard} element={<LandlordLayout />}>
             <Route index element={<LandlordDashboardPage />} />
             <Route path="phong" element={<RoomManagementPage />} />
+            <Route path="dat-phong" element={<LandlordBookingsPage />} />
             <Route
               path="nguoi-thue"
               element={<LandlordPlaceholderPage title="Người thuê" />}
@@ -68,6 +70,7 @@ export function AppRouter() {
             }
           >
             <Route index element={<TenantDashboardPage />} />
+            <Route path="dat-phong" element={<TenantBookingsPage />} />
             <Route path="hoa-don" element={<TenantDashboardPage />} />
             <Route path="bao-tri" element={<TenantDashboardPage />} />
             <Route path="phong-da-luu" element={<TenantFavoriteRoomsPage />} />
