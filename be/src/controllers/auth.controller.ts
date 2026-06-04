@@ -91,7 +91,7 @@ const loginUser = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-const logoutUser = async (_req: Request, res: Response): Promise<void> => {
+const logoutUser = async (req: Request, res: Response): Promise<void> => {
   try {
     // Stateless JWT: client drops tokens. Add server-side refresh revocation later if needed.
     res.status(200).json({ message: "Logout successful!" });

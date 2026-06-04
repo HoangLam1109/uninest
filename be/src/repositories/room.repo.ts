@@ -13,8 +13,17 @@ export const RoomRepository = {
 
   count: (filter: any) => RoomModel.countDocuments(filter),
 
-  findById: (id: string, landlordId: string) =>
-    RoomModel.findOne({ _id: id, landlordId }),
+  findById: (id: string, landlordId?: string) => {
+    if (landlordId && landlordId.trim() !== "") {
+      return RoomModel.findOne({
+        _id: id,
+        landlordId,
+      });
+    }
+
+    return RoomModel.findById(id);
+  },
+
 
   update: (id: string, landlordId: string, data: any) =>
     RoomModel.findOneAndUpdate(

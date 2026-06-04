@@ -1,6 +1,13 @@
 import User from "../models/User.model.js";
 
 import { UserRepository } from "./user.repo.js";
+import { PropertyRepository } from "./property.repo.js";
+import { RoomImageRepository } from "./room-image.repo.js";
+import { FavoriteRepository } from "./favorite.repo.js";
+import { BookingRepository } from "./booking.repo.js";
+import { ContractRepository } from "./contract.repo.js";
+import { InvoiceRepository, InvoiceDetailRepository } from "./invoice.repo.js";
+import { ReviewRepository } from "./review.repo.js";
 
 // Repository factory
 export class RepositoryFactory {
@@ -21,3 +28,6 @@ export class RepositoryFactory {
 
 // Export individual repositories for convenience
 export const userRepository = RepositoryFactory.getUserRepository();
+
+// Export other repositories
+export { PropertyRepository, RoomImageRepository, FavoriteRepository, BookingRepository, ContractRepository, InvoiceRepository, InvoiceDetailRepository, ReviewRepository };
