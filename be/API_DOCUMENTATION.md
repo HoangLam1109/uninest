@@ -64,7 +64,7 @@ Hệ thống sử dụng 2 middleware xác thực JWT:
 
 **Luồng xử lý:**
 1. Controller nhận `email, fullName, password, phone`.
-2. Validate các trường bắt buộc.
+2. Validate các trường bắt buộc.F
 3. Kiểm tra email đã tồn tại chưa qua `UserService.getUserByEmail`.
 4. Tạo user mới qua `UserService.createUser`.
 5. Trả về kết quả.

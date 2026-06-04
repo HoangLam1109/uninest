@@ -3,6 +3,7 @@ import { USER_ROLES } from '@/constants/roles'
 import { paths } from '@/config/constants'
 import { adminSidebarConfig, AdminDashboardPage } from '@/features/admin'
 import { LoginPage, RegisterPage } from '@/features/auth'
+import { LandlordBookingsPage, TenantBookingsPage } from '@/features/booking'
 import { ProtectedRoute } from '@/app/router/protected-route'
 import { RoleRoute } from '@/app/router/role-route'
 import { DashboardLayout } from '@/layouts/dashboard-layout'
@@ -13,15 +14,25 @@ import {
   LandlordDashboardPage,
   LandlordPlaceholderPage,
 } from '@/features/landlord'
-import { RoomManagementPage } from '@/features/room'
+import {
+  RoomDetailPage,
+  RoomListPage,
+  RoomManagementPage,
+} from '@/features/room'
 import { staffSidebarConfig, StaffDashboardPage } from '@/features/staff'
-import { tenantSidebarConfig, TenantDashboardPage } from '@/features/tenant'
+import {
+  tenantSidebarConfig,
+  TenantDashboardPage,
+  TenantFavoriteRoomsPage,
+} from '@/features/tenant'
 import { NotFoundPage } from '@/pages/not-found'
 
 export function AppRouter() {
   return (
     <Routes>
       <Route path={paths.home} element={<HomePage />} />
+      <Route path={paths.rooms} element={<RoomListPage />} />
+      <Route path={paths.roomDetail} element={<RoomDetailPage />} />
       <Route path={paths.login} element={<LoginPage />} />
       <Route path={paths.register} element={<RegisterPage />} />
       <Route path={paths.dashboard} element={<DashboardRedirectPage />} />
@@ -32,6 +43,7 @@ export function AppRouter() {
           <Route path={paths.landlordDashboard} element={<LandlordLayout />}>
             <Route index element={<LandlordDashboardPage />} />
             <Route path="phong" element={<RoomManagementPage />} />
+            <Route path="dat-phong" element={<LandlordBookingsPage />} />
             <Route
               path="nguoi-thue"
               element={<LandlordPlaceholderPage title="Người thuê" />}
@@ -58,9 +70,10 @@ export function AppRouter() {
             }
           >
             <Route index element={<TenantDashboardPage />} />
+            <Route path="dat-phong" element={<TenantBookingsPage />} />
             <Route path="hoa-don" element={<TenantDashboardPage />} />
             <Route path="bao-tri" element={<TenantDashboardPage />} />
-            <Route path="phong-da-luu" element={<TenantDashboardPage />} />
+            <Route path="phong-da-luu" element={<TenantFavoriteRoomsPage />} />
             <Route path="hop-dong" element={<TenantDashboardPage />} />
           </Route>
         </Route>

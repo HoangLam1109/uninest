@@ -2,45 +2,35 @@ import { useMemo } from 'react'
 import {
   BadgeDollarSign,
   Edit3,
+  Images,
   Plus,
-  RefreshCcw,
   Search,
   Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { LandlordDashboardHeader } from '@/features/landlord'
+import { useAuthStore } from '@/stores/auth.store'
 import {
   useCreateRoom,
   useDeleteRoom,
+  useGetMyRooms,
   useGetRoomById,
-  useGetRooms,
   useUpdateRoom,
 } from '../hooks/use-rooms'
+import {
+  formatRoomCurrency,
+  roomStatusClasses,
+  roomStatusLabels,
+} from '../../../utils/room-display'
 import { useRoomUiStore, type RoomSortOption } from '../stores/room-ui.store'
 import type { Room, RoomPayload, RoomStatus } from '../types/room.type'
 import { RoomFormModal } from './room-form-modal'
+import { RoomImageModal } from './room-image-modal'
 
-const statusLabels: Record<RoomStatus, string> = {
-  AVAILABLE: 'Còn trống',
-  RENTED: 'Đã thuê',
-  MAINTENANCE: 'Bảo trì',
-}
-
-const statusClasses: Record<RoomStatus, string> = {
-  AVAILABLE: 'bg-green-500/10 text-green-700',
-  RENTED: 'bg-primary/10 text-primary',
-  MAINTENANCE: 'bg-red-500/10 text-red-600',
-}
-
-const currencyFormatter = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-  maximumFractionDigits: 0,
-})
-
-function formatCurrency(value?: number) {
-  return currencyFormatter.format(value ?? 0)
+function getRoomLandlordId(room: Room) {
+  if (typeof room.landlordId === 'string') return room.landlordId
+  return room.landlordId?._id
 }
 
 function searchRooms(rooms: Room[], search: string) {
@@ -75,6 +65,7 @@ function sortRooms(rooms: Room[], sort: RoomSortOption) {
 }
 
 export function RoomManagement() {
+  const currentUserId = useAuthStore((state) => state.user?.id)
   const search = useRoomUiStore((state) => state.search)
   const status = useRoomUiStore((state) => state.status)
   const city = useRoomUiStore((state) => state.city)
@@ -83,6 +74,8 @@ export function RoomManagement() {
   const page = useRoomUiStore((state) => state.page)
   const formOpen = useRoomUiStore((state) => state.modalOpen)
   const editingRoomId = useRoomUiStore((state) => state.editingRoomId)
+  const imageModalOpen = useRoomUiStore((state) => state.imageModalOpen)
+  const imageRoomId = useRoomUiStore((state) => state.imageRoomId)
   const setSearch = useRoomUiStore((state) => state.setSearch)
   const setStatus = useRoomUiStore((state) => state.setStatus)
   const setCity = useRoomUiStore((state) => state.setCity)
@@ -92,7 +85,8 @@ export function RoomManagement() {
   const openCreateModal = useRoomUiStore((state) => state.openCreateModal)
   const openEditModal = useRoomUiStore((state) => state.openEditModal)
   const closeModal = useRoomUiStore((state) => state.closeModal)
-  const resetFilters = useRoomUiStore((state) => state.resetFilters)
+  const openImageModal = useRoomUiStore((state) => state.openImageModal)
+  const closeImageModal = useRoomUiStore((state) => state.closeImageModal)
 
   const params = useMemo(
     () => ({
@@ -105,7 +99,7 @@ export function RoomManagement() {
     [city, district, page, status],
   )
 
-  const roomsQuery = useGetRooms(params)
+  const roomsQuery = useGetMyRooms(params)
   const roomDetailQuery = useGetRoomById(
     editingRoomId,
     formOpen && Boolean(editingRoomId),
@@ -114,7 +108,11 @@ export function RoomManagement() {
   const updateRoom = useUpdateRoom()
   const deleteRoom = useDeleteRoom()
 
-  const rooms = roomsQuery.data?.data ?? []
+  const rooms = useMemo(() => {
+    const data = roomsQuery.data?.data ?? []
+    if (!currentUserId) return []
+    return data.filter((room) => getRoomLandlordId(room) === currentUserId)
+  }, [currentUserId, roomsQuery.data?.data])
   const displayedRooms = useMemo(
     () => sortRooms(searchRooms(rooms, search), sort),
     [rooms, search, sort],
@@ -123,6 +121,7 @@ export function RoomManagement() {
     roomDetailQuery.data ??
     rooms.find((room) => room._id === editingRoomId) ??
     null
+  const imageRoom = rooms.find((room) => room._id === imageRoomId) ?? null
   const pagination = roomsQuery.data?.pagination
 
   const summary = useMemo(() => {
@@ -257,10 +256,6 @@ export function RoomManagement() {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row lg:shrink-0">
-            <Button type="button" variant="ghost" onClick={resetFilters}>
-              <RefreshCcw className="size-4" />
-              Đặt lại
-            </Button>
             <Button type="button" onClick={openCreateModal}>
               <Plus className="size-4" />
               Thêm phòng
@@ -326,19 +321,19 @@ export function RoomManagement() {
                   <td className="px-4 py-4">
                     <p className="inline-flex items-center gap-1 font-semibold text-slate-900">
                       <BadgeDollarSign className="size-4 text-primary" />
-                      {formatCurrency(room.pricePerMonth)}
+                      {formatRoomCurrency(room.pricePerMonth)}
                     </p>
                     {room.depositAmount ? (
                       <p className="mt-1 text-xs text-slate-500">
-                        Cọc {formatCurrency(room.depositAmount)}
+                        Cọc {formatRoomCurrency(room.depositAmount)}
                       </p>
                     ) : null}
                   </td>
                   <td className="px-4 py-4">
                     <span
-                      className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-bold ${statusClasses[room.status]}`}
+                      className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-bold ${roomStatusClasses[room.status]}`}
                     >
-                      {statusLabels[room.status]}
+                      {roomStatusLabels[room.status]}
                     </span>
                   </td>
                   <td className="px-4 py-4 text-sm text-slate-600">
@@ -346,6 +341,15 @@ export function RoomManagement() {
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        aria-label="Quan ly anh phong"
+                        onClick={() => openImageModal(room._id)}
+                      >
+                        <Images className="size-4" />
+                      </Button>
                       <Button
                         type="button"
                         size="icon"
@@ -411,6 +415,12 @@ export function RoomManagement() {
         }
         onClose={closeModal}
         onSubmit={handleSubmit}
+      />
+      <RoomImageModal
+        open={imageModalOpen}
+        roomId={imageRoomId}
+        roomTitle={imageRoom?.title}
+        onClose={closeImageModal}
       />
     </div>
   )

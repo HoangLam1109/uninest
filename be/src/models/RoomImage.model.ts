@@ -3,6 +3,7 @@ import { Schema, model, Document, Types } from "mongoose";
 export interface IRoomImage extends Document {
   roomId: Types.ObjectId;
   url: string;
+  publicId?: string;
   caption?: string;
   order: number;
   isPrimary: boolean;
@@ -20,6 +21,10 @@ const RoomImageSchema = new Schema<IRoomImage>(
     url: {
       type: String,
       required: [true, "Image URL is required"],
+      trim: true,
+    },
+    publicId: {
+      type: String,
       trim: true,
     },
     caption: {

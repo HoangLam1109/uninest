@@ -1,6 +1,4 @@
 import { RoomModel } from "../models/Room.model.js";
-import mongoose from "mongoose";
-
 export const RoomRepository = {
   create: (data: any) => RoomModel.create(data),
 
@@ -18,10 +16,10 @@ export const RoomRepository = {
       return RoomModel.findOne({
         _id: id,
         landlordId,
-      });
+      }).populate("landlordId", "fullName email phone");
     }
 
-    return RoomModel.findById(id);
+    return RoomModel.findById(id).populate("landlordId", "fullName email phone");
   },
 
 
