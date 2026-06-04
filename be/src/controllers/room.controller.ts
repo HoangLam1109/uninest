@@ -1,7 +1,40 @@
 import type { Request, Response } from "express";
 import mongoose from "mongoose";
+import { configureCloudinary } from "../config/cloudinary.config.js";
 import { RoomService } from "../services/room.service.js";
 import { UserService } from "../services/user.service.js";
+
+function uploadBufferToCloudinary(file: Express.Multer.File, roomId: string) {
+  const cloudinary = configureCloudinary();
+
+  return new Promise<{ secure_url: string; public_id: string }>(
+    (resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: `uninest/rooms/${roomId}`,
+          resource_type: "image",
+          transformation: [
+            { width: 1600, height: 1200, crop: "limit" },
+            { quality: "auto", fetch_format: "auto" },
+          ],
+        },
+        (error, result) => {
+          if (error || !result) {
+            reject(error ?? new Error("Cloudinary upload failed"));
+            return;
+          }
+
+          resolve({
+            secure_url: result.secure_url,
+            public_id: result.public_id,
+          });
+        },
+      );
+
+      uploadStream.end(file.buffer);
+    },
+  );
+}
 
 /**
  * CREATE ROOM
@@ -29,9 +62,55 @@ export const createRoom = async (req: Request, res: Response) => {
  */
 export const getAllRooms = async (req: Request, res: Response) => {
   try {
+    const { city, district, status, minPrice, maxPrice, page = 1, limit = 10 } =
+      req.query;
+
+    const filter: any = {};
+
+    if (city) filter.city = city;
+    if (district) filter.district = district;
+    if (status) filter.status = status;
+
+    if (minPrice || maxPrice) {
+      filter.pricePerMonth = {};
+      if (minPrice) filter.pricePerMonth.$gte = Number(minPrice);
+      if (maxPrice) filter.pricePerMonth.$lte = Number(maxPrice);
+    }
+
+    const pageNumber = Number(page);
+    const limitNumber = Number(limit);
+    const skip = (pageNumber - 1) * limitNumber;
+
+    const { rooms, total } = await RoomService.getAllRooms(
+      filter,
+      skip,
+      limitNumber
+    );
+
+    return res.json({
+      success: true,
+      data: rooms,
+      pagination: {
+        total,
+        page: pageNumber,
+        limit: limitNumber,
+        totalPages: Math.ceil(total / limitNumber),
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * GET MY ROOMS
+ */
+export const getMyRooms = async (req: Request, res: Response) => {
+  try {
     const landlordId = req.userId;
     if (!landlordId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
+
     const { city, district, status, minPrice, maxPrice, page = 1, limit = 10 } =
       req.query;
 
@@ -149,15 +228,11 @@ export const searchRooms = async (req: Request, res: Response) => {
 export const getRoomById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const landlordId = req.userId;
-
-    if (!landlordId)
-      return res.status(401).json({ success: false, message: "Unauthorized" });
 
     if (!mongoose.Types.ObjectId.isValid(id as string))
       return res.status(400).json({ success: false, message: "Invalid id" });
 
-    const room = await RoomService.getRoomById(id as string, landlordId);
+    const room = await RoomService.getRoomById(id as string);
 
     if (!room)
       return res.status(404).json({ success: false, message: "Not found" });
@@ -295,20 +370,24 @@ export const uploadRoomImage = async (req: Request, res: Response) => {
     if (!room)
       return res.status(404).json({ success: false, message: "Room not found" });
 
-    const { url, caption, order, isPrimary } = req.body;
+    const file = req.file;
+    const { caption, order, isPrimary } = req.body;
 
-    if (!url) {
+    if (!file) {
       return res.status(400).json({
         success: false,
-        message: "Image URL is required",
+        message: "Image file is required",
       });
     }
 
+    const uploadedImage = await uploadBufferToCloudinary(file, roomId as string);
+
     const image = await RoomService.uploadRoomImage(roomId as string, {
-      url,
+      url: uploadedImage.secure_url,
+      publicId: uploadedImage.public_id,
       caption,
-      order: order || 0,
-      isPrimary: isPrimary || false,
+      order: Number(order || 0),
+      isPrimary: isPrimary === "true" || isPrimary === true,
     });
 
     return res.status(201).json({
@@ -371,6 +450,15 @@ export const deleteRoomImage = async (req: Request, res: Response) => {
 
     if (!image)
       return res.status(404).json({ success: false, message: "Image not found" });
+
+    if (image.publicId) {
+      try {
+        const cloudinary = configureCloudinary();
+        await cloudinary.uploader.destroy(image.publicId);
+      } catch (cloudinaryError) {
+        console.error("Failed to delete Cloudinary image:", cloudinaryError);
+      }
+    }
 
     return res.json({
       success: true,
