@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import authRouter from "./routes/auth.route.js";
 import roomRouter from "./routes/room.route.js";
+import userRouter from "./routes/user.route.js";
 import propertyRouter from "./routes/property.route.js";
 import favoriteRouter from "./routes/favorite.route.js";
 import bookingRouter from "./routes/booking.route.js";
@@ -29,6 +30,7 @@ connectDB();
 
 app.use(express.json());
 app.use("/api/auth", authRouter);
+app.use("/api/users", userRouter);
 app.use("/api/properties", propertyRouter);
 app.use("/api/rooms", roomRouter);
 app.use("/api/favorites", favoriteRouter);

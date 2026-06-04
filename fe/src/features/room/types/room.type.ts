@@ -2,6 +2,22 @@ export type RoomType = 'STUDIO' | 'SINGLE' | 'SHARED' | 'APARTMENT'
 
 export type RoomStatus = 'AVAILABLE' | 'RENTED' | 'MAINTENANCE'
 
+export type TenantRef = {
+  tenantId: string
+  isPrimaryTenant: boolean
+}
+
+export type TenantPopulated = {
+  tenantId: {
+    _id: string
+    fullName: string
+    email: string
+    phone: string
+    avatarUrl?: string
+  }
+  isPrimaryTenant: boolean
+}
+
 export type Room = {
   _id: string
   landlordId?: string
@@ -17,6 +33,7 @@ export type Room = {
   depositAmount?: number
   areaSqm?: number
   maxOccupants: number
+  tenants?: TenantPopulated[]
   roomType?: RoomType
   status: RoomStatus
   isPublished: boolean
@@ -64,6 +81,7 @@ export type RoomPayload = {
   depositAmount?: number
   areaSqm?: number
   maxOccupants: number
+  tenants?: TenantRef[]
   roomType?: RoomType
   status?: RoomStatus
   isPublished?: boolean

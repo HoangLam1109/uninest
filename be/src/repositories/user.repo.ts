@@ -45,4 +45,8 @@ export class UserRepository implements IUserRepository {
   async findAll(fields?: string): Promise<any[]> {
     return await this.userModel.find({}, fields);
   }
+
+  async findByPhone(phone: string): Promise<any> {
+    return await this.userModel.findOne({ phone });
+  }
 }

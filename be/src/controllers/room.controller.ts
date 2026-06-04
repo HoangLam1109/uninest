@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import { RoomService } from "../services/room.service.js";
+import { UserService } from "../services/user.service.js";
 
 /**
  * CREATE ROOM
@@ -68,6 +69,35 @@ export const getAllRooms = async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * GET ALL TETANT BY LANDLORD ID   
+ * */
+export const getTenantListByLandlord = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const landlordId = req.userId;
+    if (!landlordId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const tenants =
+      await RoomService.getTenantListByLandlord(
+        landlordId
+      );
+
+    return res.status(200).json({
+      success: true,
+      data: tenants,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 

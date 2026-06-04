@@ -7,6 +7,7 @@ export const RoomRepository = {
   findAll: (filter: any, skip: number, limit: number) =>
     RoomModel.find(filter)
       .populate("landlordId", "fullName email phone")
+      .populate("tenants.tenantId", "fullName email phone avatarUrl")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
@@ -14,14 +15,13 @@ export const RoomRepository = {
   count: (filter: any) => RoomModel.countDocuments(filter),
 
   findById: (id: string, landlordId?: string) => {
-    if (landlordId && landlordId.trim() !== "") {
-      return RoomModel.findOne({
-        _id: id,
-        landlordId,
-      });
-    }
+    const query = landlordId && landlordId.trim() !== ""
+      ? RoomModel.findOne({ _id: id, landlordId })
+      : RoomModel.findById(id);
 
-    return RoomModel.findById(id);
+    return query
+      .populate("landlordId", "fullName email phone")
+      .populate("tenants.tenantId", "fullName email phone avatarUrl");
   },
 
 
@@ -38,9 +38,22 @@ export const RoomRepository = {
   search: (keyword: any, skip: number, limit: number) =>
     RoomModel.find(keyword)
       .populate("landlordId", "fullName email phone")
+      .populate("tenants.tenantId", "fullName email phone avatarUrl")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
 
   countSearch: (keyword: any) => RoomModel.countDocuments(keyword),
+  
+  getTenantListByLandlord: (landlordId: string) => {
+    return RoomModel.find({
+      landlordId,
+      deletedAt: null,
+    })
+      .populate({
+        path: "tenants.tenantId",
+        select: "fullName email phone avatarUrl",
+      })
+      .lean();
+  }
 };
