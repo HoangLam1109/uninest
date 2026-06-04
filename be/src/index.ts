@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import authRouter from "./routes/auth.route.js";
 import roomRouter from "./routes/room.route.js";
+import userRouter from "./routes/user.route.js";
 import propertyRouter from "./routes/property.route.js";
 import favoriteRouter from "./routes/favorite.route.js";
 import bookingRouter from "./routes/booking.route.js";
@@ -10,6 +11,7 @@ import contractRouter from "./routes/contract.route.js";
 import invoiceRouter from "./routes/invoice.route.js";
 import reviewRouter from "./routes/review.route.js";
 import connectDB from "./config/database.config.js";
+import { setupSwagger } from "./swagger.js";
 
 dotenv.config();
 
@@ -29,6 +31,7 @@ connectDB();
 
 app.use(express.json());
 app.use("/api/auth", authRouter);
+app.use("/api/users", userRouter);
 app.use("/api/properties", propertyRouter);
 app.use("/api/rooms", roomRouter);
 app.use("/api/favorites", favoriteRouter);
@@ -36,6 +39,8 @@ app.use("/api/bookings", bookingRouter);
 app.use("/api/contracts", contractRouter);
 app.use("/api/invoices", invoiceRouter);
 app.use("/api/reviews", reviewRouter);
+
+setupSwagger(app);
 
 app.get("/", (_req, res) => {
   res.send("JWT Authentication System is running!");

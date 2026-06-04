@@ -310,6 +310,24 @@ export function RoomManagement() {
                       {room.roomType ?? 'Chưa chọn'} · {room.areaSqm ?? 0} m2 ·{' '}
                       {room.maxOccupants} người
                     </p>
+                    {room.tenants && room.tenants.length > 0 ? (
+                      <p className="mt-1 text-xs font-medium text-primary">
+                        {room.tenants.length} người thuê
+                        {room.tenants.some((t) => t.isPrimaryTenant) ? (
+                          <span className="ml-1 text-slate-500">
+                            · Chính:{' '}
+                            {room.tenants
+                              .filter((t) => t.isPrimaryTenant)
+                              .map((t) =>
+                                typeof t.tenantId === 'string'
+                                  ? t.tenantId
+                                  : t.tenantId.fullName
+                              )
+                              .join(', ')}
+                          </span>
+                        ) : null}
+                      </p>
+                    ) : null}
                   </td>
                   <td className="px-4 py-4 text-sm text-slate-600">
                     <p>{room.address}</p>

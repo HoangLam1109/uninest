@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useFieldArray, useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
@@ -10,6 +10,7 @@ import {
   type RoomFormValues,
 } from '../schemas/room.schema'
 import type { Room, RoomPayload, RoomStatus, RoomType } from '../types/room.type'
+import { MinusCircle, PlusCircle } from 'lucide-react'
 
 const roomTypeOptions: Array<{ value: RoomType; label: string }> = [
   { value: 'STUDIO', label: 'Studio' },
@@ -45,6 +46,14 @@ function toDefaultValues(room?: Room | null): RoomFormInput {
     waterRate: room?.waterRate,
     areaSqm: room?.areaSqm,
     maxOccupants: room?.maxOccupants ?? 1,
+    tenants:
+      room?.tenants?.map((t) => ({
+        tenantId:
+          typeof t.tenantId === 'string'
+            ? t.tenantId
+            : t.tenantId._id,
+        isPrimaryTenant: t.isPrimaryTenant,
+      })) ?? [],
     roomType: room?.roomType,
     status: room?.status ?? 'AVAILABLE',
     isPublished: room?.isPublished ?? false,
@@ -81,10 +90,16 @@ export function RoomFormModal({
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors },
   } = useForm<RoomFormInput, unknown, RoomFormValues>({
     resolver: zodResolver(roomSchema),
     defaultValues: toDefaultValues(room),
+  })
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'tenants',
   })
 
   useEffect(() => {
@@ -203,6 +218,84 @@ export function RoomFormModal({
             </p>
           ) : null}
         </label>
+
+        {/* ---------- Tenants ---------- */}
+        <fieldset className="md:col-span-2 space-y-3 rounded-lg border border-primary/10 p-4">
+          <div className="flex items-center justify-between">
+            <legend className="text-sm font-semibold text-slate-700">
+              Người thuê ({fields.length})
+            </legend>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => append({ tenantId: '', isPrimaryTenant: false })}
+            >
+              <PlusCircle className="size-4" />
+              Thêm người thuê
+            </Button>
+          </div>
+
+          {fields.length === 0 ? (
+            <p className="text-xs text-slate-500">
+              Chưa có người thuê nào. Nhấn "Thêm người thuê" để gán người thuê vào phòng.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {fields.map((field, index) => (
+                <div
+                  key={field.id}
+                  className="flex items-start gap-3 rounded-lg border border-primary/10 bg-slate-50 p-3"
+                >
+                  <div className="flex-1 space-y-1">
+                    <label className="text-xs font-semibold text-slate-500">
+                      ID người thuê
+                    </label>
+                    <Input
+                      className="h-10 border border-primary/10 px-3 text-sm shadow-none"
+                      placeholder="Nhập ID người dùng"
+                      {...register(`tenants.${index}.tenantId`)}
+                    />
+                    {errors.tenants?.[index]?.tenantId ? (
+                      <p className="text-xs text-red-600">
+                        {errors.tenants[index]!.tenantId!.message}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <label className="flex shrink-0 items-center gap-2 pt-6 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      className="size-4 accent-primary"
+                      {...register(`tenants.${index}.isPrimaryTenant`)}
+                    />
+                    Thuê chính
+                  </label>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="mt-5 shrink-0 text-red-500 hover:text-red-700"
+                    aria-label="Xóa người thuê"
+                    onClick={() => remove(index)}
+                  >
+                    <MinusCircle className="size-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {errors.tenants?.root ? (
+            <p className="text-xs text-red-600">{errors.tenants.root.message}</p>
+          ) : null}
+          {errors.tenants && !Array.isArray(errors.tenants) && 'message' in errors.tenants ? (
+            <p className="text-xs text-red-600">
+              {(errors.tenants as { message?: string }).message}
+            </p>
+          ) : null}
+        </fieldset>
 
         <label>
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">

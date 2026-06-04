@@ -13,6 +13,11 @@ export enum ROOM_STATUS {
   MAINTENANCE = "MAINTENANCE",
 }
 
+export interface ITenantRef {
+  tenantId: Types.ObjectId;
+  isPrimaryTenant: boolean;
+}
+
 export interface IRoom extends Document {
   propertyId?: Types.ObjectId;
   landlordId: Types.ObjectId;
@@ -31,6 +36,7 @@ export interface IRoom extends Document {
   waterRate?: number;
   areaSqm?: number;
   maxOccupants: number;
+  tenants: ITenantRef[];
   roomType?: ROOM_TYPE;
   status: ROOM_STATUS;
   isPublished: boolean;
@@ -92,6 +98,30 @@ const RoomSchema = new Schema<IRoom>(
     maxOccupants: {
       type: Number,
       default: 1,
+    },
+    tenants: {
+      type: [
+        {
+          tenantId: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+          },
+          isPrimaryTenant: {
+            type: Boolean,
+            default: false,
+          },
+        },
+      ],
+      default: [],
+      validate: {
+        validator: function (this: IRoom, value: ITenantRef[]) {
+          // At most one primary tenant
+          const primaryCount = value.filter((t) => t.isPrimaryTenant).length;
+          return primaryCount <= 1;
+        },
+        message: "Only one tenant can be the primary tenant",
+      },
     },
     roomType: {
       type: String,

@@ -18,6 +18,16 @@ export interface UpdateUserData {
   avatarUrl?: string;
 }
 
+export interface ITenant {
+  tenantId: string;
+  tenantName: string;
+  tenantEmail: string;
+  tenantPhone: string;
+  tenantAvatarUrl?: string;
+  isPrimaryTenant: boolean;
+}
+
+
 export class UserService {
   async getUser(userId: string): Promise<IUser | null> {
     return await userRepository.findById(
@@ -86,4 +96,18 @@ export class UserService {
       return newUser;
     } else return userData;
   }
+  
+
+  async getUserByPhone(phone: string): Promise<IUser | null> {
+    return await userRepository.findByPhone(phone);
+  }
+  async updateUserProfile(userId: string, userData: UpdateUserData): Promise<IUser | null> {
+    const updatedUser = await userRepository.updateById(userId, userData);
+    return updatedUser;
+  }
+  
+  async getUserProfile (userId: string): Promise<IUser | null> {
+    return await userRepository.findById(userId);
+  }
 }
+  

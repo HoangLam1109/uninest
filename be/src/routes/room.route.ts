@@ -7,7 +7,9 @@ import {
   getMyRooms,
   getRoomById,
   getRoomImages,
+  getTenantListByLandlord,
   publishRoom,
+  searchRooms,
   setPrimaryImage,
   unpublishRoom,
   updateRoom,
@@ -35,6 +37,13 @@ router.patch(
   "/:id/unpublish",
   authenticateMiddleware.authenticateUser,
   unpublishRoom
+);
+
+// Tenants
+router.get(
+  "/tenants",
+  authenticateMiddleware.authenticateUser,
+  getTenantListByLandlord
 );
 
 // Room Images

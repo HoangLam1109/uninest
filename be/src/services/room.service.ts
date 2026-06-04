@@ -1,9 +1,35 @@
 import { RoomRepository } from "../repositories/room.repo.js";
 import { RoomImageRepository } from "../repositories/room-image.repo.js";
-import { ROOM_STATUS } from "../models/Room.model.js";
+import { ROOM_STATUS, RoomModel, type ITenantRef } from "../models/Room.model.js";
+
+/**
+ * Validate tenants array against business rules:
+ * - At most one primary tenant
+ * - Number of tenants cannot exceed maxOccupants
+ */
+const validateTenants = (tenants: ITenantRef[], maxOccupants: number): void => {
+  if (!tenants || tenants.length === 0) return;
+
+  // Only one primary tenant allowed
+  const primaryCount = tenants.filter((t) => t.isPrimaryTenant).length;
+  if (primaryCount > 1) {
+    throw new Error("Only one tenant can be the primary tenant");
+  }
+
+  // Tenants cannot exceed maxOccupants
+  if (tenants.length > maxOccupants) {
+    throw new Error(
+      `Number of tenants (${tenants.length}) cannot exceed max occupants (${maxOccupants})`
+    );
+  }
+};
 
 export const RoomService = {
   createRoom: async (data: any, landlordId: string) => {
+    const tenants: ITenantRef[] = data.tenants ?? [];
+    const maxOccupants = data.maxOccupants ?? 1;
+    validateTenants(tenants, maxOccupants);
+
     return await RoomRepository.create({
       ...data,
       landlordId,
@@ -34,6 +60,17 @@ export const RoomService = {
   },
 
   updateRoom: async (id: string, landlordId: string, data: any) => {
+    // Validate tenants if present in update data
+    if (data.tenants !== undefined) {
+      // Fetch current room to resolve maxOccupants if not provided
+      let maxOccupants = data.maxOccupants;
+      if (maxOccupants === undefined) {
+        const currentRoom = await RoomRepository.findById(id, landlordId);
+        maxOccupants = currentRoom?.maxOccupants ?? 1;
+      }
+      validateTenants(data.tenants, maxOccupants);
+    }
+
     return await RoomRepository.update(id, landlordId, data);
   },
 
@@ -78,4 +115,26 @@ export const RoomService = {
     const result = await RoomImageRepository.setPrimaryImage(roomId, imageId);
     return result[1];
   },
+  getTenantListByLandlord : async (landlordId: string) => {
+    const rooms =
+      await RoomRepository.getTenantListByLandlord(landlordId);
+
+    return rooms.flatMap((room: any) =>
+      room.tenants.map((tenant: any) => {
+        const user = tenant.tenantId;
+
+        return {
+          tenantId: user._id,
+          tenantName: user.fullName,
+          tenantEmail: user.email,
+          tenantPhone: user.phone,
+          tenantAvatarUrl: user.avatarUrl,
+          isPrimaryTenant: tenant.isPrimaryTenant,
+
+          roomTitle: room.title,
+          address: room.address,
+        };
+      })
+    );
+  }
 };
