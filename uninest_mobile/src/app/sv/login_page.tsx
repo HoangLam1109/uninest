@@ -43,16 +43,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [studentTab, setStudentTab] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLogin = async () => {
-    if (!studentTab) {
-      signIn();
-      router.replace("/landlord/home_page" as any);
-      return;
-    }
-
     const error = validateLogin(email, password);
     if (error) {
       Alert.alert("Đăng nhập thất bại", error);
@@ -72,7 +65,12 @@ export default function LoginPage() {
         refreshToken: response.data.refreshToken,
       });
 
-      router.replace("/" as any);
+      const role = response.data.user.role;
+      if (role === "LANDLORD") {
+        router.replace("/landlord/home_page" as any);
+      } else {
+        router.replace("/" as any);
+      }
     } catch (err) {
       Alert.alert(
         "Đăng nhập thất bại",
@@ -113,41 +111,6 @@ export default function LoginPage() {
                 <ThemedText type="small" style={styles.subtitle}>
                   Ngôi nhà của bạn xa giảng đường
                 </ThemedText>
-              </View>
-
-              <View style={styles.tabRow}>
-                <Pressable
-                  onPress={() => setStudentTab(true)}
-                  style={[
-                    styles.tab,
-                    studentTab ? styles.tabActive : styles.tabIdle,
-                  ]}
-                >
-                  <ThemedText
-                    type="smallBold"
-                    style={
-                      studentTab ? styles.tabTextActive : styles.tabTextIdle
-                    }
-                  >
-                    Đăng nhập Sinh viên
-                  </ThemedText>
-                </Pressable>
-                <Pressable
-                  onPress={() => setStudentTab(false)}
-                  style={[
-                    styles.tab,
-                    !studentTab ? styles.tabActive : styles.tabIdle,
-                  ]}
-                >
-                  <ThemedText
-                    type="smallBold"
-                    style={
-                      !studentTab ? styles.tabTextActive : styles.tabTextIdle
-                    }
-                  >
-                    Đăng nhập Cho nhà
-                  </ThemedText>
-                </Pressable>
               </View>
 
               <View style={styles.bannerWrap}>
@@ -213,7 +176,7 @@ export default function LoginPage() {
                 onPress={handleLogin}
                 disabled={isSubmitting}
               >
-                {isSubmitting && studentTab ? (
+                {isSubmitting ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
                   <ThemedText
@@ -314,29 +277,6 @@ const styles = StyleSheet.create({
     color: "#4B5568",
     textAlign: "center",
     lineHeight: 20,
-  },
-  tabRow: {
-    flexDirection: "row",
-    marginBottom: 14,
-    gap: 10,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    borderBottomWidth: 2,
-  },
-  tabActive: {
-    borderBottomColor: "#F28C1B",
-  },
-  tabIdle: {
-    borderBottomColor: "#E7D8C5",
-  },
-  tabTextActive: {
-    color: "#F28C1B",
-  },
-  tabTextIdle: {
-    color: "#7A869A",
   },
   bannerWrap: {
     borderRadius: 14,

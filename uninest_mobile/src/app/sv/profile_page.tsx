@@ -28,6 +28,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/auth-context";
 import { useFavorites } from "@/context/favorites-context";
+import { isLandlordRole } from "@/utils/landlord-access";
 import { formatPrice } from "@/utils/room-display";
 import type { AuthUser } from "@/types/auth";
 import type { Booking, BookingRoomRef, BookingStatus } from "@/types/booking";
@@ -148,6 +149,16 @@ export default function ProfilePage() {
   const handleSettingsSelect = (id: ProfileSettingsItemId) => {
     setSettingsOpen(false);
 
+    if (id === "landlord") {
+      const role = displayUser?.role ?? sessionUser?.role;
+      if (isLandlordRole(role)) {
+        router.push("/landlord/home_page" as any);
+      } else {
+        router.push("/sv/landlord_request_page" as any);
+      }
+      return;
+    }
+
     if (id === "logout") {
       Alert.alert("Đăng xuất", "Bạn có chắc muốn đăng xuất?", [
         { text: "Hủy", style: "cancel" },
@@ -164,7 +175,7 @@ export default function ProfilePage() {
     }
 
     const routes: Record<
-      Exclude<ProfileSettingsItemId, "logout">,
+      Exclude<ProfileSettingsItemId, "logout" | "landlord">,
       string
     > = {
       personal: "/sv/profile_personal_page",
