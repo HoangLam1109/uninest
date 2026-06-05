@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Pagination } from '@/components/common/pagination'
 import {
   Select,
   SelectContent,
@@ -17,7 +17,7 @@ import { bookingStatusLabels } from '../lib/booking-display'
 import type { BookingStatus } from '../types/booking.type'
 
 const statusOptions: Array<{ value: 'ALL' | BookingStatus; label: string }> = [
-  { value: 'ALL', label: 'Tat ca trang thai' },
+  { value: 'ALL', label: 'Tất cả trạng thái' },
   { value: 'PENDING', label: bookingStatusLabels.PENDING },
   { value: 'APPROVED', label: bookingStatusLabels.APPROVED },
   { value: 'REJECTED', label: bookingStatusLabels.REJECTED },
@@ -42,10 +42,10 @@ export function LandlordBookingsPage() {
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase text-primary">
-            Booking phong
+            Đặt phòng
           </p>
           <h1 className="mt-1 text-2xl font-bold text-slate-950 md:text-3xl">
-            Duyet yeu cau dat phong
+            Duyệt yêu cầu đặt phòng
           </h1>
         </div>
         <div className="w-full rounded-lg border border-primary/10 bg-white px-3 py-2 lg:max-w-64">
@@ -56,7 +56,7 @@ export function LandlordBookingsPage() {
               setPage(1)
             }}
           >
-            <SelectTrigger aria-label="Loc theo trang thai">
+            <SelectTrigger aria-label="Lọc theo trạng thái">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -80,13 +80,13 @@ export function LandlordBookingsPage() {
 
       {bookingsQuery.isError ? (
         <div className="rounded-xl border border-red-500/20 bg-white p-8 text-center text-sm text-red-600">
-          Khong the tai danh sach booking.
+          Không thể tải danh sách đặt phòng.
         </div>
       ) : null}
 
       {!bookingsQuery.isLoading && !bookingsQuery.isError && bookings.length === 0 ? (
         <div className="rounded-xl border border-primary/10 bg-white p-8 text-center text-sm text-slate-500">
-          Chua co booking phu hop.
+          Chưa có danh sách đặt phòng phù hợp.
         </div>
       ) : null}
 
@@ -105,32 +105,13 @@ export function LandlordBookingsPage() {
         </div>
       ) : null}
 
-      {pagination && pagination.totalPages > 1 ? (
-        <div className="flex items-center justify-end gap-3">
-          <span className="text-sm text-slate-500">
-            Trang {pagination.page}/{pagination.totalPages}
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={page <= 1 || bookingsQuery.isFetching}
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
-            className="bg-white"
-          >
-            Truoc
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={bookingsQuery.isFetching || page >= pagination.totalPages}
-            onClick={() =>
-              setPage((current) => Math.min(pagination.totalPages, current + 1))
-            }
-            className="bg-white"
-          >
-            Sau
-          </Button>
-        </div>
+      {pagination ? (
+        <Pagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          isDisabled={bookingsQuery.isFetching}
+          onPageChange={setPage}
+        />
       ) : null}
     </div>
   )

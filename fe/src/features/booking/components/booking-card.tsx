@@ -50,24 +50,24 @@ export function BookingCard({
             </span>
             {booking.createdAt ? (
               <span className="text-xs font-semibold text-slate-400">
-                Tao ngay {formatBookingDate(booking.createdAt)}
+                Tạo ngay {formatBookingDate(booking.createdAt)}
               </span>
             ) : null}
           </div>
           <h2 className="mt-3 line-clamp-2 text-xl font-bold text-slate-950">
-            {room?.title ?? 'Phong khong kha dung'}
+            {room?.title ?? 'Phòng không khả dụng'}
           </h2>
           <p className="mt-2 flex items-start gap-2 text-sm text-slate-500">
             <Home className="mt-0.5 size-4 shrink-0" />
             {room
               ? [room.address, room.district, room.city].filter(Boolean).join(', ')
-              : 'Chua co thong tin phong'}
+              : 'Chưa có thông tin phòng'}
           </p>
         </div>
 
         {room?.pricePerMonth ? (
           <div className="rounded-xl bg-primary/10 px-4 py-3 text-left lg:text-right">
-            <p className="text-xs font-bold uppercase text-primary">Gia phong</p>
+            <p className="text-xs font-bold uppercase text-primary">Giá phòng</p>
             <p className="mt-1 text-lg font-bold text-primary">
               {formatBookingCurrency(room.pricePerMonth)}
             </p>
@@ -77,25 +77,25 @@ export function BookingCard({
 
       <div className="mt-5 grid gap-3 text-sm md:grid-cols-3">
         <div className="rounded-lg bg-surface p-3">
-          <p className="text-slate-500">Ngay nhan phong</p>
+          <p className="text-slate-500">Ngày nhận phòng</p>
           <p className="mt-1 flex items-center gap-2 font-bold text-slate-950">
             <CalendarDays className="size-4 text-primary" />
             {formatBookingDate(booking.checkInDate)}
           </p>
         </div>
         <div className="rounded-lg bg-surface p-3">
-          <p className="text-slate-500">Ngay tra phong</p>
+          <p className="text-slate-500">Ngày trả phòng</p>
           <p className="mt-1 font-bold text-slate-950">
             {formatBookingDate(booking.checkOutDate)}
           </p>
         </div>
         <div className="rounded-lg bg-surface p-3">
           <p className="text-slate-500">
-            {mode === 'landlord' ? 'Nguoi thue' : 'Trang thai hien tai'}
+            {mode === 'landlord' ? 'Người thuê' : 'Trạng thái hiện tại'}
           </p>
           <p className="mt-1 font-bold text-slate-950">
             {mode === 'landlord'
-              ? tenant?.fullName ?? tenant?.email ?? 'Chua co thong tin'
+              ? tenant?.fullName ?? tenant?.email ?? 'Chưa có thông tin'
               : bookingStatusLabels[booking.status]}
           </p>
         </div>
@@ -134,7 +134,7 @@ export function BookingCard({
               onClick={() => onCancel?.(booking._id)}
             >
               <XCircle className="size-4" />
-              Huy booking
+              Hủy booking
             </Button>
           ) : null}
           {canLandlordReview ? (
@@ -154,7 +154,7 @@ export function BookingCard({
                 onClick={() => onApprove?.(booking._id)}
               >
                 <CheckCircle2 className="size-4" />
-                Phe duyet
+                Phê duyệt
               </Button>
             </>
           ) : null}

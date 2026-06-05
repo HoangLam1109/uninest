@@ -7,6 +7,7 @@ import {
   Search,
   Trash2,
 } from 'lucide-react'
+import { Pagination } from '@/components/common/pagination'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { LandlordDashboardHeader } from '@/features/landlord'
@@ -310,24 +311,6 @@ export function RoomManagement() {
                       {room.roomType ?? 'Chưa chọn'} · {room.areaSqm ?? 0} m2 ·{' '}
                       {room.maxOccupants} người
                     </p>
-                    {room.tenants && room.tenants.length > 0 ? (
-                      <p className="mt-1 text-xs font-medium text-primary">
-                        {room.tenants.length} người thuê
-                        {room.tenants.some((t) => t.isPrimaryTenant) ? (
-                          <span className="ml-1 text-slate-500">
-                            · Chính:{' '}
-                            {room.tenants
-                              .filter((t) => t.isPrimaryTenant)
-                              .map((t) =>
-                                typeof t.tenantId === 'string'
-                                  ? t.tenantId
-                                  : t.tenantId.fullName
-                              )
-                              .join(', ')}
-                          </span>
-                        ) : null}
-                      </p>
-                    ) : null}
                   </td>
                   <td className="px-4 py-4 text-sm text-slate-600">
                     <p>{room.address}</p>
@@ -395,32 +378,20 @@ export function RoomManagement() {
           </table>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-primary/10 p-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            Trang {pagination?.page ?? page} / {pagination?.totalPages ?? 1}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={page <= 1 || roomsQuery.isFetching}
-              onClick={() => setPage(Math.max(1, page - 1))}
-            >
-              Trước
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={
-                roomsQuery.isFetching ||
-                Boolean(pagination && page >= pagination.totalPages)
-              }
-              onClick={() => setPage(page + 1)}
-            >
-              Sau
-            </Button>
-          </div>
-        </div>
+        <Pagination
+          page={pagination?.page ?? page}
+          totalPages={pagination?.totalPages ?? 1}
+          isDisabled={roomsQuery.isFetching}
+          showWhenSinglePage
+          buttonVariant="outline"
+          buttonClassName=""
+          className="flex flex-col gap-3 border-t border-primary/10 p-4 sm:flex-row sm:items-center sm:justify-between"
+          controlsClassName="gap-2"
+          pageClassName="text-slate-600"
+          pageSeparator=" / "
+          previousLabel="Trước"
+          onPageChange={setPage}
+        />
       </section>
 
       <RoomFormModal
