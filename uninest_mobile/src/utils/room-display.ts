@@ -1,4 +1,4 @@
-import type { Room, RoomImage } from "@/types/room";
+import type { Room, RoomImage, RoomStatus } from "@/types/room";
 
 export function formatPrice(value: number) {
   return `${value.toLocaleString("vi-VN")}đ`;
@@ -9,6 +9,15 @@ export function formatRoomLocation(room: Room) {
     Boolean,
   );
   return parts.join(", ");
+}
+
+export function roomStatusLabel(status?: RoomStatus | string) {
+  const map: Record<string, string> = {
+    AVAILABLE: "Còn trống",
+    RENTED: "Đã thuê",
+    MAINTENANCE: "Bảo trì",
+  };
+  return status ? (map[status] ?? status) : "—";
 }
 
 export function roomTypeLabel(roomType?: string) {

@@ -14,6 +14,7 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
+import { bookingApi } from "@/api/booking.api";
 import { reviewApi } from "@/api/review.api";
 import { roomApi } from "@/api/room.api";
 import { FavoriteHeartButton } from "@/components/favorite-heart-button";
@@ -22,8 +23,10 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/auth-context";
 import { getApiErrorMessage } from "@/lib/api-error";
+import type { Booking } from "@/types/booking";
 import type { Review, ReviewStatistics } from "@/types/review";
 import type { Room, RoomImage } from "@/types/room";
+import { getBookingRoomId } from "@/utils/booking-display";
 import {
   buildRoomHighlights,
   formatPrice,
@@ -48,6 +51,7 @@ export default function DetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewStats, setReviewStats] = useState<ReviewStatistics | null>(null);
+  const [approvedBooking, setApprovedBooking] = useState<Booking | null>(null);
 
   const loadRoom = useCallback(async () => {
     if (!roomId) {
@@ -59,7 +63,7 @@ export default function DetailPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [roomRes, imagesRes, reviewsRes] = await Promise.all([
+      const [roomRes, imagesRes, reviewsRes, bookingsRes] = await Promise.all([
         roomApi.getById(roomId),
         roomApi.listImages(roomId),
         reviewApi.listByRoom(roomId, { limit: 20 }).catch(() => ({
@@ -71,6 +75,11 @@ export default function DetailPage() {
             ratingDistribution: [],
           },
         })),
+        bookingApi.listMine({ page: 1, limit: 100 }).catch(() => ({
+          success: true,
+          data: [],
+          pagination: { total: 0, page: 1, limit: 100, totalPages: 0 },
+        })),
       ]);
       setRoom(roomRes.data ? { ...roomRes.data, _id: String(roomRes.data._id) } : null);
       const sorted = sortRoomImages(imagesRes.data ?? []);
@@ -78,11 +87,17 @@ export default function DetailPage() {
       setImageIndex(0);
       setReviews(reviewsRes.data ?? []);
       setReviewStats(reviewsRes.statistics ?? null);
+      const approved = (bookingsRes.data ?? []).find(
+        (booking) =>
+          getBookingRoomId(booking) === roomId && booking.status === "APPROVED",
+      );
+      setApprovedBooking(approved ?? null);
     } catch (err) {
       setRoom(null);
       setImages([]);
       setReviews([]);
       setReviewStats(null);
+      setApprovedBooking(null);
       setError(getApiErrorMessage(err, "Không tải được thông tin phòng."));
     } finally {
       setIsLoading(false);
@@ -355,22 +370,33 @@ export default function DetailPage() {
               </Text>
             </View>
 
-            <Pressable
-              style={styles.bookButton}
-              onPress={() =>
-                router.push({
-                  pathname: "/sv/booking_page",
-                  params: { roomId: room._id, title: room.title },
-                } as any)
-              }
-            >
-              <Text style={styles.bookButtonText}>Đặt ngay →</Text>
-            </Pressable>
+            {approvedBooking ? (
+              <View style={styles.approvedBanner}>
+                <Text style={styles.approvedIcon}>✓</Text>
+                <ThemedText type="smallBold" style={styles.approvedText}>
+                  Bạn đã được chủ nhà chấp nhận thuê phòng này
+                </ThemedText>
+              </View>
+            ) : (
+              <>
+                <Pressable
+                  style={styles.bookButton}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/sv/booking_page",
+                      params: { roomId: room._id, title: room.title },
+                    } as any)
+                  }
+                >
+                  <Text style={styles.bookButtonText}>Đặt ngay →</Text>
+                </Pressable>
 
-            <Text style={styles.note}>
-              Chưa thu tiền thanh toán. Bạn sẽ được xem xét hợp đồng thuê trước
-              khi ký.
-            </Text>
+                <Text style={styles.note}>
+                  Chưa thu tiền thanh toán. Bạn sẽ được xem xét hợp đồng thuê
+                  trước khi ký.
+                </Text>
+              </>
+            )}
           </View>
           ) : null}
         </ScrollView>
@@ -787,6 +813,26 @@ const styles = StyleSheet.create({
     color: "#2E241A",
     fontSize: 18,
     fontWeight: "700",
+  },
+  approvedBanner: {
+    marginTop: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#E2F5E8",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  approvedIcon: {
+    color: "#2E8B57",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  approvedText: {
+    flex: 1,
+    color: "#2E8B57",
+    lineHeight: 20,
   },
   bookButton: {
     height: 54,

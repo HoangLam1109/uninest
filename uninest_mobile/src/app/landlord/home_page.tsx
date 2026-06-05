@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Pressable,
@@ -135,6 +136,7 @@ function PaymentRow({
 
 export default function LandlordHomePage() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [activeChartMonth] = useState(5);
 
   return (
@@ -169,9 +171,12 @@ export default function LandlordHomePage() {
               <Pressable style={styles.iconCircle}>
                 <Text style={styles.bellIcon}>🔔</Text>
               </Pressable>
-              <View style={styles.profileCircle}>
+              <Pressable
+                style={styles.profileCircle}
+                onPress={() => router.push("/landlord/profile_page" as any)}
+              >
                 <Text style={styles.profileEmoji}>👨🏻</Text>
-              </View>
+              </Pressable>
             </View>
           </View>
 

@@ -7,6 +7,7 @@ export type ProfileSettingsItemId =
   | "personal"
   | "rooms"
   | "invoices"
+  | "landlord"
   | "logout";
 
 type MenuItem = {
@@ -20,6 +21,7 @@ const MENU_ITEMS: MenuItem[] = [
   { id: "personal", label: "Thông tin cá nhân", icon: "👤" },
   { id: "rooms", label: "Phòng", icon: "🏠" },
   { id: "invoices", label: "Hóa đơn", icon: "🧾" },
+  { id: "landlord", label: "Làm chủ nhà", icon: "🏢" },
   { id: "logout", label: "Đăng xuất", icon: "↪", danger: true },
 ];
 

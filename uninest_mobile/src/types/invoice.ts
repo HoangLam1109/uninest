@@ -73,3 +73,29 @@ export type InvoiceDetailResponse = {
   success: boolean;
   data: InvoiceDetail | null;
 };
+
+export type CreateInvoicePayload = {
+  bookingId: string;
+  billingMonth: string;
+  dueDate: string;
+  rentAmount: number;
+  electricityAmount?: number;
+  waterAmount?: number;
+  additionalFees?: number;
+  notes?: string;
+};
+
+export type UpdateInvoicePayload = {
+  rentAmount?: number;
+  electricityAmount?: number;
+  waterAmount?: number;
+  additionalFees?: number;
+  notes?: string;
+  dueDate?: string;
+};
+
+export type InvoiceMutationResponse = {
+  success: boolean;
+  message?: string;
+  data: Invoice;
+};

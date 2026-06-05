@@ -59,7 +59,6 @@ function validateRegister(form: RegisterForm): string | null {
 export default function RegisterPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [studentTab, setStudentTab] = useState(true);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -148,41 +147,6 @@ export default function RegisterPage() {
                 <ThemedText type="small" style={styles.subtitle}>
                   Tạo tài khoản — ngôi nhà của bạn xa giảng đường
                 </ThemedText>
-              </View>
-
-              <View style={styles.tabRow}>
-                <Pressable
-                  onPress={() => setStudentTab(true)}
-                  style={[
-                    styles.tab,
-                    studentTab ? styles.tabActive : styles.tabIdle,
-                  ]}
-                >
-                  <ThemedText
-                    type="smallBold"
-                    style={
-                      studentTab ? styles.tabTextActive : styles.tabTextIdle
-                    }
-                  >
-                    Đăng ký Sinh viên
-                  </ThemedText>
-                </Pressable>
-                <Pressable
-                  onPress={() => setStudentTab(false)}
-                  style={[
-                    styles.tab,
-                    !studentTab ? styles.tabActive : styles.tabIdle,
-                  ]}
-                >
-                  <ThemedText
-                    type="smallBold"
-                    style={
-                      !studentTab ? styles.tabTextActive : styles.tabTextIdle
-                    }
-                  >
-                    Đăng ký Cho nhà
-                  </ThemedText>
-                </Pressable>
               </View>
 
               <View style={styles.bannerWrap}>
@@ -400,29 +364,6 @@ const styles = StyleSheet.create({
     color: "#4B5568",
     textAlign: "center",
     lineHeight: 20,
-  },
-  tabRow: {
-    flexDirection: "row",
-    marginBottom: 14,
-    gap: 10,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    borderBottomWidth: 2,
-  },
-  tabActive: {
-    borderBottomColor: "#F28C1B",
-  },
-  tabIdle: {
-    borderBottomColor: "#E7D8C5",
-  },
-  tabTextActive: {
-    color: "#F28C1B",
-  },
-  tabTextIdle: {
-    color: "#7A869A",
   },
   bannerWrap: {
     borderRadius: 14,

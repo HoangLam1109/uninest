@@ -11,6 +11,9 @@ export type LandlordTab =
 
 const TAB_ROUTES: Partial<Record<LandlordTab, string>> = {
   home: "/landlord/home_page",
+  rooms: "/landlord/rooms_page",
+  tenants: "/landlord/tenants_page",
+  reports: "/landlord/invoices_page",
   settings: "/landlord/settings_page",
 };
 
