@@ -87,3 +87,17 @@ export function sumUnpaidAmount(invoices: Invoice[]) {
     .filter((inv) => isInvoiceUnpaid(inv.status))
     .reduce((sum, inv) => sum + (inv.totalAmount ?? 0), 0);
 }
+
+export function sumPaidAmount(invoices: Invoice[]) {
+  return invoices
+    .filter((inv) => inv.status === "PAID")
+    .reduce((sum, inv) => sum + (inv.totalAmount ?? 0), 0);
+}
+
+export function getTenantName(invoice: Invoice) {
+  const tenant = invoice.tenantId;
+  if (typeof tenant === "object" && tenant !== null && tenant.fullName) {
+    return tenant.fullName;
+  }
+  return "Người thuê";
+}

@@ -8,6 +8,7 @@ type AuthContextValue = {
   user: AuthUser | null;
   signIn: (session?: AuthSession) => void;
   signOut: () => void;
+  updateUser: (user: AuthUser) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -33,6 +34,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setAccessToken(null);
         setIsAuthenticated(false);
+      },
+      updateUser: (nextUser: AuthUser) => {
+        setUser(nextUser);
       },
     }),
     [isAuthenticated, user],

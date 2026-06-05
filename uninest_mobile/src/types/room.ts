@@ -1,3 +1,7 @@
+export type RoomStatus = "AVAILABLE" | "RENTED" | "MAINTENANCE";
+
+export type RoomType = "STUDIO" | "SINGLE" | "SHARED" | "APARTMENT";
+
 export type RoomLandlord = {
   _id: string;
   fullName?: string;
@@ -55,4 +59,21 @@ export type RoomImage = {
 export type RoomImageListResponse = {
   success: boolean;
   data: RoomImage[];
+};
+
+export type RoomPayload = {
+  title: string;
+  address: string;
+  pricePerMonth: number;
+  maxOccupants: number;
+  description?: string;
+  city?: string;
+  district?: string;
+  ward?: string;
+  depositAmount?: number;
+  electricityRate?: number;
+  waterRate?: number;
+  areaSqm?: number;
+  roomType?: RoomType;
+  propertyId?: string | null;
 };

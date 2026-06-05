@@ -44,6 +44,21 @@ export default function LandlordSettingsPage() {
       return;
     }
 
+    if (item.id === "profile") {
+      router.push("/landlord/profile_page" as any);
+      return;
+    }
+
+    if (item.id === "invoices") {
+      router.push("/landlord/invoices_page" as any);
+      return;
+    }
+
+    if (item.id === "properties") {
+      router.push("/landlord/rooms_page" as any);
+      return;
+    }
+
     Alert.alert(item.label, "Tính năng đang được phát triển.");
   };
 
