@@ -7,6 +7,7 @@ import { BookingRequestModal } from '@/features/booking'
 import { useGetRoomById, useGetRoomImages } from '../hooks/use-rooms'
 import { formatRoomCurrency, formatRoomFullLocation } from '../../../utils/room-display'
 import type { RoomImage } from '../types/room.type'
+import { RoomLocationMap } from '../components/room-location-map'
 
 function sortImages(images: RoomImage[]) {
   return [...images].sort((first, second) => {
@@ -107,6 +108,11 @@ export function RoomDetailPage() {
                     {room.description || 'Phòng này chưa có mô tả chi tiết.'}
                   </p>
                 </article>
+
+                <RoomLocationMap
+                  address={formatRoomFullLocation(room)}
+                  title={room.title}
+                />
               </div>
 
               <aside className="h-fit rounded-xl border border-primary/10 bg-white p-5">

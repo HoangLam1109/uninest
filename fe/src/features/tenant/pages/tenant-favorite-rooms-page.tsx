@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Grid3X3, List, Search } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Pagination } from '@/components/common/pagination'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { useGetTenantFavoriteRooms } from '@/features/room/hooks/use-rooms'
@@ -144,35 +144,13 @@ export function TenantFavoriteRoomsPage() {
         </div>
       ) : null}
 
-      {pagination && pagination.totalPages > 1 ? (
-        <div className="flex items-center justify-end gap-3">
-          <span className="text-sm text-slate-500">
-            Trang {pagination.page}/{pagination.totalPages}
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={page <= 1 || favoritesQuery.isFetching}
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
-            className="bg-white"
-          >
-            Truoc
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={
-              favoritesQuery.isFetching ||
-              page >= pagination.totalPages
-            }
-            onClick={() =>
-              setPage((current) => Math.min(pagination.totalPages, current + 1))
-            }
-            className="bg-white"
-          >
-            Sau
-          </Button>
-        </div>
+      {pagination ? (
+        <Pagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          isDisabled={favoritesQuery.isFetching}
+          onPageChange={setPage}
+        />
       ) : null}
     </div>
   )

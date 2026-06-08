@@ -1,4 +1,4 @@
-import { ContractModel } from "../models/Contract.model.js";
+import { CONTRACT_STATUS, ContractModel } from "../models/Contract.model.js";
 import mongoose from "mongoose";
 
 export const ContractRepository = {
@@ -68,11 +68,11 @@ export const ContractRepository = {
     ContractModel.findOne({
       landlordId,
       tenantId,
-      status: "ACTIVE",
+      status: CONTRACT_STATUS.ACTIVE,
       deletedAt: null,
     }),
 
-  findByStatus: (status: string, skip: number, limit: number) =>
+  findByStatus: (status: CONTRACT_STATUS, skip: number, limit: number) =>
     ContractModel.find({ status, deletedAt: null })
       .populate("bookingId")
       .populate("landlordId", "fullName email phone")
@@ -81,6 +81,6 @@ export const ContractRepository = {
       .skip(skip)
       .limit(limit),
 
-  countByStatus: (status: string) =>
+  countByStatus: (status: CONTRACT_STATUS) =>
     ContractModel.countDocuments({ status, deletedAt: null }),
 };
