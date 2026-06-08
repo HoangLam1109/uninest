@@ -29,7 +29,7 @@ export function TenantContractsPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
+    <div className="flex w-full flex-col gap-6">
       <header>
         <p className="text-sm font-semibold uppercase text-primary">
           Hợp đồng của tôi

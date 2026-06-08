@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   CalendarDays,
   CheckCircle2,
@@ -7,8 +8,11 @@ import {
   User,
   XCircle,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
+import { contractApi } from '../api/contract.api'
 import type { Contract } from '../types/contract.type'
 import {
   contractStatusLabels,
@@ -40,6 +44,7 @@ export function ContractCard({
   onRenew,
   onTenantSign,
 }: ContractCardProps) {
+  const [isOpeningFile, setIsOpeningFile] = useState(false)
   const canEdit = mode === 'landlord' && contract.status === 'DRAFT'
   const canActivate = mode === 'landlord' && contract.status === 'DRAFT'
   const canTerminate = mode === 'landlord' && contract.status === 'ACTIVE'
@@ -48,7 +53,28 @@ export function ContractCard({
   const canRenew =
     mode === 'landlord' &&
     (contract.status === 'ACTIVE' || contract.status === 'EXPIRED')
-  const contractFileUrl = contract.signedContractFileUrl ?? contract.contractFileUrl
+  const hasContractFile = Boolean(
+    contract.signedContractStorageKey ??
+      contract.signedContractFileUrl ??
+      contract.contractFileUrl,
+  )
+
+  async function handleOpenFile() {
+    try {
+      setIsOpeningFile(true)
+      const { data } = await contractApi.file(contract._id)
+      const fileUrl = URL.createObjectURL(
+        new Blob([data], { type: data.type || 'application/pdf' }),
+      )
+      window.open(fileUrl, '_blank', 'noopener,noreferrer')
+    } catch (error) {
+      toast.error('Không thể mở file hợp đồng', {
+        description: getApiErrorMessage(error, 'Vui lòng thử lại sau.'),
+      })
+    } finally {
+      setIsOpeningFile(false)
+    }
+  }
 
   return (
     <article className="rounded-xl border border-primary/10 bg-white p-5 shadow-sm">
@@ -115,12 +141,15 @@ export function ContractCard({
       ) : null}
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
-        {contractFileUrl ? (
-          <Button type="button" variant="outline" asChild>
-            <a href={contractFileUrl} target="_blank" rel="noreferrer">
-              <ExternalLink className="size-4" />
-              Xem file
-            </a>
+        {hasContractFile ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isActionPending || isOpeningFile}
+            onClick={handleOpenFile}
+          >
+            <ExternalLink className="size-4" />
+            {isOpeningFile ? 'Đang mở file' : 'Xem file'}
           </Button>
         ) : null}
         {canTenantSign ? (

@@ -20,6 +20,7 @@ export interface IContract extends Document {
   terms?: string;
   contractFileUrl?: string;
   signedContractFileUrl?: string;
+  signedContractStorageKey?: string;
   tenantSignatureDataUrl?: string;
   tenantConfirmedAt?: Date;
   status: CONTRACT_STATUS;
@@ -79,6 +80,10 @@ const ContractSchema = new Schema<IContract>(
       trim: true,
     },
     signedContractFileUrl: {
+      type: String,
+      trim: true,
+    },
+    signedContractStorageKey: {
       type: String,
       trim: true,
     },

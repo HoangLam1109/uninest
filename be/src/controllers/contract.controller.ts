@@ -11,8 +11,15 @@ export const createContractFromBooking = async (req: Request, res: Response) => 
     if (!landlordId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
-    const { bookingId, monthlyRent, depositAmount, terms, contractFileUrl, startDate } =
-      req.body;
+    const {
+      bookingId,
+      monthlyRent,
+      depositAmount,
+      terms,
+      contractFileUrl,
+      startDate,
+      endDate,
+    } = req.body;
 
     if (!bookingId || !monthlyRent) {
       return res.status(400).json({
@@ -31,6 +38,7 @@ export const createContractFromBooking = async (req: Request, res: Response) => 
       contractFileUrl,
     };
     if (startDate) contractData.startDate = new Date(startDate);
+    if (endDate) contractData.endDate = new Date(endDate);
 
     const contract = await ContractService.createContractFromBooking(
       bookingId,
@@ -71,6 +79,43 @@ export const getContractById = async (req: Request, res: Response) => {
     const contract = await ContractService.getContractById(contractId as string, userId);
 
     return res.json({ success: true, data: contract });
+  } catch (err: any) {
+    const statusCode = err.message.includes("not found") ||
+      err.message.includes("do not have access")
+      ? 403
+      : 500;
+    return res
+      .status(statusCode)
+      .json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * STREAM VIEWABLE CONTRACT FILE
+ */
+export const streamContractFile = async (req: Request, res: Response) => {
+  try {
+    const { id: contractId } = req.params;
+    const userId = req.userId;
+
+    if (!userId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    if (!mongoose.Types.ObjectId.isValid(contractId as string))
+      return res.status(400).json({ success: false, message: "Invalid contract id" });
+
+    const file = await ContractService.getContractFile(contractId as string, userId);
+
+    res.setHeader("Content-Type", file.contentType);
+    res.setHeader("Content-Disposition", `inline; filename="${file.filename}"`);
+    file.stream.on("error", () => {
+      if (!res.headersSent) {
+        res.status(500).json({ success: false, message: "Cannot stream contract file" });
+      } else {
+        res.end();
+      }
+    });
+    file.stream.pipe(res);
   } catch (err: any) {
     const statusCode = err.message.includes("not found") ||
       err.message.includes("do not have access")
@@ -251,14 +296,13 @@ export const confirmContractByTenant = async (req: Request, res: Response) => {
     if (!mongoose.Types.ObjectId.isValid(contractId as string))
       return res.status(400).json({ success: false, message: "Invalid contract id" });
 
-    const { tenantSignatureDataUrl, signedContractFileUrl } = req.body;
+    const { tenantSignatureDataUrl } = req.body;
 
     const contract = await ContractService.confirmContractByTenant(
       contractId as string,
       tenantId,
       {
         tenantSignatureDataUrl,
-        signedContractFileUrl,
       }
     );
 

@@ -21,6 +21,9 @@ export const contractApi = {
 
   getById: (id: string) => api.get<ContractResponse>(`/contracts/${id}`),
 
+  file: (id: string) =>
+    api.get<Blob>(`/contracts/${id}/file`, { responseType: 'blob' }),
+
   update: (id: string, payload: UpdateContractPayload) =>
     api.put<ContractResponse>(`/contracts/${id}`, payload),
 

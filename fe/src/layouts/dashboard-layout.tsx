@@ -13,7 +13,7 @@ type DashboardLayoutProps = {
 
 export function DashboardLayout({
   sidebar,
-  contentClassName = 'mx-auto flex max-w-6xl flex-col p-4 md:p-6 lg:p-8',
+  contentClassName = 'flex w-full flex-col p-4 md:p-6 lg:p-8',
 }: DashboardLayoutProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 

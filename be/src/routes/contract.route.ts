@@ -7,6 +7,7 @@ import {
   getLandlordContracts,
   getTenantContracts,
   renewContract,
+  streamContractFile,
   terminateContract,
   updateContract,
 } from "../controllers/contract.controller.js";
@@ -23,6 +24,7 @@ router.post("/", createContractFromBooking);
 // Specific paths before param routes
 router.get("/landlord", getLandlordContracts);
 router.get("/tenant", getTenantContracts);
+router.get("/:id/file", streamContractFile);
 
 // Get contract by ID
 router.get("/:id", getContractById);

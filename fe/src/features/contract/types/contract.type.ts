@@ -29,6 +29,7 @@ export type Contract = {
   terms?: string
   contractFileUrl?: string
   signedContractFileUrl?: string
+  signedContractStorageKey?: string
   tenantSignatureDataUrl?: string
   tenantConfirmedAt?: string
   status: ContractStatus
@@ -49,6 +50,7 @@ export type CreateContractPayload = {
   terms?: string
   contractFileUrl?: string
   startDate?: string
+  endDate?: string
 }
 
 export type UpdateContractPayload = {
@@ -66,7 +68,6 @@ export type RenewContractPayload = UpdateContractPayload & {
 
 export type ConfirmContractPayload = {
   tenantSignatureDataUrl: string
-  signedContractFileUrl?: string
 }
 
 export type ContractListResponse = {
