@@ -9,6 +9,5 @@ export const images = {
     'https://www.figma.com/api/mcp/asset/8dc1a886-97ae-4e34-bace-9a6cb58a2763',
     'https://www.figma.com/api/mcp/asset/e0a01af1-50f3-4a07-8ffd-3ecabebf208d',
   ],
-  landlord:
-    'https://www.figma.com/api/mcp/asset/2b05fa7b-5865-4cad-95d6-4bc6064fd316',
+  landlord: '/landlord-working.png',
 } as const

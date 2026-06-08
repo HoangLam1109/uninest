@@ -83,11 +83,11 @@ export function useApproveBooking() {
     onSuccess: (booking) => {
       queryClient.invalidateQueries({ queryKey: bookingKeys.all })
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(booking._id) })
-      toast.success('Da phe duyet booking')
+      toast.success('Đã phê duyệt yêu cầu')
     },
     onError: (error) => {
-      toast.error('Khong the phe duyet booking', {
-        description: getApiErrorMessage(error, 'Vui long thu lai sau.'),
+      toast.error('Không thể phê duyệt yêu cầu', {
+        description: getApiErrorMessage(error, 'Vui lòng thử lại sau.'),
       })
     },
   })
@@ -104,11 +104,11 @@ export function useRejectBooking() {
     onSuccess: (booking) => {
       queryClient.invalidateQueries({ queryKey: bookingKeys.all })
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(booking._id) })
-      toast.success('Da tu choi booking')
+      toast.success('Đã từ chối yêu cầu')
     },
     onError: (error) => {
-      toast.error('Khong the tu choi booking', {
-        description: getApiErrorMessage(error, 'Vui long thu lai sau.'),
+      toast.error('Không thể từ chối yêu cầu', {
+        description: getApiErrorMessage(error, 'Vui lòng thử lại sau.'),
       })
     },
   })
@@ -125,11 +125,11 @@ export function useCancelBooking() {
     onSuccess: (booking) => {
       queryClient.invalidateQueries({ queryKey: bookingKeys.all })
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(booking._id) })
-      toast.success('Da huy booking')
+      toast.success('Đã hủy yêu cầu')
     },
     onError: (error) => {
-      toast.error('Khong the huy booking', {
-        description: getApiErrorMessage(error, 'Vui long thu lai sau.'),
+      toast.error('Không thể hủy yêu cầu', {
+        description: getApiErrorMessage(error, 'Vui lòng thử lại sau.'),
       })
     },
   })

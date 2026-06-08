@@ -206,11 +206,11 @@ export function useUploadRoomImage() {
     },
     onSuccess: (_image, variables) => {
       queryClient.invalidateQueries({ queryKey: roomKeys.images(variables.roomId) })
-      toast.success('Da them anh phong')
+      toast.success('Đã thêm ảnh phòng')
     },
     onError: (error) => {
-      toast.error('Khong the them anh phong', {
-        description: getApiErrorMessage(error, 'Vui long chon file anh hop le.'),
+      toast.error('Không thể thêm ảnh phòng', {
+        description: getApiErrorMessage(error, 'Vui lòng chọn file ảnh hợp lệ.'),
       })
     },
   })
@@ -229,11 +229,11 @@ export function useDeleteRoomImage() {
     }) => roomApi.deleteImage(roomId, imageId),
     onSuccess: (_response, variables) => {
       queryClient.invalidateQueries({ queryKey: roomKeys.images(variables.roomId) })
-      toast.success('Da xoa anh phong')
+      toast.success('Đã xóa ảnh phòng')
     },
     onError: (error) => {
-      toast.error('Khong the xoa anh phong', {
-        description: getApiErrorMessage(error, 'Vui long thu lai sau.'),
+      toast.error('Không thể xóa ảnh phòng', {
+        description: getApiErrorMessage(error, 'Vui lòng thử lại sau.'),
       })
     },
   })
@@ -255,11 +255,11 @@ export function useSetPrimaryRoomImage() {
     },
     onSuccess: (image) => {
       queryClient.invalidateQueries({ queryKey: roomKeys.images(image.roomId) })
-      toast.success('Da dat anh dai dien')
+      toast.success('Đã đặt ảnh đại diện')
     },
     onError: (error) => {
       toast.error('Không thể đặt ảnh đại diện', {
-        description: getApiErrorMessage(error, 'Vui long thu lai sau.'),
+        description: getApiErrorMessage(error, 'Vui lòng thử lại sau.'),
       })
     },
   })

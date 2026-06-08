@@ -225,12 +225,12 @@ export function RoomImageModal({
               checked={isPrimary}
               onChange={(event) => setIsPrimary(event.target.checked)}
             />
-            Đặt làm ảnh
+            Đặt làm ảnh đại diện 
           </label>
 
           <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="ghost" onClick={handleClose}>
-              Dong
+              Đóng
             </Button>
             <Button type="submit" disabled={isPending || !roomId || !imageFile}>
               {uploadImage.isPending ? 'Đang tải lên...' : 'Thêm ảnh'}

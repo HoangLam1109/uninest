@@ -4,7 +4,6 @@ import {
   CalendarDays,
   FileText,
   LayoutGrid,
-  Settings,
   ScrollText,
   UserPlus,
   Users,
@@ -25,7 +24,6 @@ export const landlordNavItems: LandlordNavItem[] = [
   { label: 'Người thuê', href: '/chu-nha/nguoi-thue', icon: Users },
   { label: 'Hóa đơn', href: '/chu-nha/hoa-don', icon: FileText },
   { label: 'Tiện ích', href: '/chu-nha/tien-ich', icon: Zap },
-  { label: 'Cài đặt', href: '/chu-nha/cai-dat', icon: Settings },
 ]
 
 export const landlordSidebarConfig = {

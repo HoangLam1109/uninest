@@ -10,7 +10,7 @@ import {
 import {
   formatRoomCurrency,
   formatRoomLocation,
-  getPrimaryRoomImage,
+  getDisplayRoomImage,
 } from '@/utils/room-display'
 import type { Room } from '@/features/room/types/room.type'
 import { images } from '../data'
@@ -22,15 +22,15 @@ type FeaturedRoomCardProps = {
 
 function FeaturedRoomCard({ room, fallbackImage }: FeaturedRoomCardProps) {
   const imagesQuery = useGetRoomImages(room._id)
-  const primaryImage = getPrimaryRoomImage(imagesQuery.data ?? [])
-  const imageUrl = primaryImage?.url ?? fallbackImage
+  const displayImage = getDisplayRoomImage(imagesQuery.data ?? [])
+  const imageUrl = displayImage?.url ?? fallbackImage
 
   return (
     <Card className="group flex flex-col">
       <Link to={`/phong/${room._id}`} className="relative block h-48 overflow-hidden">
         <img
           src={imageUrl}
-          alt={primaryImage?.caption || room.title}
+          alt={displayImage?.caption || room.title}
           className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
         {room.isPublished ? (

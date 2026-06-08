@@ -1,5 +1,4 @@
 import { RoomImageModel } from "../models/RoomImage.model.js";
-import mongoose from "mongoose";
 
 export const RoomImageRepository = {
   create: (data: any) => RoomImageModel.create(data),
@@ -25,15 +24,21 @@ export const RoomImageRepository = {
   deleteByRoomId: (roomId: string) =>
     RoomImageModel.deleteMany({ roomId }),
 
-  setPrimaryImage: (roomId: string, imageId: string) =>
-    Promise.all([
-      RoomImageModel.updateMany({ roomId }, { isPrimary: false }),
-      RoomImageModel.findOneAndUpdate(
-        { _id: imageId, roomId },
-        { isPrimary: true },
-        { returnDocument: "after" }
-      ),
-    ]),
+  setPrimaryImage: async (roomId: string, imageId: string) => {
+    const selectedImage = await RoomImageModel.findOne({ _id: imageId, roomId });
+    if (!selectedImage) return null;
+
+    await RoomImageModel.updateMany(
+      { roomId, _id: { $ne: imageId } },
+      { $set: { isPrimary: false } }
+    );
+
+    return RoomImageModel.findOneAndUpdate(
+      { _id: imageId, roomId },
+      { $set: { isPrimary: true } },
+      { returnDocument: "after" }
+    );
+  },
 
   countByRoomId: (roomId: string) =>
     RoomImageModel.countDocuments({ roomId }),

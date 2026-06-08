@@ -131,10 +131,6 @@ export function AppRouter() {
               path="tien-ich"
               element={<LandlordPlaceholderPage title="Tiện ích" />}
             />
-            <Route
-              path="cai-dat"
-              element={<LandlordPlaceholderPage title="Cài đặt" />}
-            />
           </Route>
         </Route>
         <Route element={<RoleRoute allowedRoles={[USER_ROLES.TENANT]} />}>
