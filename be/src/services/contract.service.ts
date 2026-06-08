@@ -4,6 +4,84 @@ import { RoomRepository } from "../repositories/room.repo.js";
 import { CONTRACT_STATUS } from "../models/Contract.model.js";
 import { BOOKING_STATUS } from "../models/Booking.model.js";
 import { ROOM_STATUS } from "../models/Room.model.js";
+import { PDFDocument } from "pdf-lib";
+import { configureCloudinary } from "../config/cloudinary.config.js";
+
+function getDataUrlBuffer(dataUrl: string) {
+  const match = dataUrl.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/);
+  if (!match?.[2]) {
+    throw new Error("Invalid signature image");
+  }
+
+  return {
+    format: match[1],
+    buffer: Buffer.from(match[2], "base64"),
+  };
+}
+
+function uploadSignedPdfToCloudinary(buffer: Buffer, contractId: string) {
+  const cloudinary = configureCloudinary();
+
+  return new Promise<string>((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: "uninest/contracts/signed",
+        public_id: `${contractId}-${Date.now()}`,
+        resource_type: "raw",
+        format: "pdf",
+      },
+      (error, result) => {
+        if (error || !result) {
+          reject(error ?? new Error("Cloudinary upload failed"));
+          return;
+        }
+
+        resolve(result.secure_url);
+      }
+    );
+
+    uploadStream.end(buffer);
+  });
+}
+
+async function createSignedContractPdf(
+  contractFileUrl: string,
+  tenantSignatureDataUrl: string,
+  contractId: string
+) {
+  const response = await fetch(contractFileUrl);
+  if (!response.ok) {
+    throw new Error("Cannot download contract PDF");
+  }
+
+  const pdfBytes = await response.arrayBuffer();
+  const pdfDocument = await PDFDocument.load(pdfBytes);
+  const pages = pdfDocument.getPages();
+  const page = pages[pages.length - 1];
+  if (!page) {
+    throw new Error("Contract PDF has no pages");
+  }
+
+  const signature = getDataUrlBuffer(tenantSignatureDataUrl);
+  const signatureImage =
+    signature.format === "png"
+      ? await pdfDocument.embedPng(signature.buffer)
+      : await pdfDocument.embedJpg(signature.buffer);
+  const signatureWidth = 160;
+  const signatureHeight =
+    (signatureImage.height / signatureImage.width) * signatureWidth;
+  const { width } = page.getSize();
+
+  page.drawImage(signatureImage, {
+    x: Math.max(width - signatureWidth - 72, 36),
+    y: 72,
+    width: signatureWidth,
+    height: signatureHeight,
+  });
+
+  const signedPdfBytes = await pdfDocument.save();
+  return uploadSignedPdfToCloudinary(Buffer.from(signedPdfBytes), contractId);
+}
 
 export const ContractService = {
   createContractFromBooking: async (
@@ -149,7 +227,7 @@ export const ContractService = {
       throw new Error("You do not own this contract");
     }
 
-    // Only allow activation from DRAFT status
+    // Only allow sending from DRAFT status
     if (contract.status !== CONTRACT_STATUS.DRAFT) {
       throw new Error(
         `Cannot activate contract with status: ${contract.status}`
@@ -157,9 +235,61 @@ export const ContractService = {
     }
 
     const updated = await ContractRepository.update(contractId, {
+      status: CONTRACT_STATUS.PENDING_TENANT_SIGNATURE,
+    });
+
+    return updated;
+  },
+
+  confirmContractByTenant: async (
+    contractId: string,
+    tenantId: string,
+    signatureData: {
+      tenantSignatureDataUrl: string;
+      signedContractFileUrl?: string;
+    }
+  ) => {
+    const contract = await ContractRepository.findById(contractId);
+    if (!contract) {
+      throw new Error("Contract not found");
+    }
+
+    if (contract.tenantId._id.toString() !== tenantId) {
+      throw new Error("You do not have access to this contract");
+    }
+
+    if (contract.status !== CONTRACT_STATUS.PENDING_TENANT_SIGNATURE) {
+      throw new Error(
+        `Cannot confirm contract with status: ${contract.status}`
+      );
+    }
+
+    if (!signatureData.tenantSignatureDataUrl) {
+      throw new Error("Tenant signature is required");
+    }
+
+    const signedContractFileUrl =
+      signatureData.signedContractFileUrl ??
+      (contract.contractFileUrl
+        ? await createSignedContractPdf(
+            contract.contractFileUrl,
+            signatureData.tenantSignatureDataUrl,
+            contractId
+          )
+        : undefined);
+
+    const updateData: any = {
       status: CONTRACT_STATUS.ACTIVE,
       signedAt: new Date(),
-    });
+      tenantConfirmedAt: new Date(),
+      tenantSignatureDataUrl: signatureData.tenantSignatureDataUrl,
+    };
+
+    if (signedContractFileUrl) {
+      updateData.signedContractFileUrl = signedContractFileUrl;
+    }
+
+    const updated = await ContractRepository.update(contractId, updateData);
 
     return updated;
   },

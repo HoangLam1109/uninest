@@ -15,7 +15,7 @@ import type { Room, RoomPayload, RoomStatus, RoomType } from '../types/room.type
 const roomTypeOptions: Array<{ value: RoomType; label: string }> = [
   { value: 'STUDIO', label: 'Studio' },
   { value: 'SINGLE', label: 'Phòng đơn' },
-  { value: 'SHARED', label: 'Phòng ghéo' },
+  { value: 'SHARED', label: 'Phòng ghép' },
   { value: 'APARTMENT', label: 'Căn hộ' },
 ]
 
@@ -146,8 +146,8 @@ export function RoomFormModal({
           </span>
           <Input
             type="number"
-            className={inputClassName}
             min={0}
+            className={inputClassName}
             {...register('depositAmount')}
           />
         </label>

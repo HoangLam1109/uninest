@@ -1,6 +1,7 @@
 import express from "express";
 import {
   activateContract,
+  confirmContractByTenant,
   createContractFromBooking,
   getContractById,
   getLandlordContracts,
@@ -29,6 +30,7 @@ router.get("/:id", getContractById);
 // Contract actions
 router.put("/:id", updateContract);
 router.patch("/:id/activate", activateContract);
+router.patch("/:id/tenant-confirm", confirmContractByTenant);
 router.patch("/:id/terminate", terminateContract);
 router.post("/:id/renew", renewContract);
 

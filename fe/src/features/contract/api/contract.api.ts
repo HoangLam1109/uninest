@@ -3,6 +3,7 @@ import type {
   ContractListParams,
   ContractListResponse,
   ContractResponse,
+  ConfirmContractPayload,
   CreateContractPayload,
   RenewContractPayload,
   UpdateContractPayload,
@@ -25,6 +26,9 @@ export const contractApi = {
 
   activate: (id: string) =>
     api.patch<ContractResponse>(`/contracts/${id}/activate`),
+
+  confirmByTenant: (id: string, payload: ConfirmContractPayload) =>
+    api.patch<ContractResponse>(`/contracts/${id}/tenant-confirm`, payload),
 
   terminate: (id: string) =>
     api.patch<ContractResponse>(`/contracts/${id}/terminate`),

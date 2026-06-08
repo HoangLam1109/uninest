@@ -1,8 +1,15 @@
-import { useState, type ComponentProps } from 'react'
+import { useMemo, useState, type ComponentProps } from 'react'
 import { FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
+import { useGetLandlordBookings } from '@/features/booking/hooks/use-bookings'
+import {
+  formatBookingDate,
+  getBookingRoom,
+  getBookingTenant,
+} from '@/features/booking/lib/booking-display'
+import type { Booking } from '@/features/booking/types/booking.type'
 import type {
   Contract,
   CreateContractPayload,
@@ -34,6 +41,23 @@ function toIsoDate(value: string) {
 
 function optionalNumber(value: string) {
   return value ? Number(value) : undefined
+}
+
+function getBookingSearchText(booking: Booking) {
+  const tenant = getBookingTenant(booking)
+  const room = getBookingRoom(booking)
+
+  return [
+    booking._id,
+    tenant?.fullName,
+    tenant?.email,
+    tenant?.phone,
+    room?.title,
+    room?.address,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
 }
 
 export function ContractFormModal({
@@ -73,6 +97,7 @@ function ContractFormFields({
   onSubmit,
 }: Omit<ContractFormModalProps, 'open'>) {
   const [bookingId, setBookingId] = useState('')
+  const [isBookingPickerOpen, setIsBookingPickerOpen] = useState(false)
   const [monthlyRent, setMonthlyRent] = useState(
     contract?.monthlyRent ? String(contract.monthlyRent) : '',
   )
@@ -89,6 +114,20 @@ function ContractFormFields({
     contract?.contractFileUrl ?? '',
   )
   const [terms, setTerms] = useState(contract?.terms ?? '')
+  const landlordBookingsQuery = useGetLandlordBookings(
+    { page: 1, limit: 100, status: 'APPROVED' },
+    mode === 'create',
+  )
+  const bookingOptions = landlordBookingsQuery.data?.data ?? []
+  const filteredBookingOptions = useMemo(() => {
+    const keyword = bookingId.trim().toLowerCase()
+
+    if (!keyword) return bookingOptions.slice(0, 8)
+
+    return bookingOptions
+      .filter((booking) => getBookingSearchText(booking).includes(keyword))
+      .slice(0, 8)
+  }, [bookingId, bookingOptions])
 
   const handleSubmit: ComponentProps<'form'>['onSubmit'] = (event) => {
     event.preventDefault()
@@ -118,16 +157,67 @@ function ContractFormFields({
   return (
     <form className="grid gap-4" onSubmit={handleSubmit}>
         {mode === 'create' ? (
-          <label className="block space-y-2 text-sm font-semibold text-foreground">
-            <span>Booking ID *</span>
+          <div className="relative block space-y-2 text-sm font-semibold text-foreground">
+            <label htmlFor="contract-booking-id">Booking ID *</label>
             <Input
+              id="contract-booking-id"
               required
               value={bookingId}
-              onChange={(event) => setBookingId(event.target.value)}
+              onBlur={() => window.setTimeout(() => setIsBookingPickerOpen(false), 120)}
+              onChange={(event) => {
+                setBookingId(event.target.value)
+                setIsBookingPickerOpen(true)
+              }}
+              onFocus={() => setIsBookingPickerOpen(true)}
               className="h-11 border border-primary/10 px-3 text-sm shadow-none"
-              placeholder="665a1b2c3d4e5f6a7b8c9d0e"
+              placeholder="Nhập ID hoặc tìm theo tên người đặt"
+              autoComplete="off"
             />
-          </label>
+            {isBookingPickerOpen ? (
+              <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-72 overflow-y-auto rounded-lg border border-primary/10 bg-white p-1 shadow-lg">
+                {landlordBookingsQuery.isLoading ? (
+                  <div className="px-3 py-2 text-sm font-medium text-slate-500">
+                    Đang tải booking...
+                  </div>
+                ) : null}
+
+                {!landlordBookingsQuery.isLoading &&
+                filteredBookingOptions.length === 0 ? (
+                  <div className="px-3 py-2 text-sm font-medium text-slate-500">
+                    Không tìm thấy booking phù hợp.
+                  </div>
+                ) : null}
+
+                {filteredBookingOptions.map((booking) => {
+                  const tenant = getBookingTenant(booking)
+                  const room = getBookingRoom(booking)
+
+                  return (
+                    <button
+                      key={booking._id}
+                      type="button"
+                      className="w-full rounded-md px-3 py-2 text-left text-sm transition hover:bg-primary/5 focus:bg-primary/5 focus:outline-none"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        setBookingId(booking._id)
+                        setIsBookingPickerOpen(false)
+                      }}
+                    >
+                      <span className="block font-semibold text-foreground">
+                        {tenant?.fullName ?? tenant?.email ?? booking._id}
+                      </span>
+                      <span className="mt-0.5 block text-xs font-medium text-slate-500">
+                        {room?.title ? ` · ${room.title}` : ''}
+                        {booking.checkInDate
+                          ? ` · ${formatBookingDate(booking.checkInDate)}`
+                          : ''}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : null}
+          </div>
         ) : null}
 
         <div className="grid gap-4 md:grid-cols-2">

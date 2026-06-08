@@ -27,6 +27,7 @@ type ContractCardProps = {
   onActivate?: (contractId: string) => void
   onTerminate?: (contractId: string) => void
   onRenew?: (contract: Contract) => void
+  onTenantSign?: (contract: Contract) => void
 }
 
 export function ContractCard({
@@ -37,13 +38,17 @@ export function ContractCard({
   onActivate,
   onTerminate,
   onRenew,
+  onTenantSign,
 }: ContractCardProps) {
   const canEdit = mode === 'landlord' && contract.status === 'DRAFT'
   const canActivate = mode === 'landlord' && contract.status === 'DRAFT'
   const canTerminate = mode === 'landlord' && contract.status === 'ACTIVE'
+  const canTenantSign =
+    mode === 'tenant' && contract.status === 'PENDING_TENANT_SIGNATURE'
   const canRenew =
     mode === 'landlord' &&
     (contract.status === 'ACTIVE' || contract.status === 'EXPIRED')
+  const contractFileUrl = contract.signedContractFileUrl ?? contract.contractFileUrl
 
   return (
     <article className="rounded-xl border border-primary/10 bg-white p-5 shadow-sm">
@@ -110,12 +115,22 @@ export function ContractCard({
       ) : null}
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
-        {contract.contractFileUrl ? (
+        {contractFileUrl ? (
           <Button type="button" variant="outline" asChild>
-            <a href={contract.contractFileUrl} target="_blank" rel="noreferrer">
+            <a href={contractFileUrl} target="_blank" rel="noreferrer">
               <ExternalLink className="size-4" />
               Xem file
             </a>
+          </Button>
+        ) : null}
+        {canTenantSign ? (
+          <Button
+            type="button"
+            disabled={isActionPending}
+            onClick={() => onTenantSign?.(contract)}
+          >
+            <CheckCircle2 className="size-4" />
+            Ký hợp đồng
           </Button>
         ) : null}
         {canEdit ? (
@@ -158,7 +173,7 @@ export function ContractCard({
             onClick={() => onActivate?.(contract._id)}
           >
             <CheckCircle2 className="size-4" />
-            Kích hoạt
+            Gửi ký
           </Button>
         ) : null}
       </div>

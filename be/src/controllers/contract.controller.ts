@@ -223,12 +223,56 @@ export const activateContract = async (req: Request, res: Response) => {
 
     return res.json({
       success: true,
-      message: "Contract activated successfully",
+      message: "Contract sent to tenant for signature successfully",
       data: contract,
     });
   } catch (err: any) {
     const statusCode = err.message.includes("not found") ||
       err.message.includes("do not own")
+      ? 403
+      : 400;
+    return res
+      .status(statusCode)
+      .json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * CONFIRM CONTRACT (Tenant - sign online and activate)
+ */
+export const confirmContractByTenant = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.userId;
+    const { id: contractId } = req.params;
+
+    if (!tenantId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    if (!mongoose.Types.ObjectId.isValid(contractId as string))
+      return res.status(400).json({ success: false, message: "Invalid contract id" });
+
+    const { tenantSignatureDataUrl, signedContractFileUrl } = req.body;
+
+    const contract = await ContractService.confirmContractByTenant(
+      contractId as string,
+      tenantId,
+      {
+        tenantSignatureDataUrl,
+        signedContractFileUrl,
+      }
+    );
+
+    if (!contract)
+      return res.status(404).json({ success: false, message: "Contract not found" });
+
+    return res.json({
+      success: true,
+      message: "Contract confirmed successfully",
+      data: contract,
+    });
+  } catch (err: any) {
+    const statusCode = err.message.includes("not found") ||
+      err.message.includes("do not have access")
       ? 403
       : 400;
     return res

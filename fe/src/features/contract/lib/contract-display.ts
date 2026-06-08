@@ -8,6 +8,7 @@ import type {
 
 export const contractStatusLabels: Record<ContractStatus, string> = {
   DRAFT: 'Bản nháp',
+  PENDING_TENANT_SIGNATURE: 'Chờ người thuê ký',
   ACTIVE: 'Đang hiệu lực',
   EXPIRED: 'Hết hạn',
   TERMINATED: 'Đã chấm dứt',
@@ -15,6 +16,7 @@ export const contractStatusLabels: Record<ContractStatus, string> = {
 
 export const contractStatusStyles: Record<ContractStatus, string> = {
   DRAFT: 'bg-slate-100 text-slate-600',
+  PENDING_TENANT_SIGNATURE: 'bg-blue-500/10 text-blue-700',
   ACTIVE: 'bg-green-500/10 text-green-700',
   EXPIRED: 'bg-amber-500/10 text-amber-700',
   TERMINATED: 'bg-red-500/10 text-red-600',

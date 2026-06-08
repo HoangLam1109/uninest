@@ -4,6 +4,7 @@ import { getApiErrorMessage } from '@/lib/api-error'
 import { contractApi } from '../api/contract.api'
 import type {
   ContractListParams,
+  ConfirmContractPayload,
   CreateContractPayload,
   RenewContractPayload,
   UpdateContractPayload,
@@ -109,11 +110,38 @@ export function useActivateContract() {
     onSuccess: (contract) => {
       queryClient.invalidateQueries({ queryKey: contractKeys.all })
       queryClient.invalidateQueries({ queryKey: contractKeys.detail(contract._id) })
-      toast.success('Đã kích hoạt hợp đồng')
+      toast.success('Đã chuyển hợp đồng cho người thuê ký')
     },
     onError: (error) => {
-      toast.error('Không thể kích hoạt hợp đồng', {
+      toast.error('Không thể chuyển hợp đồng', {
         description: getApiErrorMessage(error, 'Vui lòng thử lại sau.'),
+      })
+    },
+  })
+}
+
+export function useConfirmContractByTenant() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string
+      payload: ConfirmContractPayload
+    }) => {
+      const { data } = await contractApi.confirmByTenant(id, payload)
+      return data.data
+    },
+    onSuccess: (contract) => {
+      queryClient.invalidateQueries({ queryKey: contractKeys.all })
+      queryClient.invalidateQueries({ queryKey: contractKeys.detail(contract._id) })
+      toast.success('Đã ký và xác nhận hợp đồng')
+    },
+    onError: (error) => {
+      toast.error('Không thể xác nhận hợp đồng', {
+        description: getApiErrorMessage(error, 'Vui lòng ký lại và thử lại.'),
       })
     },
   })

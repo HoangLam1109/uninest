@@ -1,13 +1,32 @@
 import { useState } from 'react'
 import { Pagination } from '@/components/common/pagination'
 import { ContractCard } from '../components/contract-card'
-import { useGetTenantContracts } from '../hooks/use-contracts'
+import { ContractSignatureModal } from '../components/contract-signature-modal'
+import {
+  useConfirmContractByTenant,
+  useGetTenantContracts,
+} from '../hooks/use-contracts'
+import type { Contract, ConfirmContractPayload } from '../types/contract.type'
 
 export function TenantContractsPage() {
   const [page, setPage] = useState(1)
+  const [signingContract, setSigningContract] = useState<Contract | null>(null)
   const contractsQuery = useGetTenantContracts({ page, limit: 10 })
+  const confirmContract = useConfirmContractByTenant()
   const contracts = contractsQuery.data?.data ?? []
   const pagination = contractsQuery.data?.pagination
+
+  function handleConfirm(contractId: string, payload: ConfirmContractPayload) {
+    confirmContract.mutate(
+      {
+        id: contractId,
+        payload,
+      },
+      {
+        onSuccess: () => setSigningContract(null),
+      },
+    )
+  }
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
@@ -47,6 +66,8 @@ export function TenantContractsPage() {
               key={contract._id}
               contract={contract}
               mode="tenant"
+              isActionPending={confirmContract.isPending}
+              onTenantSign={setSigningContract}
             />
           ))}
         </div>
@@ -60,6 +81,14 @@ export function TenantContractsPage() {
           onPageChange={setPage}
         />
       ) : null}
+
+      <ContractSignatureModal
+        open={Boolean(signingContract)}
+        contract={signingContract}
+        isPending={confirmContract.isPending}
+        onClose={() => setSigningContract(null)}
+        onConfirm={handleConfirm}
+      />
     </div>
   )
 }

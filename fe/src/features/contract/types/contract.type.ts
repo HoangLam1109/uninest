@@ -1,7 +1,12 @@
 import type { Booking } from '@/features/booking/types/booking.type'
 import type { RoomPagination } from '@/features/room/types/room.type'
 
-export type ContractStatus = 'DRAFT' | 'ACTIVE' | 'EXPIRED' | 'TERMINATED'
+export type ContractStatus =
+  | 'DRAFT'
+  | 'PENDING_TENANT_SIGNATURE'
+  | 'ACTIVE'
+  | 'EXPIRED'
+  | 'TERMINATED'
 
 export type ContractUser = {
   _id?: string
@@ -23,6 +28,9 @@ export type Contract = {
   depositAmount?: number
   terms?: string
   contractFileUrl?: string
+  signedContractFileUrl?: string
+  tenantSignatureDataUrl?: string
+  tenantConfirmedAt?: string
   status: ContractStatus
   signedAt?: string
   createdAt?: string
@@ -54,6 +62,11 @@ export type UpdateContractPayload = {
 
 export type RenewContractPayload = UpdateContractPayload & {
   startDate: string
+}
+
+export type ConfirmContractPayload = {
+  tenantSignatureDataUrl: string
+  signedContractFileUrl?: string
 }
 
 export type ContractListResponse = {

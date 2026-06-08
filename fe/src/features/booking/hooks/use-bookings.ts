@@ -50,9 +50,10 @@ export function useGetTenantBookings(
   })
 }
 
-export function useGetLandlordBookings(params: BookingListParams) {
+export function useGetLandlordBookings(params: BookingListParams, enabled = true) {
   return useQuery({
     queryKey: bookingKeys.landlordList(params),
+    enabled,
     queryFn: async () => {
       const { data } = await bookingApi.landlord(params)
       return data
