@@ -144,7 +144,6 @@ export const ContractService = {
         cccdNumber: verifiedIdentity.cccdNumber,
         cccdFrontImage: verifiedIdentity.cccdFrontImage,
         cccdBackImage: verifiedIdentity.cccdBackImage,
-        coTenants: verifiedIdentity.coTenants,
       },
     };
   },
@@ -184,9 +183,19 @@ export const ContractService = {
     skip: number,
     limit: number
   ) => {
+    // Lấy identity IDs của user, rồi tìm các booking mà user là người thuê (chính hoặc kèm)
+    const identities = await IdentityRepository.findByUserId(tenantId);
+    const identityIds = identities.map((i: any) => i._id.toString());
+
+    const userBookings = await BookingRepository.findIdsByTenantOrIdentity(
+      tenantId,
+      identityIds,
+    );
+    const bookingIds = userBookings.map((b: any) => b._id.toString());
+
     const [contracts, total] = await Promise.all([
-      ContractRepository.findByTenantId(tenantId, skip, limit),
-      ContractRepository.countByTenantId(tenantId),
+      ContractRepository.findByTenantOrBookingIds(tenantId, bookingIds, skip, limit),
+      ContractRepository.countByTenantOrBookingIds(tenantId, bookingIds),
     ]);
 
     return { contracts, total };

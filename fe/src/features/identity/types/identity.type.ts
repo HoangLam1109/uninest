@@ -1,12 +1,5 @@
 export type IdentityStatus = 'PENDING_VERIFICATION' | 'VERIFIED' | 'REJECTED'
 
-export type CoTenant = {
-  fullName: string
-  dateOfBirth?: string
-  phone?: string
-  cccdNumber?: string
-}
-
 export type IdentityUser = {
   _id: string
   fullName: string
@@ -23,7 +16,6 @@ export type Identity = {
   cccdNumber: string
   cccdFrontImage: string
   cccdBackImage: string
-  coTenants: CoTenant[]
   status: IdentityStatus
   verifiedAt?: string
   verifiedBy?: string | IdentityUser
@@ -38,7 +30,7 @@ export type CreateIdentityPayload = {
   cccdNumber: string
   cccdFront: File
   cccdBack: File
-  coTenants?: CoTenant[]
+  targetUserId?: string
 }
 
 export type UpdateIdentityPayload = {
@@ -47,7 +39,6 @@ export type UpdateIdentityPayload = {
   phone?: string
   cccdFront?: File
   cccdBack?: File
-  coTenants?: CoTenant[]
 }
 
 export type IdentityListResponse = {

@@ -53,6 +53,39 @@ export const ContractRepository = {
   countByTenantId: (tenantId: string) =>
     ContractModel.countDocuments({ tenantId, deletedAt: null }),
 
+  /** Tìm contract theo tenantId HOẶC theo các bookingId (dành cho người thuê kèm) */
+  findByTenantOrBookingIds: (
+    tenantId: string,
+    bookingIds: string[],
+    skip: number,
+    limit: number,
+  ) =>
+    ContractModel.find({
+      deletedAt: null,
+      $or: [
+        { tenantId },
+        ...(bookingIds.length > 0 ? [{ bookingId: { $in: bookingIds } }] : []),
+      ],
+    })
+      .populate({
+        path: "bookingId",
+        populate: { path: "roomId", select: "title address" },
+      })
+      .populate("landlordId", "fullName email phone")
+      .populate("tenantId", "fullName email phone")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+
+  countByTenantOrBookingIds: (tenantId: string, bookingIds: string[]) =>
+    ContractModel.countDocuments({
+      deletedAt: null,
+      $or: [
+        { tenantId },
+        ...(bookingIds.length > 0 ? [{ bookingId: { $in: bookingIds } }] : []),
+      ],
+    }),
+
   update: (id: string, data: any) =>
     ContractModel.findOneAndUpdate(
       { _id: id, deletedAt: null },

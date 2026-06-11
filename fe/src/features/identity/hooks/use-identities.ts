@@ -8,6 +8,7 @@ export const identityKeys = {
   all: ['identities'] as const,
   my: () => [...identityKeys.all, 'my'] as const,
   detail: (id: string) => [...identityKeys.all, 'detail', id] as const,
+  search: (cccd: string) => [...identityKeys.all, 'search', cccd] as const,
 }
 
 export function useCreateIdentity() {
@@ -66,6 +67,17 @@ export function useGetIdentityById(id: string | null, enabled = true) {
     enabled: Boolean(id) && enabled,
     queryFn: async () => {
       const { data } = await identityApi.getById(id as string)
+      return data.data
+    },
+  })
+}
+
+export function useSearchIdentityByCccd() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (cccd: string) => {
+      const { data } = await identityApi.searchByCccd(cccd)
       return data.data
     },
   })

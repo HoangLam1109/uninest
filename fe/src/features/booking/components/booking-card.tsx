@@ -130,7 +130,7 @@ export function BookingCard({
           </div>
         </div>
 
-        {mode === 'landlord' && tenant ? (
+      {mode === 'landlord' && tenant ? (
           <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-500">
             {tenant.email ? (
               <span className="inline-flex items-center gap-2">
@@ -155,14 +155,9 @@ export function BookingCard({
             <div className="space-y-2">
               {identities.map((identity, index) => {
                 const id = typeof identity === 'string' ? identity : identity._id
-                const name =
-                  typeof identity === 'string'
-                    ? `Người ${index + 1}`
-                    : identity.fullName
-                const cccd =
-                  typeof identity === 'string' ? '' : identity.cccdNumber
-                const phone = typeof identity === 'string' ? '' : identity.phone
-
+                const name = typeof identity === 'object' ? identity.fullName : `Người ${index + 1}`
+                const cccd = typeof identity === 'object' ? identity.cccdNumber : ''
+                const phone = typeof identity === 'object' ? identity.phone : ''
                 return (
                   <div
                     key={id}

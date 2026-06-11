@@ -78,6 +78,14 @@ export class UserService {
     );
   }
 
+  async searchUsers(query: string): Promise<any[]> {
+    return await userRepository.searchUsers(query);
+  }
+
+  async getUserByPhone(phone: string): Promise<IUser | null> {
+    return await userRepository.findByPhone(phone);
+  }
+
   // Private helper method to hash passwords
   private async _passwordCheck(
     userId: string,

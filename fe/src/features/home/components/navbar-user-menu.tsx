@@ -39,7 +39,7 @@ export function NavbarUserMenu({ user }: NavbarUserMenuProps) {
         aria-haspopup="menu"
         aria-label={`Tài khoản ${user.fullName}`}
       >
-        <Avatar name={user.fullName} />
+        <Avatar name={user.fullName} src={user.avatarUrl} />
       </button>
 
       {open ? (
