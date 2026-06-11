@@ -11,12 +11,14 @@ export const roomCurrencyFormatter = new Intl.NumberFormat('vi-VN', {
 
 export const roomStatusLabels: Record<RoomStatus, string> = {
   AVAILABLE: 'Còn trống',
+  DEPOSITED: 'Đã cọc',
   RENTED: 'Đã thuê',
   MAINTENANCE: 'Bảo trì',
 }
 
 export const roomStatusClasses: Record<RoomStatus, string> = {
   AVAILABLE: 'bg-green-500/10 text-green-700',
+  DEPOSITED: 'bg-amber-500/10 text-amber-700',
   RENTED: 'bg-primary/10 text-primary',
   MAINTENANCE: 'bg-red-500/10 text-red-600',
 }

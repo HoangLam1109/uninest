@@ -7,9 +7,9 @@ import { RoleRoute } from '@/app/router/role-route'
 import { Loading } from '@/components/common/loading'
 import { DashboardLayout } from '@/layouts/dashboard-layout'
 import { LandlordLayout } from '@/layouts/landlord-layout'
+import { TenantLayout } from '@/layouts/tenant-layout'
 import { adminSidebarConfig } from '@/features/admin/data'
 import { staffSidebarConfig } from '@/features/staff/data'
-import { tenantSidebarConfig } from '@/features/tenant/data'
 
 const AdminDashboardPage = lazy(() =>
   import('@/features/admin/pages/admin-dashboard-page').then((module) => ({
@@ -24,24 +24,24 @@ const DashboardRedirectPage = lazy(() =>
 const HomePage = lazy(() =>
   import('@/pages/home').then((module) => ({ default: module.HomePage })),
 )
-const LandlordBookingsPage = lazy(() =>
-  import('@/features/booking/pages/landlord-bookings-page').then((module) => ({
-    default: module.LandlordBookingsPage,
-  })),
-)
 const LandlordContractsPage = lazy(() =>
   import('@/features/contract/pages/landlord-contracts-page').then((module) => ({
     default: module.LandlordContractsPage,
   })),
 )
-const LandlordDashboardPage = lazy(() =>
-  import('@/features/landlord/components/landlord-dashboard').then((module) => ({
-    default: module.LandlordDashboardPage,
+const LandlordInvoicesPage = lazy(() =>
+  import('@/features/invoice/pages/landlord-invoices-page').then((module) => ({
+    default: module.LandlordInvoicesPage,
   })),
 )
-const LandlordPlaceholderPage = lazy(() =>
-  import('@/features/landlord/components/landlord-placeholder').then((module) => ({
-    default: module.LandlordPlaceholderPage,
+const LandlordTenantsPage = lazy(() =>
+  import('@/features/landlord/components/landlord-tenants-page').then((module) => ({
+    default: module.LandlordTenantsPage,
+  })),
+)
+const LandlordBookingsPage = lazy(() =>
+  import('@/features/booking/pages/landlord-bookings-page').then((module) => ({
+    default: module.LandlordBookingsPage,
   })),
 )
 const LoginPage = lazy(() =>
@@ -89,9 +89,19 @@ const TenantContractsPage = lazy(() =>
     default: module.TenantContractsPage,
   })),
 )
-const TenantDashboardPage = lazy(() =>
-  import('@/features/tenant/pages/tenant-dashboard-page').then((module) => ({
-    default: module.TenantDashboardPage,
+const TenantInvoicesPage = lazy(() =>
+  import('@/features/invoice/pages/tenant-invoices-page').then((module) => ({
+    default: module.TenantInvoicesPage,
+  })),
+)
+const TenantInvoiceDetailPage = lazy(() =>
+  import('@/features/invoice/pages/tenant-invoice-detail-page').then((module) => ({
+    default: module.TenantInvoiceDetailPage,
+  })),
+)
+const TenantMeterReadingsPage = lazy(() =>
+  import('@/features/invoice/pages/tenant-meter-readings-page').then((module) => ({
+    default: module.TenantMeterReadingsPage,
   })),
 )
 const TenantFavoriteRoomsPage = lazy(() =>
@@ -115,35 +125,27 @@ export function AppRouter() {
           element={<RoleRoute allowedRoles={[USER_ROLES.LANDLORD]} />}
         >
           <Route path={paths.landlordDashboard} element={<LandlordLayout />}>
-            <Route index element={<LandlordDashboardPage />} />
+            <Route index element={<RoomManagementPage />} />
             <Route path="phong" element={<RoomManagementPage />} />
             <Route path="dat-phong" element={<LandlordBookingsPage />} />
             <Route path="hop-dong" element={<LandlordContractsPage />} />
+            <Route path="hoa-don" element={<LandlordInvoicesPage />} />
             <Route
               path="nguoi-thue"
-              element={<LandlordPlaceholderPage title="Người thuê" />}
-            />
-            <Route
-              path="hoa-don"
-              element={<LandlordPlaceholderPage title="Hóa đơn" />}
-            />
-            <Route
-              path="tien-ich"
-              element={<LandlordPlaceholderPage title="Tiện ích" />}
+              element={<LandlordTenantsPage />}
             />
           </Route>
         </Route>
         <Route element={<RoleRoute allowedRoles={[USER_ROLES.TENANT]} />}>
           <Route
             path={paths.tenantDashboard}
-            element={
-              <DashboardLayout sidebar={tenantSidebarConfig} contentClassName="" />
-            }
+            element={<TenantLayout />}
           >
-            <Route index element={<TenantDashboardPage />} />
+            <Route index element={<TenantBookingsPage />} />
             <Route path="dat-phong" element={<TenantBookingsPage />} />
-            <Route path="hoa-don" element={<TenantDashboardPage />} />
-            <Route path="bao-tri" element={<TenantDashboardPage />} />
+            <Route path="hoa-don" element={<TenantInvoicesPage />} />
+            <Route path="hoa-don/:id" element={<TenantInvoiceDetailPage />} />
+            <Route path="chi-so" element={<TenantMeterReadingsPage />} />
             <Route path="phong-da-luu" element={<TenantFavoriteRoomsPage />} />
             <Route path="hop-dong" element={<TenantContractsPage />} />
           </Route>

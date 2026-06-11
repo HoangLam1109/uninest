@@ -1,11 +1,11 @@
 import { images } from '@/assets/images'
+import { paths } from '@/config/constants'
 
 
 export const navLinks = [
-  { label: 'Trang chủ', href: '#' },
-  { label: 'Phòng cho thuê', href: '#rooms' },
-  { label: 'Chủ nhà', href: '#landlords' },
-  { label: 'Về chúng tôi', href: '#about' },
+  { label: 'Trang chủ', href: paths.home },
+  { label: 'Phòng cho thuê', href: paths.rooms },
+  { label: 'Điều khiển', href: paths.landlordDashboard },
 ] as const
 
 export const featuredRooms = [

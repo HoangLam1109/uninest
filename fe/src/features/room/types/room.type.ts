@@ -1,6 +1,6 @@
 export type RoomType = 'STUDIO' | 'SINGLE' | 'SHARED' | 'APARTMENT'
 
-export type RoomStatus = 'AVAILABLE' | 'RENTED' | 'MAINTENANCE'
+export type RoomStatus = 'AVAILABLE' | 'DEPOSITED' | 'RENTED' | 'MAINTENANCE'
 
 export type RoomLandlord = {
   _id: string
@@ -163,4 +163,31 @@ export type RoomImagePayload = {
   caption?: string
   order?: number
   isPrimary?: boolean
+}
+
+export type LandlordTenant = {
+  tenantId: string
+  tenantName: string
+  tenantEmail: string
+  tenantPhone: string
+  tenantAvatarUrl?: string
+  isPrimaryTenant: boolean
+  cccdNumber?: string
+  cccdFrontImage?: string
+  cccdBackImage?: string
+  dateOfBirth?: string
+  coTenants?: Array<{
+    fullName: string
+    dateOfBirth?: string
+    phone?: string
+    cccdNumber?: string
+  }>
+  roomTitle: string
+  address: string
+}
+
+export type LandlordTenantListResponse = {
+  success: boolean
+  data: LandlordTenant[]
+  message?: string
 }

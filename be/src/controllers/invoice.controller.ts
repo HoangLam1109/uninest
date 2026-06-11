@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import { InvoiceService } from "../services/invoice.service.js";
+import { UtilityInvoiceService } from "../services/utility-invoice.service.js";
 
 /**
  * CREATE INVOICE (Landlord)
@@ -400,5 +401,159 @@ export const updateInvoiceDetail = async (req: Request, res: Response) => {
     return res
       .status(statusCode)
       .json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * CREATE UTILITY INVOICE (Landlord) — Tự động tính điện, nước
+ *
+ * Body:
+ * {
+ *   bookingId: string,
+ *   billingMonth: "YYYY-MM",
+ *   dueDate: ISO string,
+ *   rentAmount: number,
+ *   electricityNewIndex?: number,
+ *   waterNewIndex?: number,
+ *   electricityRate?: number,   // optional, lấy từ Room nếu ko truyền
+ *   waterRate?: number,          // optional, lấy từ Room nếu ko truyền
+ *   additionalFees?: number,
+ *   notes?: string
+ * }
+ */
+export const createUtilityInvoice = async (req: Request, res: Response) => {
+  try {
+    const landlordId = req.userId;
+    if (!landlordId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const {
+      bookingId,
+      billingMonth,
+      dueDate,
+      rentAmount,
+      electricityNewIndex,
+      waterNewIndex,
+      electricityRate,
+      waterRate,
+      additionalFees,
+      notes,
+    } = req.body;
+
+    if (!bookingId || !billingMonth || !dueDate || rentAmount == null) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "bookingId, billingMonth, dueDate, and rentAmount are required",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(bookingId)) {
+      return res.status(400).json({ success: false, message: "Invalid bookingId" });
+    }
+
+    if (!/^\d{4}-\d{2}$/.test(billingMonth)) {
+      return res.status(400).json({
+        success: false,
+        message: "billingMonth must be in YYYY-MM format",
+      });
+    }
+
+    const input: Parameters<typeof UtilityInvoiceService.createUtilityInvoice>[1] = {
+      bookingId,
+      billingMonth,
+      dueDate: new Date(dueDate),
+      rentAmount: Number(rentAmount),
+    };
+    if (electricityNewIndex != null) input.electricityNewIndex = Number(electricityNewIndex);
+    if (waterNewIndex != null) input.waterNewIndex = Number(waterNewIndex);
+    if (electricityRate != null) input.electricityRate = Number(electricityRate);
+    if (waterRate != null) input.waterRate = Number(waterRate);
+    if (additionalFees != null) input.additionalFees = Number(additionalFees);
+    if (notes != null) input.notes = notes;
+
+    const result = await UtilityInvoiceService.createUtilityInvoice(landlordId, input);
+
+    return res.status(201).json({
+      success: true,
+      message: "Utility invoice created successfully",
+      data: {
+        invoice: result.invoice,
+        detail: result.detail,
+      },
+    });
+  } catch (err: any) {
+    if (err.name === "UtilityInvoiceError") {
+      return res.status(err.statusCode || 400).json({
+        success: false,
+        message: err.message,
+        code: err.code,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Internal server error",
+    });
+  }
+};
+
+/**
+ * CREATE INITIAL METER READING (Landlord)
+ * Gọi khi tenant mới nhận phòng, trước khi tạo hóa đơn đầu tiên.
+ *
+ * Body:
+ * {
+ *   contractId: string,
+ *   roomId?: string,
+ *   electricityReading?: number,
+ *   waterReading?: number,
+ *   photoUrls?: { electricity?: string, water?: string },
+ *   notes?: string
+ * }
+ */
+export const createInitialMeterReading = async (req: Request, res: Response) => {
+  try {
+    const landlordId = req.userId;
+    if (!landlordId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const { contractId, roomId, electricityReading, waterReading, photoUrls, notes } = req.body;
+
+    if (!contractId || !mongoose.Types.ObjectId.isValid(contractId)) {
+      return res.status(400).json({ success: false, message: "Valid contractId is required" });
+    }
+
+    const readingInput: Parameters<typeof UtilityInvoiceService.createInitialReading>[1] = {
+      contractId,
+    };
+    if (roomId) readingInput.roomId = roomId;
+    if (electricityReading != null) readingInput.electricityReading = Number(electricityReading);
+    if (waterReading != null) readingInput.waterReading = Number(waterReading);
+    if (photoUrls) readingInput.photoUrls = photoUrls;
+    if (notes != null) readingInput.notes = notes;
+
+    const readings = await UtilityInvoiceService.createInitialReading(landlordId, readingInput);
+
+    return res.status(201).json({
+      success: true,
+      message: "Initial meter reading created successfully",
+      data: readings,
+    });
+  } catch (err: any) {
+    if (err.name === "UtilityInvoiceError") {
+      return res.status(err.statusCode || 400).json({
+        success: false,
+        message: err.message,
+        code: err.code,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Internal server error",
+    });
   }
 };

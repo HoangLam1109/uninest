@@ -21,6 +21,7 @@ const roomTypeOptions: Array<{ value: RoomType; label: string }> = [
 
 const statusOptions: Array<{ value: RoomStatus; label: string }> = [
   { value: 'AVAILABLE', label: 'Còn trống' },
+  { value: 'DEPOSITED', label: 'Đã đặt cọc' },
   { value: 'RENTED', label: 'Đã thuê' },
   { value: 'MAINTENANCE', label: 'Bảo trì' },
 ]

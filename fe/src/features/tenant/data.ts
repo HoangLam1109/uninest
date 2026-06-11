@@ -1,29 +1,30 @@
 import {
+  ArrowLeft,
   CalendarDays,
   CreditCard,
   FileText,
+  Gauge,
   Heart,
   Home,
-  LayoutGrid,
-  MessageSquareWarning,
   Wrench,
 } from 'lucide-react'
 
 export const tenantNavItems = [
-  { label: 'Tổng quan', href: '/cu-dan', icon: LayoutGrid },
+
   { label: 'Đặt phòng', href: '/cu-dan/dat-phong', icon: CalendarDays },
   { label: 'Hóa đơn', href: '/cu-dan/hoa-don', icon: FileText },
+  { label: 'Chỉ số điện nước', href: '/cu-dan/chi-so', icon: Gauge },
   { label: 'Phòng đã lưu', href: '/cu-dan/phong-da-luu', icon: Heart },
   { label: 'Hợp đồng', href: '/cu-dan/hop-dong', icon: Home },
 ] as const
 
 export const tenantSidebarConfig = {
-  baseHref: '/cu-dan',
+  baseHref: '/cu-dan/dat-phong',
   label: 'Cổng người thuê',
   navLabel: 'Điều hướng người thuê',
   navItems: tenantNavItems,
-  ctaLabel: 'Gửi yêu cầu hỗ trợ',
-  ctaIcon: MessageSquareWarning,
+  ctaLabel: 'Trang chủ',
+  ctaIcon: ArrowLeft,
 }
 
 export const tenantStats = [

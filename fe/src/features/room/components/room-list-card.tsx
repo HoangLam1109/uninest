@@ -6,6 +6,8 @@ import {
   formatRoomCurrency,
   formatRoomLocation,
   getPrimaryRoomImage,
+  roomStatusClasses,
+  roomStatusLabels,
 } from '@/utils/room-display'
 import { useGetRoomImages } from '../hooks/use-rooms'
 import type { Room } from '../types/room.type'
@@ -53,7 +55,11 @@ export function RoomListCard({ room }: RoomListCardProps) {
           <span>{room.areaSqm ?? 0} m2</span>
           <span>{room.maxOccupants} nguoi</span>
           <span>{room.roomType ?? 'Chua chon'}</span>
-          <span>{room.status}</span>
+          <span
+            className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${roomStatusClasses[room.status]}`}
+          >
+            {roomStatusLabels[room.status]}
+          </span>
         </div>
 
         <div className="mt-auto flex items-center justify-between gap-3">

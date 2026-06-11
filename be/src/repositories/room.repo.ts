@@ -54,5 +54,12 @@ export const RoomRepository = {
         select: "fullName email phone avatarUrl",
       })
       .lean();
-  }
+  },
+
+  addTenants: (roomId: string, landlordId: string, tenants: { tenantId: any; isPrimaryTenant: boolean }[]) =>
+    RoomModel.findOneAndUpdate(
+      { _id: roomId, landlordId },
+      { $push: { tenants: { $each: tenants } } },
+      { returnDocument: "after", runValidators: true }
+    ),
 };

@@ -12,7 +12,7 @@ export const createBooking = async (req: Request, res: Response) => {
     if (!tenantId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
-    const { roomId, checkInDate, checkOutDate, notes } = req.body;
+    const { roomId, checkInDate, checkOutDate, identityIds, notes } = req.body;
     
     if (!roomId || !checkInDate) {
       return res.status(400).json({
@@ -21,12 +21,25 @@ export const createBooking = async (req: Request, res: Response) => {
       });
     }
 
+    if (!identityIds || !Array.isArray(identityIds) || identityIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one identity profile (identityIds) is required",
+      });
+    }
+
     if (!mongoose.Types.ObjectId.isValid(roomId as string))
       return res.status(400).json({ success: false, message: "Invalid room id" });
+
+    for (const id of identityIds) {
+      if (!mongoose.Types.ObjectId.isValid(id as string))
+        return res.status(400).json({ success: false, message: `Invalid identity id: ${id}` });
+    }
 
     const booking = await BookingService.createBooking(
       roomId,
       tenantId,
+      identityIds,
       new Date(checkInDate),
       checkOutDate ? new Date(checkOutDate) : undefined,
       notes
@@ -229,6 +242,38 @@ export const cancelBooking = async (req: Request, res: Response) => {
   } catch (err: any) {
     const statusCode = err.message.includes("not found") ||
       err.message.includes("not your booking")
+      ? 403
+      : 400;
+    return res
+      .status(statusCode)
+      .json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * DELETE BOOKING (Landlord - soft delete)
+ */
+export const deleteBooking = async (req: Request, res: Response) => {
+  try {
+    const landlordId = req.userId;
+    const { id: bookingId } = req.params;
+
+    if (!landlordId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    if (!mongoose.Types.ObjectId.isValid(bookingId as string))
+      return res.status(400).json({ success: false, message: "Invalid booking id" });
+
+    const booking = await BookingService.deleteBookingByLandlord(bookingId as string, landlordId);
+
+    return res.json({
+      success: true,
+      message: "Booking deleted successfully",
+      data: booking,
+    });
+  } catch (err: any) {
+    const statusCode = err.message.includes("not found") ||
+      err.message.includes("do not own")
       ? 403
       : 400;
     return res

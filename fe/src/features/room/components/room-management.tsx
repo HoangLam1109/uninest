@@ -132,7 +132,7 @@ export function RoomManagement() {
         acc[room.status] += 1
         return acc
       },
-      { total: 0, AVAILABLE: 0, RENTED: 0, MAINTENANCE: 0 },
+      { total: 0, AVAILABLE: 0, DEPOSITED: 0, RENTED: 0, MAINTENANCE: 0 },
     )
   }, [rooms])
 
@@ -155,7 +155,7 @@ export function RoomManagement() {
         subtitle="Theo dõi trạng thái, giá thuê và thông tin hiển thị của từng phòng."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <article className="rounded-xl border border-primary/10 bg-white p-4">
           <p className="text-xs font-semibold uppercase text-slate-500">Tổng phòng</p>
           <p className="mt-2 text-2xl font-bold text-slate-900">
@@ -166,6 +166,12 @@ export function RoomManagement() {
           <p className="text-xs font-semibold uppercase text-slate-500">Còn trống</p>
           <p className="mt-2 text-2xl font-bold text-green-700">
             {summary.AVAILABLE}
+          </p>
+        </article>
+        <article className="rounded-xl border border-primary/10 bg-white p-4">
+          <p className="text-xs font-semibold uppercase text-slate-500">Đã cọc</p>
+          <p className="mt-2 text-2xl font-bold text-amber-700">
+            {summary.DEPOSITED}
           </p>
         </article>
         <article className="rounded-xl border border-primary/10 bg-white p-4">
@@ -209,6 +215,7 @@ export function RoomManagement() {
               >
                 <option value="">Tất cả</option>
                 <option value="AVAILABLE">Còn trống</option>
+                <option value="DEPOSITED">Đã cọc</option>
                 <option value="RENTED">Đã thuê</option>
                 <option value="MAINTENANCE">Bảo trì</option>
               </select>

@@ -1,13 +1,11 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  ArrowLeft,
   Building2,
   CalendarDays,
   FileText,
-  LayoutGrid,
   ScrollText,
-  UserPlus,
   Users,
-  Zap,
 } from 'lucide-react'
 
 export type LandlordNavItem = {
@@ -17,22 +15,21 @@ export type LandlordNavItem = {
 }
 
 export const landlordNavItems: LandlordNavItem[] = [
-  { label: 'Tổng quan', href: '/chu-nha', icon: LayoutGrid },
   { label: 'Quản lý phòng', href: '/chu-nha/phong', icon: Building2 },
   { label: 'Đặt phòng', href: '/chu-nha/dat-phong', icon: CalendarDays },
   { label: 'Hợp đồng', href: '/chu-nha/hop-dong', icon: ScrollText },
   { label: 'Người thuê', href: '/chu-nha/nguoi-thue', icon: Users },
   { label: 'Hóa đơn', href: '/chu-nha/hoa-don', icon: FileText },
-  { label: 'Tiện ích', href: '/chu-nha/tien-ich', icon: Zap },
 ]
 
 export const landlordSidebarConfig = {
-  baseHref: '/chu-nha',
+  baseHref: '/chu-nha/phong',
   label: 'Chủ nhà Dashboard',
   navLabel: 'Điều hướng chủ nhà',
   navItems: landlordNavItems,
-  ctaLabel: 'Thêm người thuê mới',
-  ctaIcon: UserPlus,
+  ctaLabel: 'Trang chủ',
+  ctaIcon: ArrowLeft,
+  ctaHref: '/',
 }
 
 export const landlordStats = [
@@ -124,4 +121,3 @@ export const paymentStatusStyles: Record<PaymentStatus, string> = {
   overdue: 'bg-red-500/10 text-red-600',
 }
 
-export { UserPlus }

@@ -7,7 +7,9 @@ import { FavoriteRepository } from "./favorite.repo.js";
 import { BookingRepository } from "./booking.repo.js";
 import { ContractRepository } from "./contract.repo.js";
 import { InvoiceRepository, InvoiceDetailRepository } from "./invoice.repo.js";
+import { MeterReadingRepository } from "./meter-reading.repo.js";
 import { ReviewRepository } from "./review.repo.js";
+import { IdentityRepository } from "./identity.repo.js";
 
 // Repository factory
 export class RepositoryFactory {
@@ -30,4 +32,4 @@ export class RepositoryFactory {
 export const userRepository = RepositoryFactory.getUserRepository();
 
 // Export other repositories
-export { PropertyRepository, RoomImageRepository, FavoriteRepository, BookingRepository, ContractRepository, InvoiceRepository, InvoiceDetailRepository, ReviewRepository };
+export { PropertyRepository, RoomImageRepository, FavoriteRepository, BookingRepository, ContractRepository, InvoiceRepository, InvoiceDetailRepository, MeterReadingRepository, ReviewRepository };

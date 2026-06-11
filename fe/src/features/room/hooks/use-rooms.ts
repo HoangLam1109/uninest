@@ -20,6 +20,7 @@ export const roomKeys = {
   favoritesList: (params: Pick<RoomListParams, 'page' | 'limit'>) =>
     [...roomKeys.favorites(), params] as const,
   favorite: (roomId: string) => [...roomKeys.all, 'favorite', roomId] as const,
+  tenants: () => [...roomKeys.all, 'tenants'] as const,
 }
 
 function getFavoriteRoomId(roomId: string | { _id: string }) {
@@ -64,6 +65,16 @@ export function useGetTenantFavoriteRooms(
     queryKey: roomKeys.favoritesList(params),
     queryFn: async () => {
       const { data } = await roomApi.listFavorites(params)
+      return data
+    },
+  })
+}
+
+export function useGetLandlordTenants() {
+  return useQuery({
+    queryKey: roomKeys.tenants(),
+    queryFn: async () => {
+      const { data } = await roomApi.getTenants()
       return data
     },
   })

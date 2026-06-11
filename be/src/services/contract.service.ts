@@ -1,8 +1,10 @@
 import { ContractRepository } from "../repositories/contract.repo.js";
 import { BookingRepository } from "../repositories/booking.repo.js";
+import { IdentityRepository } from "../repositories/identity.repo.js";
 import { RoomRepository } from "../repositories/room.repo.js";
 import { CONTRACT_STATUS } from "../models/Contract.model.js";
 import { BOOKING_STATUS } from "../models/Booking.model.js";
+import { IDENTITY_STATUS } from "../models/Identity.model.js";
 import { ROOM_STATUS } from "../models/Room.model.js";
 import { PDFDocument } from "pdf-lib";
 import {
@@ -104,7 +106,22 @@ export const ContractService = {
       throw new Error("Contract already exists for this booking");
     }
 
-    // Create contract
+    // Fetch verified identities for tenant info
+    const identityIds = (booking as any).identityIds || [];
+    if (!identityIds.length) {
+      throw new Error("No identity profiles found for this booking");
+    }
+
+    // Verify at least one identity is VERIFIED
+    const identities = await Promise.all(
+      identityIds.map((id: any) => IdentityRepository.findById(id._id || id.toString()))
+    );
+    const verifiedIdentity = identities.find((id) => id && id.status === IDENTITY_STATUS.VERIFIED);
+    if (!verifiedIdentity) {
+      throw new Error("No verified identity found. Please verify at least one identity first.");
+    }
+
+    // Create contract with auto-filled tenant info from identity
     const contract = await ContractRepository.create({
       bookingId,
       landlordId,
@@ -118,7 +135,18 @@ export const ContractService = {
       status: CONTRACT_STATUS.DRAFT,
     });
 
-    return contract;
+    return {
+      contract,
+      tenantIdentity: {
+        fullName: verifiedIdentity.fullName,
+        dateOfBirth: verifiedIdentity.dateOfBirth,
+        phone: verifiedIdentity.phone,
+        cccdNumber: verifiedIdentity.cccdNumber,
+        cccdFrontImage: verifiedIdentity.cccdFrontImage,
+        cccdBackImage: verifiedIdentity.cccdBackImage,
+        coTenants: verifiedIdentity.coTenants,
+      },
+    };
   },
 
   getContractById: async (id: string, userId: string) => {
@@ -275,6 +303,48 @@ export const ContractService = {
 
     const updated = await ContractRepository.update(contractId, updateData);
 
+    // Update room status from DEPOSITED to RENTED when contract becomes active
+    const bookingId = (contract.bookingId as any)._id?.toString() ?? contract.bookingId.toString();
+
+    const booking = await BookingRepository.findById(bookingId);
+    if (booking) {
+      const roomId = (booking.roomId as any)._id?.toString() ?? booking.roomId.toString();
+
+      await RoomRepository.update(
+        roomId,
+        contract.landlordId._id.toString(),
+        { status: ROOM_STATUS.RENTED }
+      );
+
+      // Sync verified identities to room's tenant list
+      const identityIds = (booking as any).identityIds || [];
+      const identities = await Promise.all(
+        identityIds.map((id: any) => IdentityRepository.findById(id._id || id.toString()))
+      );
+      const verifiedIdentities = identities.filter(
+        (id) => id && id.status === IDENTITY_STATUS.VERIFIED
+      );
+
+      if (verifiedIdentities.length > 0) {
+        const existingTenantIds = new Set(
+          ((booking.roomId as any).tenants || []).map((t: any) =>
+            (t.tenantId?._id || t.tenantId).toString()
+          )
+        );
+
+        const newTenants = verifiedIdentities
+          .filter((identity) => !existingTenantIds.has(identity!.userId._id.toString()))
+          .map((identity, index) => ({
+            tenantId: identity!.userId._id,
+            isPrimaryTenant: index === 0,
+          }));
+
+        if (newTenants.length > 0) {
+          await RoomRepository.addTenants(roomId, contract.landlordId._id.toString(), newTenants);
+        }
+      }
+    }
+
     return updated;
   },
 
@@ -314,26 +384,30 @@ export const ContractService = {
       throw new Error("You do not own this contract");
     }
 
-    // Only allow termination from ACTIVE or DRAFT status
-    if (![CONTRACT_STATUS.ACTIVE, CONTRACT_STATUS.DRAFT].includes(contract.status)) {
+    // Allow termination from DRAFT, PENDING_TENANT_SIGNATURE, or ACTIVE status
+    if (
+      ![CONTRACT_STATUS.ACTIVE, CONTRACT_STATUS.DRAFT, CONTRACT_STATUS.PENDING_TENANT_SIGNATURE].includes(
+        contract.status
+      )
+    ) {
       throw new Error(
         `Cannot terminate contract with status: ${contract.status}`
       );
     }
 
-    // If ACTIVE contract, revert room status and cancel booking
-    if (contract.status === CONTRACT_STATUS.ACTIVE) {
-      const booking = await BookingRepository.findById(
-        contract.bookingId.toString()
-      );
+    // If contract is not DRAFT, revert booking and room
+    if (contract.status !== CONTRACT_STATUS.DRAFT) {
+      const bookingId = (contract.bookingId as any)._id?.toString() ?? contract.bookingId.toString();
+
+      const booking = await BookingRepository.findById(bookingId);
       if (booking) {
-        // Revert room status from RENTED back to AVAILABLE
+        const roomId = (booking.roomId as any)._id?.toString() ?? booking.roomId.toString();
+
         await RoomRepository.update(
-          booking.roomId._id.toString(),
+          roomId,
           landlordId,
           { status: ROOM_STATUS.AVAILABLE }
         );
-        // Cancel the booking
         await BookingRepository.update(booking._id.toString(), {
           status: BOOKING_STATUS.CANCELLED,
         });

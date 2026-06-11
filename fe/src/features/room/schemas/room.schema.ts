@@ -39,7 +39,7 @@ export const roomSchema = z.object({
   areaSqm: optionalNumber,
   maxOccupants: z.coerce.number().int().min(1, 'Toi thieu 1 nguoi'),
   roomType: z.enum(['STUDIO', 'SINGLE', 'SHARED', 'APARTMENT']).optional(),
-  status: z.enum(['AVAILABLE', 'RENTED', 'MAINTENANCE']),
+  status: z.enum(['AVAILABLE', 'DEPOSITED', 'RENTED', 'MAINTENANCE']),
   isPublished: z.boolean(),
 })
 

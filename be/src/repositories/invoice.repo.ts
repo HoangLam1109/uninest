@@ -1,4 +1,4 @@
-import { InvoiceModel } from "../models/Invoice.model.js";
+import { InvoiceModel, INVOICE_STATUS } from "../models/Invoice.model.js";
 import { InvoiceDetailModel } from "../models/InvoiceDetail.model.js";
 import mongoose from "mongoose";
 
@@ -85,6 +85,63 @@ export const InvoiceRepository = {
       dueDate: { $lt: new Date() },
       deletedAt: null,
     }),
+
+  /**
+   * Tìm hóa đơn gần nhất TRƯỚC billingMonth của cùng hợp đồng (theo contractId).
+   * Không lấy hóa đơn đã hủy (CANCELLED) hoặc đã xóa mềm.
+   * Trả về hóa đơn đã populate InvoiceDetail.
+   */
+  findPreviousInvoiceByContractId: async (
+    contractId: string,
+    billingMonth: string
+  ) => {
+    const invoices = await InvoiceModel.find({
+      contractId,
+      billingMonth: { $lt: billingMonth },
+      status: { $ne: "CANCELLED" },
+      deletedAt: null,
+    })
+      .sort({ billingMonth: -1 })
+      .limit(1)
+      .lean();
+
+    if (!invoices.length) return null;
+
+    const invoice = invoices[0];
+    const detail = await InvoiceDetailModel.findOne({
+      invoiceId: invoice._id,
+    }).lean();
+
+    return { invoice, detail };
+  },
+
+  /**
+   * Tìm hóa đơn gần nhất TRƯỚC billingMonth theo bookingId
+   * (fallback khi chưa có contractId).
+   */
+  findPreviousInvoiceByBookingId: async (
+    bookingId: string,
+    billingMonth: string
+  ) => {
+    const invoices = await InvoiceModel.find({
+      bookingId,
+      billingMonth: { $lt: billingMonth },
+      status: { $ne: "CANCELLED" },
+      deletedAt: null,
+    })
+      .sort({ billingMonth: -1 })
+      .limit(1)
+      .lean();
+
+    if (!invoices.length) return null;
+
+    const invoice = invoices[0];
+    const detail = await InvoiceDetailModel.findOne({
+      invoiceId: invoice._id,
+    }).lean();
+
+    return { invoice, detail };
+  },
 };
 
 export const InvoiceDetailRepository = {

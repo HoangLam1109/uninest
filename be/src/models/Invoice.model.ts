@@ -9,6 +9,8 @@ export enum INVOICE_STATUS {
 
 export interface IInvoice extends Document {
   bookingId: Types.ObjectId;
+  /** Reference to the active contract at the time of billing */
+  contractId?: Types.ObjectId;
   landlordId: Types.ObjectId;
   tenantId: Types.ObjectId;
   billingMonth: string; // YYYY-MM format
@@ -33,6 +35,12 @@ const InvoiceSchema = new Schema<IInvoice>(
       type: Schema.Types.ObjectId,
       ref: "Booking",
       required: [true, "Booking ID is required"],
+      index: true,
+    },
+    contractId: {
+      type: Schema.Types.ObjectId,
+      ref: "Contract",
+      default: null,
       index: true,
     },
     landlordId: {

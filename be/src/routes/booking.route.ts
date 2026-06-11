@@ -3,6 +3,7 @@ import {
   approveBooking,
   cancelBooking,
   createBooking,
+  deleteBooking,
   getBookingById,
   getLandlordBookings,
   getTenantBookings,
@@ -28,5 +29,6 @@ router.get("/:id", getBookingById);
 router.patch("/:id/approve", approveBooking);
 router.patch("/:id/reject", rejectBooking);
 router.patch("/:id/cancel", cancelBooking);
+router.delete("/:id", deleteBooking);
 
 export default router;

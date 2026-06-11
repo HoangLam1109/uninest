@@ -83,6 +83,7 @@ export function useApproveBooking() {
     onSuccess: (booking) => {
       queryClient.invalidateQueries({ queryKey: bookingKeys.all })
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(booking._id) })
+      queryClient.invalidateQueries({ queryKey: ['rooms'] })
       toast.success('Đã phê duyệt yêu cầu')
     },
     onError: (error) => {
@@ -104,6 +105,7 @@ export function useRejectBooking() {
     onSuccess: (booking) => {
       queryClient.invalidateQueries({ queryKey: bookingKeys.all })
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(booking._id) })
+      queryClient.invalidateQueries({ queryKey: ['rooms'] })
       toast.success('Đã từ chối yêu cầu')
     },
     onError: (error) => {
@@ -125,10 +127,32 @@ export function useCancelBooking() {
     onSuccess: (booking) => {
       queryClient.invalidateQueries({ queryKey: bookingKeys.all })
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(booking._id) })
+      queryClient.invalidateQueries({ queryKey: ['rooms'] })
       toast.success('Đã hủy yêu cầu')
     },
     onError: (error) => {
       toast.error('Không thể hủy yêu cầu', {
+        description: getApiErrorMessage(error, 'Vui lòng thử lại sau.'),
+      })
+    },
+  })
+}
+
+export function useDeleteBooking() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await bookingApi.delete(id)
+      return data.data
+    },
+    onSuccess: (booking) => {
+      queryClient.invalidateQueries({ queryKey: bookingKeys.all })
+      queryClient.invalidateQueries({ queryKey: bookingKeys.detail(booking._id) })
+      toast.success('Đã xóa yêu cầu đặt phòng')
+    },
+    onError: (error) => {
+      toast.error('Không thể xóa yêu cầu', {
         description: getApiErrorMessage(error, 'Vui lòng thử lại sau.'),
       })
     },

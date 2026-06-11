@@ -23,4 +23,6 @@ export const bookingApi = {
   reject: (id: string) => api.patch<BookingResponse>(`/bookings/${id}/reject`),
 
   cancel: (id: string) => api.patch<BookingResponse>(`/bookings/${id}/cancel`),
+
+  delete: (id: string) => api.delete<BookingResponse>(`/bookings/${id}`),
 }
