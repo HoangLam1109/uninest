@@ -80,7 +80,7 @@ export function LandlordContractsPage() {
   }
 
   return (
-    <div className="flex w-full flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="mt-1 text-2xl font-bold text-slate-950 md:text-3xl">

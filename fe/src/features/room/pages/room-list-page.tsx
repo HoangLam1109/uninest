@@ -19,17 +19,17 @@ export function RoomListPage() {
           <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.14em] text-primary">
-                Danh sach phong
+                Danh sách phòng
               </p>
               <h1 className="mt-2 font-serif text-3xl font-bold text-foreground lg:text-5xl">
-                Tim phong phu hop voi ban
+                TÌm phòng phù hợp với bạn
               </h1>
             </div>
             <div className="relative w-full lg:max-w-sm">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 className="h-11 rounded-lg border-primary/10 bg-white pl-9 shadow-none"
-                placeholder="Tim theo ten, dia chi..."
+                placeholder="Tìm theo tên, địa chỉ..."
                 disabled
               />
             </div>
@@ -48,13 +48,13 @@ export function RoomListPage() {
 
           {roomsQuery.isError ? (
             <div className="rounded-xl border border-red-500/20 bg-white p-8 text-center text-sm text-red-600">
-              Khong the tai danh sach phong. Vui long thu lai sau.
+              Không thể tải danh sách phòng. Vui lòng thử lại sau.
             </div>
           ) : null}
 
           {!roomsQuery.isLoading && !roomsQuery.isError && rooms.length === 0 ? (
             <div className="rounded-xl border border-primary/10 bg-white p-8 text-center text-sm text-muted-foreground">
-              Chua co phong trong de hien thi.
+              Chưa có phòng trống để hiển thị.
             </div>
           ) : null}
 

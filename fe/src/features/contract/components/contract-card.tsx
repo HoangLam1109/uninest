@@ -77,9 +77,9 @@ export function ContractCard({
   }
 
   return (
-    <article className="rounded-xl border border-primary/10 bg-white p-5 shadow-sm">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
+    <article className="rounded-xl border border-primary/10 bg-white p-4 shadow-sm sm:p-5">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+        <div className="min-w-0 pr-0 lg:pr-4">
           <div className="flex flex-wrap items-center gap-2">
             <span
               className={cn(
@@ -96,23 +96,25 @@ export function ContractCard({
           <h2 className="mt-3 line-clamp-2 text-xl font-bold text-slate-950">
             {getContractRoomTitle(contract)}
           </h2>
-          <p className="mt-2 flex items-center gap-2 text-sm text-slate-500">
+          <p className="mt-2 flex min-w-0 items-center gap-2 text-sm text-slate-500">
             <User className="size-4 shrink-0" />
-            {mode === 'landlord'
-              ? getContractPartyName(contract.tenantId)
-              : getContractPartyName(contract.landlordId)}
+            <span className="truncate">
+              {mode === 'landlord'
+                ? getContractPartyName(contract.tenantId)
+                : getContractPartyName(contract.landlordId)}
+            </span>
           </p>
         </div>
 
-        <div className="rounded-xl bg-primary/10 px-4 py-3 text-left lg:text-right">
+        <div className="w-full rounded-xl bg-primary/10 px-4 py-3 text-left sm:w-fit sm:min-w-44 lg:text-right">
           <p className="text-xs font-bold uppercase text-primary">Tiền thuê</p>
-          <p className="mt-1 text-lg font-bold text-primary">
+          <p className="mt-1 whitespace-nowrap text-lg font-bold text-primary">
             {formatContractCurrency(contract.monthlyRent)}
           </p>
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 text-sm md:grid-cols-3">
+      <div className="mt-5 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-3">
         <div className="rounded-lg bg-surface p-3">
           <p className="text-slate-500">Ngày bắt đầu</p>
           <p className="mt-1 flex items-center gap-2 font-bold text-slate-950">
@@ -140,7 +142,7 @@ export function ContractCard({
         </p>
       ) : null}
 
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
         {hasContractFile ? (
           <Button
             type="button"

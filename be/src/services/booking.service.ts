@@ -94,9 +94,13 @@ export const BookingService = {
   },
 
   getTenantBookings: async (tenantId: string, skip: number, limit: number) => {
+    // Lấy tất cả identity IDs của user để tìm booking mà user là người thuê kèm
+    const identities = await IdentityRepository.findByUserId(tenantId);
+    const identityIds = identities.map((i: any) => i._id.toString());
+
     const [bookings, total] = await Promise.all([
-      BookingRepository.findByTenantId(tenantId, skip, limit),
-      BookingRepository.countByTenantId(tenantId),
+      BookingRepository.findByTenantOrIdentity(tenantId, identityIds, skip, limit),
+      BookingRepository.countByTenantOrIdentity(tenantId, identityIds),
     ]);
 
     return { bookings, total };

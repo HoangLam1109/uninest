@@ -54,77 +54,77 @@ export function BookingCard({
 
   return (
     <>
-      <article className="rounded-xl border border-primary/10 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={cn(
-                  'rounded-full px-3 py-1 text-xs font-bold',
-                  bookingStatusStyles[booking.status],
-                )}
-              >
-                {bookingStatusLabels[booking.status]}
+      <article className="rounded-xl border border-primary/10 bg-white p-4 shadow-sm sm:p-5">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+        <div className="min-w-0 pr-0 lg:pr-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={cn(
+                'rounded-full px-3 py-1 text-xs font-bold',
+                bookingStatusStyles[booking.status],
+              )}
+            >
+              {bookingStatusLabels[booking.status]}
+            </span>
+            {booking.createdAt ? (
+              <span className="text-xs font-semibold text-slate-400">
+                Tạo ngày {formatBookingDate(booking.createdAt)}
               </span>
-              {booking.createdAt ? (
-                <span className="text-xs font-semibold text-slate-400">
-                  Tạo ngày {formatBookingDate(booking.createdAt)}
-                </span>
-              ) : null}
-            </div>
-            <h2 className="mt-3 line-clamp-2 text-xl font-bold text-slate-950">
-              {room?.title ?? 'Phòng không khả dụng'}
-            </h2>
-            <p className="mt-2 flex items-start gap-2 text-sm text-slate-500">
-              <Home className="mt-0.5 size-4 shrink-0" />
-              {room
-                ? [room.address, room.district, room.city].filter(Boolean).join(', ')
-                : 'Chưa có thông tin phòng'}
-            </p>
+            ) : null}
           </div>
-
-          {room?.pricePerMonth ? (
-            <div className="rounded-xl bg-primary/10 px-4 py-3 text-left lg:text-right">
-              <p className="text-xs font-bold uppercase text-primary">Giá phòng</p>
-              <p className="mt-1 text-lg font-bold text-primary">
-                {formatBookingCurrency(room.pricePerMonth)}
-              </p>
-            </div>
-          ) : null}
+          <h2 className="mt-3 line-clamp-2 text-xl font-bold text-slate-950">
+            {room?.title ?? 'Phòng không khả dụng'}
+          </h2>
+          <p className="mt-2 flex min-w-0 items-start gap-2 text-sm text-slate-500">
+            <Home className="mt-0.5 size-4 shrink-0" />
+            {room
+              ? [room.address, room.district, room.city].filter(Boolean).join(', ')
+              : 'Chưa có thông tin phòng'}
+          </p>
         </div>
 
-        <div className="mt-5 grid gap-3 text-sm md:grid-cols-3">
-          <div className="rounded-lg bg-surface p-3">
-            <p className="text-slate-500">Ngày nhận phòng</p>
-            <p className="mt-1 flex items-center gap-2 font-bold text-slate-950">
-              <CalendarDays className="size-4 text-primary" />
-              {formatBookingDate(booking.checkInDate)}
+        {room?.pricePerMonth ? (
+          <div className="w-full rounded-xl bg-primary/10 px-4 py-3 text-left sm:w-fit sm:min-w-44 lg:text-right">
+            <p className="text-xs font-bold uppercase text-primary">Giá phòng</p>
+            <p className="mt-1 whitespace-nowrap text-lg font-bold text-primary">
+              {formatBookingCurrency(room.pricePerMonth)}
             </p>
           </div>
+        ) : null}
+      </div>
+
+      <div className="mt-5 grid gap-3 text-sm md:grid-cols-3">
+        <div className="rounded-lg bg-surface p-3">
+          <p className="text-slate-500">Ngày nhận phòng</p>
+          <p className="mt-1 flex items-center gap-2 font-bold text-slate-950">
+            <CalendarDays className="size-4 text-primary" />
+            {formatBookingDate(booking.checkInDate)}
+          </p>
+        </div>
+        <div className="rounded-lg bg-surface p-3">
+          <p className="text-slate-500">Ngày trả phòng</p>
+          <p className="mt-1 font-bold text-slate-950">
+            {formatBookingDate(booking.checkOutDate)}
+          </p>
+        </div>
+        {mode === 'tenant' ? (
           <div className="rounded-lg bg-surface p-3">
-            <p className="text-slate-500">Ngày trả phòng</p>
+            <p className="text-slate-500">Tổng tiền</p>
             <p className="mt-1 font-bold text-slate-950">
-              {formatBookingDate(booking.checkOutDate)}
+              {formatBookingCurrency(booking.totalPrice)}
             </p>
           </div>
-          {mode === 'tenant' ? (
-            <div className="rounded-lg bg-surface p-3">
-              <p className="text-slate-500">Tổng tiền</p>
-              <p className="mt-1 font-bold text-slate-950">
-                {formatBookingCurrency(booking.totalPrice)}
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-lg bg-surface p-3">
-              <p className="text-slate-500">Người thuê</p>
-              <p className="mt-1 font-bold text-slate-950">
-                {tenant?.fullName ?? tenant?.email ?? 'Chưa có thông tin'}
-              </p>
-            </div>
-          )}
-        </div>
+        ) : (
+          <div className="rounded-lg bg-surface p-3">
+            <p className="text-slate-500">Người thuê</p>
+            <p className="mt-1 font-bold text-slate-950">
+              {tenant?.fullName ?? tenant?.email ?? 'Chưa có thông tin'}
+            </p>
+          </div>
+        )}
+      </div>
 
-        {mode === 'landlord' && tenant ? (
+      {mode === 'landlord' && tenant ? (
           <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-500">
             {tenant.email ? (
               <span className="inline-flex items-center gap-2">
@@ -152,7 +152,6 @@ export function BookingCard({
                 const name = typeof identity === 'object' ? identity.fullName : `Người ${index + 1}`
                 const cccd = typeof identity === 'object' ? identity.cccdNumber : ''
                 const phone = typeof identity === 'object' ? identity.phone : ''
-                const status = typeof identity === 'object' ? identity.status : ''
                 return (
                   <div
                     key={id}
@@ -169,7 +168,6 @@ export function BookingCard({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="sm"
                       className="shrink-0 gap-1 text-xs text-primary"
                       onClick={() => {
                         setViewingIdentityId(id)
@@ -186,15 +184,21 @@ export function BookingCard({
           </div>
         ) : null}
 
-        {booking.notes ? (
-          <p className="mt-4 rounded-lg border border-primary/10 bg-white p-3 text-sm leading-6 text-slate-600">
-            {booking.notes}
-          </p>
-        ) : null}
-
-        {canLandlordReview || canTenantCancel ? (
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
-            {canTenantCancel ? (
+      {canLandlordReview || canTenantCancel ? (
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+          {canTenantCancel ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isActionPending}
+              onClick={() => onCancel?.(booking._id)}
+            >
+              <XCircle className="size-4" />
+              Hủy booking
+            </Button>
+          ) : null}
+          {canLandlordReview ? (
+            <>
               <Button
                 type="button"
                 variant="outline"
@@ -204,8 +208,9 @@ export function BookingCard({
                 <XCircle className="size-4" />
                 Hủy booking
               </Button>
-            ) : null}
-            {canLandlordReview ? (
+            </>
+          ) : null}
+          {canLandlordReview ? (
               <>
                 <Button
                   type="button"
@@ -234,7 +239,6 @@ export function BookingCard({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
               className="gap-1.5 text-xs text-slate-400 hover:text-red-500"
               disabled={isActionPending}
               onClick={() => onDelete?.(booking._id)}

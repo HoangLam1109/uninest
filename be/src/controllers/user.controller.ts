@@ -1,7 +1,68 @@
 import type { Request, Response } from "express";
 import { UserService } from "../services/user.service.js";
+import { configureCloudinary } from "../config/cloudinary.config.js";
 
 const userService = new UserService();
+
+function uploadAvatarToCloudinary(file: Express.Multer.File, userId: string) {
+  const cloudinary = configureCloudinary();
+
+  return new Promise<{ secure_url: string; public_id: string }>(
+    (resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: `uninest/avatars/${userId}`,
+          public_id: `avatar_${Date.now()}`,
+          resource_type: "image",
+          transformation: [
+            { width: 400, height: 400, crop: "fill", gravity: "face" },
+            { quality: "auto", fetch_format: "auto" },
+          ],
+        },
+        (error, result) => {
+          if (error || !result) {
+            reject(error ?? new Error("Cloudinary upload failed"));
+            return;
+          }
+          resolve({
+            secure_url: result.secure_url,
+            public_id: result.public_id,
+          });
+        },
+      );
+      uploadStream.end(file.buffer);
+    },
+  );
+}
+
+export const uploadAvatar = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const file = req.file;
+    if (!file)
+      return res.status(400).json({ success: false, message: "No image file provided" });
+
+    const { secure_url } = await uploadAvatarToCloudinary(file, userId);
+
+    const updatedUser = await userService.updateUserProfile(userId, {
+      avatarUrl: secure_url,
+    });
+
+    return res.json({
+      success: true,
+      message: "Avatar uploaded successfully",
+      data: {
+        avatarUrl: secure_url,
+        user: updatedUser,
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
 
 export const getUserProfile = async (req: Request, res: Response) => {
   try {

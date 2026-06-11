@@ -6,6 +6,7 @@ import {
   Gauge,
   Heart,
   Home,
+  MessageCircle,
   User,
   Wrench,
 } from 'lucide-react'
@@ -18,6 +19,7 @@ export const tenantNavItems = [
   { label: 'Hồ sơ cá nhân', href: '/cu-dan/ho-so', icon: User },
   { label: 'Phòng đã lưu', href: '/cu-dan/phong-da-luu', icon: Heart },
   { label: 'Hợp đồng', href: '/cu-dan/hop-dong', icon: Home },
+  { label: 'Tin nhắn', href: '/cu-dan/tin-nhan', icon: MessageCircle },
 ] as const
 
 export const tenantSidebarConfig = {

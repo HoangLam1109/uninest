@@ -4,6 +4,8 @@ import {
   Building2,
   CalendarDays,
   FileText,
+  LayoutGrid,
+  MessageCircle,
   ScrollText,
   Users,
 } from 'lucide-react'
@@ -18,6 +20,7 @@ export const landlordNavItems: LandlordNavItem[] = [
   { label: 'Quản lý phòng', href: '/chu-nha/phong', icon: Building2 },
   { label: 'Đặt phòng', href: '/chu-nha/dat-phong', icon: CalendarDays },
   { label: 'Hợp đồng', href: '/chu-nha/hop-dong', icon: ScrollText },
+  { label: 'Tin nhắn', href: '/chu-nha/tin-nhan', icon: MessageCircle },
   { label: 'Người thuê', href: '/chu-nha/nguoi-thue', icon: Users },
   { label: 'Hóa đơn', href: '/chu-nha/hoa-don', icon: FileText },
 ]

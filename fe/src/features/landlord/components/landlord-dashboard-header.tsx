@@ -47,7 +47,7 @@ export function LandlordDashboardHeader({
 
           {user ? (
             <div className="rounded-full border border-primary/30 bg-primary/20 p-0.5">
-              <Avatar name={user.fullName} className="size-9 text-xs md:size-10" />
+              <Avatar name={user.fullName} src={user.avatarUrl} className="size-9 text-xs md:size-10" />
             </div>
           ) : null}
         </div>

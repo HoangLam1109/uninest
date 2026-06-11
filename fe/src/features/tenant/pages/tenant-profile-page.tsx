@@ -1,20 +1,32 @@
 import { useState } from 'react'
-import { Eye, FileText, Mail, Phone, Plus, Shield, User } from 'lucide-react'
+import { Eye, FileText, Mail, Phone, Plus, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
+import { AvatarUpload } from '@/components/ui/avatar-upload'
 import { useAuth } from '@/hooks/use-auth'
+import { useAuthStore } from '@/stores/auth.store'
 import { useGetMyIdentities } from '@/features/identity/hooks/use-identities'
 import { IdentityFormModal } from '@/features/identity/components/identity-form-modal'
 import { IdentityDetail } from '@/features/identity/components/identity-detail'
+import { userApi } from '@/features/user/api/user.api'
 import type { Identity } from '@/features/identity/types/identity.type'
 import { cn } from '@/lib/utils'
 
 export function TenantProfilePage() {
   const { user } = useAuth()
+  const setUser = useAuthStore((s) => s.setUser)
   const { data: identities = [], isLoading } = useGetMyIdentities()
 
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [viewingIdentity, setViewingIdentity] = useState<Identity | null>(null)
+
+  async function handleAvatarUpload(file: File) {
+    const { data } = await userApi.uploadAvatar(file)
+    if (user && data.data) {
+      setUser({ ...user, avatarUrl: data.data.avatarUrl })
+    }
+    return { avatarUrl: data.data.avatarUrl }
+  }
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
@@ -27,11 +39,13 @@ export function TenantProfilePage() {
 
       {/* ── User info card ─────────────────────────────────────────────── */}
       <div className="rounded-xl border border-primary/10 bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary/10">
-            <User className="size-7 text-primary" />
-          </div>
-          <div className="min-w-0">
+        <div className="flex items-start gap-4">
+          <AvatarUpload
+            name={user?.fullName ?? ''}
+            src={user?.avatarUrl}
+            onUpload={handleAvatarUpload}
+          />
+          <div className="min-w-0 pt-1">
             <h2 className="text-lg font-bold text-slate-950">{user?.fullName}</h2>
             <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
               {user?.email ? (

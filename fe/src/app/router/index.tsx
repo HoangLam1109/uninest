@@ -24,6 +24,16 @@ const DashboardRedirectPage = lazy(() =>
 const HomePage = lazy(() =>
   import('@/pages/home').then((module) => ({ default: module.HomePage })),
 )
+const ChatPage = lazy(() =>
+  import('@/features/chat/pages/chat-page').then((module) => ({
+    default: module.ChatPage,
+  })),
+)
+const LandlordBookingsPage = lazy(() =>
+  import('@/features/booking/pages/landlord-bookings-page').then((module) => ({
+    default: module.LandlordBookingsPage,
+  })),
+)
 const LandlordContractsPage = lazy(() =>
   import('@/features/contract/pages/landlord-contracts-page').then((module) => ({
     default: module.LandlordContractsPage,
@@ -37,11 +47,6 @@ const LandlordInvoicesPage = lazy(() =>
 const LandlordTenantsPage = lazy(() =>
   import('@/features/landlord/components/landlord-tenants-page').then((module) => ({
     default: module.LandlordTenantsPage,
-  })),
-)
-const LandlordBookingsPage = lazy(() =>
-  import('@/features/booking/pages/landlord-bookings-page').then((module) => ({
-    default: module.LandlordBookingsPage,
   })),
 )
 const LoginPage = lazy(() =>
@@ -119,73 +124,73 @@ export function AppRouter() {
   return (
     <Suspense fallback={<Loading />}>
       <Routes>
-      <Route path={paths.home} element={<HomePage />} />
-      <Route path={paths.rooms} element={<RoomListPage />} />
-      <Route path={paths.roomDetail} element={<RoomDetailPage />} />
-      <Route path={paths.login} element={<LoginPage />} />
-      <Route path={paths.register} element={<RegisterPage />} />
-      <Route path={paths.dashboard} element={<DashboardRedirectPage />} />
-      <Route element={<ProtectedRoute />}>
-        <Route
-          element={<RoleRoute allowedRoles={[USER_ROLES.LANDLORD]} />}
-        >
-          <Route path={paths.landlordDashboard} element={<LandlordLayout />}>
-            <Route index element={<RoomManagementPage />} />
-            <Route path="phong" element={<RoomManagementPage />} />
-            <Route path="dat-phong" element={<LandlordBookingsPage />} />
-            <Route path="hop-dong" element={<LandlordContractsPage />} />
-            <Route path="hoa-don" element={<LandlordInvoicesPage />} />
+        <Route path={paths.home} element={<HomePage />} />
+        <Route path={paths.rooms} element={<RoomListPage />} />
+        <Route path={paths.roomDetail} element={<RoomDetailPage />} />
+        <Route path={paths.login} element={<LoginPage />} />
+        <Route path={paths.register} element={<RegisterPage />} />
+        <Route path={paths.dashboard} element={<DashboardRedirectPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<RoleRoute allowedRoles={[USER_ROLES.LANDLORD]} />}>
+            <Route path={paths.landlordDashboard} element={<LandlordLayout />}>
+              <Route index element={<RoomManagementPage />} />
+              <Route path="phong" element={<RoomManagementPage />} />
+              <Route path="dat-phong" element={<LandlordBookingsPage />} />
+              <Route path="hop-dong" element={<LandlordContractsPage />} />
+              <Route path="tin-nhan" element={<ChatPage />} />
+              <Route path="hoa-don" element={<LandlordInvoicesPage />} />
+              <Route
+                path="nguoi-thue"
+                element={<LandlordTenantsPage />}
+              />
+            </Route>
+          </Route>
+          <Route element={<RoleRoute allowedRoles={[USER_ROLES.TENANT]} />}>
             <Route
-              path="nguoi-thue"
-              element={<LandlordTenantsPage />}
-            />
+              path={paths.tenantDashboard}
+              element={<TenantLayout />}
+            >
+              <Route index element={<TenantBookingsPage />} />
+              <Route path="dat-phong" element={<TenantBookingsPage />} />
+              <Route path="hoa-don" element={<TenantInvoicesPage />} />
+              <Route path="hoa-don/:id" element={<TenantInvoiceDetailPage />} />
+              <Route path="chi-so" element={<TenantMeterReadingsPage />} />
+              <Route path="phong-da-luu" element={<TenantFavoriteRoomsPage />} />
+              <Route path="hop-dong" element={<TenantContractsPage />} />
+              <Route path="tin-nhan" element={<ChatPage />} />
+              <Route path="ho-so" element={<TenantProfilePage />} />
+            </Route>
+          </Route>
+          <Route element={<RoleRoute allowedRoles={[USER_ROLES.ADMIN]} />}>
+            <Route
+              path={paths.adminDashboard}
+              element={
+                <DashboardLayout sidebar={adminSidebarConfig} contentClassName="" />
+              }
+            >
+              <Route index element={<AdminDashboardPage />} />
+              <Route path="nguoi-dung" element={<AdminDashboardPage />} />
+              <Route path="kiem-duyet" element={<AdminDashboardPage />} />
+              <Route path="bao-cao" element={<AdminDashboardPage />} />
+              <Route path="ticket" element={<AdminDashboardPage />} />
+            </Route>
+          </Route>
+          <Route element={<RoleRoute allowedRoles={[USER_ROLES.STAFF]} />}>
+            <Route
+              path={paths.staffDashboard}
+              element={
+                <DashboardLayout sidebar={staffSidebarConfig} contentClassName="" />
+              }
+            >
+              <Route index element={<StaffDashboardPage />} />
+              <Route path="ho-so" element={<StaffDashboardPage />} />
+              <Route path="ho-tro" element={<StaffDashboardPage />} />
+              <Route path="lich-hen" element={<StaffDashboardPage />} />
+              <Route path="cong-viec" element={<StaffDashboardPage />} />
+            </Route>
           </Route>
         </Route>
-        <Route element={<RoleRoute allowedRoles={[USER_ROLES.TENANT]} />}>
-          <Route
-            path={paths.tenantDashboard}
-            element={<TenantLayout />}
-          >
-            <Route index element={<TenantBookingsPage />} />
-            <Route path="dat-phong" element={<TenantBookingsPage />} />
-            <Route path="hoa-don" element={<TenantInvoicesPage />} />
-            <Route path="hoa-don/:id" element={<TenantInvoiceDetailPage />} />
-            <Route path="chi-so" element={<TenantMeterReadingsPage />} />
-            <Route path="phong-da-luu" element={<TenantFavoriteRoomsPage />} />
-            <Route path="hop-dong" element={<TenantContractsPage />} />
-            <Route path="ho-so" element={<TenantProfilePage />} />
-          </Route>
-        </Route>
-        <Route element={<RoleRoute allowedRoles={[USER_ROLES.ADMIN]} />}>
-          <Route
-            path={paths.adminDashboard}
-            element={
-              <DashboardLayout sidebar={adminSidebarConfig} contentClassName="" />
-            }
-          >
-            <Route index element={<AdminDashboardPage />} />
-            <Route path="nguoi-dung" element={<AdminDashboardPage />} />
-            <Route path="kiem-duyet" element={<AdminDashboardPage />} />
-            <Route path="bao-cao" element={<AdminDashboardPage />} />
-            <Route path="ticket" element={<AdminDashboardPage />} />
-          </Route>
-        </Route>
-        <Route element={<RoleRoute allowedRoles={[USER_ROLES.STAFF]} />}>
-          <Route
-            path={paths.staffDashboard}
-            element={
-              <DashboardLayout sidebar={staffSidebarConfig} contentClassName="" />
-            }
-          >
-            <Route index element={<StaffDashboardPage />} />
-            <Route path="ho-so" element={<StaffDashboardPage />} />
-            <Route path="ho-tro" element={<StaffDashboardPage />} />
-            <Route path="lich-hen" element={<StaffDashboardPage />} />
-            <Route path="cong-viec" element={<StaffDashboardPage />} />
-          </Route>
-        </Route>
-      </Route>
-      <Route path="*" element={<NotFoundPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>
   )
