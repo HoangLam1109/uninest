@@ -66,15 +66,9 @@ export function BookingCard({
         </div>
 
         {room?.pricePerMonth ? (
-<<<<<<< Updated upstream
-          <div className="rounded-xl bg-primary/10 px-4 py-3 text-left lg:text-right">
-            <p className="text-xs font-bold uppercase text-primary">Giá phòng</p>
-            <p className="mt-1 text-lg font-bold text-primary">
-=======
           <div className="w-full rounded-xl bg-primary/10 px-4 py-3 text-left sm:w-fit sm:min-w-44 lg:text-right">
             <p className="text-xs font-bold uppercase text-primary">Giá phòng</p>
             <p className="mt-1 whitespace-nowrap text-lg font-bold text-primary">
->>>>>>> Stashed changes
               {formatBookingCurrency(room.pricePerMonth)}
             </p>
           </div>

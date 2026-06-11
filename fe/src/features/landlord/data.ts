@@ -4,12 +4,8 @@ import {
   CalendarDays,
   FileText,
   LayoutGrid,
-<<<<<<< Updated upstream
-  Settings,
-=======
   MessageCircle,
   ScrollText,
->>>>>>> Stashed changes
   UserPlus,
   Users,
   Zap,
@@ -25,11 +21,8 @@ export const landlordNavItems: LandlordNavItem[] = [
   { label: 'Tổng quan', href: '/chu-nha', icon: LayoutGrid },
   { label: 'Quản lý phòng', href: '/chu-nha/phong', icon: Building2 },
   { label: 'Đặt phòng', href: '/chu-nha/dat-phong', icon: CalendarDays },
-<<<<<<< Updated upstream
-=======
   { label: 'Hợp đồng', href: '/chu-nha/hop-dong', icon: ScrollText },
   { label: 'Tin nhắn', href: '/chu-nha/tin-nhan', icon: MessageCircle },
->>>>>>> Stashed changes
   { label: 'Người thuê', href: '/chu-nha/nguoi-thue', icon: Users },
   { label: 'Hóa đơn', href: '/chu-nha/hoa-don', icon: FileText },
   { label: 'Tiện ích', href: '/chu-nha/tien-ich', icon: Zap },
