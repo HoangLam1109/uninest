@@ -88,10 +88,10 @@ export function RoomListPage() {
           <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.14em] text-primary">
-                Danh sach phong
+                Danh sách phòng
               </p>
               <h1 className="mt-2 font-serif text-3xl font-bold text-foreground lg:text-5xl">
-                Tim phong phu hop voi ban
+                Tìm không gian sống phù hợp với bạn
               </h1>
             </div>
             <form className="relative w-full lg:max-w-sm" onSubmit={handleSearch}>
@@ -118,7 +118,7 @@ export function RoomListPage() {
 
           {activeQuery.isError ? (
             <div className="rounded-xl border border-red-500/20 bg-white p-8 text-center text-sm text-red-600">
-              Khong the tai danh sach phong. Vui long thu lai sau.
+              Không thể tải danh sách phòng. Vui lòng thử lại sau.
             </div>
           ) : null}
 

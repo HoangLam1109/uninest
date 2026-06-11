@@ -28,11 +28,11 @@ export function useCreateBooking() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: bookingKeys.tenantLists() })
-      toast.success('Da gui yeu cau dat phong')
+      toast.success('Đã gửi yêu cầu đặt phòng')
     },
     onError: (error) => {
-      toast.error('Khong the tao booking', {
-        description: getApiErrorMessage(error, 'Vui long kiem tra lai thong tin.'),
+      toast.error('Không thể tạo booking', {
+        description: getApiErrorMessage(error, 'Vui lòng kiểm tra lại thông tin.'),
       })
     },
   })

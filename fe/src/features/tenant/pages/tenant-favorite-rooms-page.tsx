@@ -77,7 +77,7 @@ export function TenantFavoriteRoomsPage() {
             </button>
             <button
               type="button"
-              aria-label="Hien thi dang danh sach"
+              aria-label="Hiển thị dạng danh sách"
               aria-pressed={view === 'list'}
               onClick={() => setView('list')}
               className={cn(
@@ -114,7 +114,7 @@ export function TenantFavoriteRoomsPage() {
 
       {favoritesQuery.isError ? (
         <div className="rounded-xl border border-red-500/20 bg-white p-8 text-center text-sm text-red-600">
-          Khong the tai danh sach phong yeu thich.
+          Không thể tải phòng yêu thích. Vui lòng thử lại sau.
         </div>
       ) : null}
 
