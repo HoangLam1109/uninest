@@ -5,6 +5,7 @@ import {
   Heart,
   Home,
   LayoutGrid,
+  MessageCircle,
   MessageSquareWarning,
   Wrench,
 } from 'lucide-react'
@@ -16,6 +17,7 @@ export const tenantNavItems = [
   { label: 'Bảo trì', href: '/cu-dan/bao-tri', icon: Wrench },
   { label: 'Phòng đã lưu', href: '/cu-dan/phong-da-luu', icon: Heart },
   { label: 'Hợp đồng', href: '/cu-dan/hop-dong', icon: Home },
+  { label: 'Tin nhắn', href: '/cu-dan/tin-nhan', icon: MessageCircle },
 ] as const
 
 export const tenantSidebarConfig = {
