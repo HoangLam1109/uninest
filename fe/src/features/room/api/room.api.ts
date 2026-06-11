@@ -6,9 +6,15 @@ import type {
   RoomFavoriteResponse,
   RoomListParams,
   RoomListResponse,
+  RoomSearchParams,
   RoomImageListResponse,
   RoomImagePayload,
   RoomImageResponse,
+  RoomReviewListParams,
+  RoomReviewListResponse,
+  RoomReviewPayload,
+  RoomReviewReplyPayload,
+  RoomReviewResponse,
   RoomPayload,
   RoomResponse,
 } from '../types/room.type'
@@ -16,6 +22,9 @@ import type {
 export const roomApi = {
   list: (params: RoomListParams) =>
     api.get<RoomListResponse>('/rooms/getAll', { params }),
+
+  search: (params: RoomSearchParams) =>
+    api.get<RoomListResponse>('/rooms/search', { params }),
 
   my: (params: RoomListParams) =>
     api.get<RoomListResponse>('/rooms/my', { params }),
@@ -69,4 +78,19 @@ export const roomApi = {
     api.delete<{ success: boolean; message?: string }>(
       `/rooms/${roomId}/images/${imageId}`,
     ),
+
+  listReviews: (roomId: string, params?: RoomReviewListParams) =>
+    api.get<RoomReviewListResponse>('/reviews/room', {
+      params: {
+        roomId,
+        page: params?.page ?? 1,
+        limit: params?.limit ?? 10,
+      },
+    }),
+
+  createReview: (payload: RoomReviewPayload) =>
+    api.post<RoomReviewResponse>('/reviews', payload),
+
+  replyReview: (reviewId: string, payload: RoomReviewReplyPayload) =>
+    api.patch<RoomReviewResponse>(`/reviews/${reviewId}/reply`, payload),
 }

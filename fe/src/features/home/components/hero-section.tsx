@@ -1,7 +1,9 @@
-import type { ReactNode } from 'react'
-import { MapPin, Search, Wallet, DoorOpen } from 'lucide-react'
+import { useState, type FormEvent, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { DoorOpen, MapPin, Search, Wallet } from 'lucide-react'
 import { images } from '@/assets/images'
 import { Button } from '@/components/ui/button'
+import { paths } from '@/config/constants'
 import {
   Select,
   SelectContent,
@@ -11,7 +13,45 @@ import {
 } from '@/components/ui/select'
 import { budgetOptions, roomTypeOptions } from '../data'
 
+const budgetRanges = {
+  'under-5': { maxPrice: 5_000_000 },
+  '5-8': { minPrice: 5_000_000, maxPrice: 8_000_000 },
+  '8-12': { minPrice: 8_000_000, maxPrice: 12_000_000 },
+  'over-12': { minPrice: 12_000_000 },
+} as const
+
+const roomTypeValues = {
+  studio: 'STUDIO',
+  apartment: 'APARTMENT',
+  shared: 'SHARED',
+  single: 'SINGLE',
+} as const
+
 export function HeroSection() {
+  const navigate = useNavigate()
+  const [keyword, setKeyword] = useState('')
+  const [budget, setBudget] = useState<keyof typeof budgetRanges>('under-5')
+  const [roomType, setRoomType] = useState<keyof typeof roomTypeValues>('studio')
+
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const params = new URLSearchParams()
+    const trimmedKeyword = keyword.trim()
+    const priceRange = budgetRanges[budget]
+
+    if (trimmedKeyword) params.set('q', trimmedKeyword)
+    if ('minPrice' in priceRange) {
+      params.set('minPrice', String(priceRange.minPrice))
+    }
+    if ('maxPrice' in priceRange) {
+      params.set('maxPrice', String(priceRange.maxPrice))
+    }
+    params.set('roomType', roomTypeValues[roomType])
+
+    navigate(`${paths.rooms}?${params.toString()}`)
+  }
+
   return (
     <section className="relative flex min-h-[520px] items-center justify-center overflow-hidden px-4 py-20 lg:min-h-[650px]">
       <img
@@ -32,7 +72,7 @@ export function HeroSection() {
         <div className="space-y-4">
           <h1 className="font-sans text-4xl font-bold leading-tight tracking-normal text-white drop-shadow-sm sm:text-5xl lg:text-7xl lg:leading-[1.1]">
             Tìm kiếm không gian sống{' '}
-            <span className="text-primary">lý tưởng</span> tại TP.HCM
+            <span className="text-primary">lí tưởng</span> tại TP.HCM
           </h1>
           <p className="mx-auto max-w-2xl text-lg font-light leading-relaxed text-white/90 lg:text-xl">
             Hệ thống căn hộ dịch vụ và phòng trọ chất lượng cao dành riêng cho
@@ -40,15 +80,20 @@ export function HeroSection() {
           </p>
         </div>
 
-        <div className="w-full max-w-4xl rounded-xl bg-white p-4 shadow-2xl">
+        <form
+          className="w-full max-w-4xl rounded-xl bg-white p-4 shadow-2xl"
+          onSubmit={handleSearch}
+        >
           <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
             <SearchField
               icon={<MapPin className="size-4 text-primary" />}
-              label="Vị trí"
+              label="Vi tri"
             >
               <input
                 type="text"
-                placeholder="Quận 1, Quận 7, Bình Thạnh..."
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+                placeholder="Quan 1, Quan 7, Binh Thanh..."
                 className="w-full bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/60"
               />
             </SearchField>
@@ -58,7 +103,10 @@ export function HeroSection() {
               label="Ngân sách"
               bordered
             >
-              <Select defaultValue="under-5">
+              <Select
+                value={budget}
+                onValueChange={(value) => setBudget(value as keyof typeof budgetRanges)}
+              >
                 <SelectTrigger className="h-auto py-0">
                   <SelectValue />
                 </SelectTrigger>
@@ -76,7 +124,10 @@ export function HeroSection() {
               icon={<DoorOpen className="size-4 text-primary" />}
               label="Loại phòng"
             >
-              <Select defaultValue="studio">
+              <Select
+                value={roomType}
+                onValueChange={(value) => setRoomType(value as keyof typeof roomTypeValues)}
+              >
                 <SelectTrigger className="h-auto py-0">
                   <SelectValue />
                 </SelectTrigger>
@@ -90,12 +141,12 @@ export function HeroSection() {
               </Select>
             </SearchField>
 
-            <Button size="lg" className="w-full shrink-0 lg:w-auto">
+            <Button type="submit" size="lg" className="w-full shrink-0 lg:w-auto">
               <Search className="size-[18px]" />
               Tìm ngay
             </Button>
           </div>
-        </div>
+        </form>
       </div>
     </section>
   )

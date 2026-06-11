@@ -1,42 +1,15 @@
 import { ReviewRepository } from "../repositories/review.repo.js";
-import { BookingRepository } from "../repositories/booking.repo.js";
 
 export const ReviewService = {
   createReview: async (
     reviewerId: string,
     roomId: string,
     reviewData: {
-      bookingId: string;
       rating: number;
       comment: string;
       imageUrls?: string[];
     }
   ) => {
-    // Verify booking exists and belongs to reviewer
-    const booking = await BookingRepository.findById(reviewData.bookingId);
-    if (!booking) {
-      throw new Error("Booking not found");
-    }
-
-    if (booking.tenantId.toString() !== reviewerId) {
-      throw new Error("You do not own this booking");
-    }
-
-    if (booking.roomId._id.toString() !== roomId) {
-      throw new Error("Booking does not match the room");
-    }
-
-    // Only verified bookings can review (approved and past checkInDate)
-    if (booking.status !== "APPROVED") {
-      throw new Error("Only approved bookings can be reviewed");
-    }
-
-    const checkInDate = new Date(booking.checkInDate);
-    const now = new Date();
-    if (checkInDate > now) {
-      throw new Error("You can only review after check-in date");
-    }
-
     // Validate rating
     if (reviewData.rating < 1 || reviewData.rating > 5) {
       throw new Error("Rating must be between 1 and 5");
@@ -55,11 +28,9 @@ export const ReviewService = {
     const review = await ReviewRepository.create({
       reviewerId,
       roomId,
-      bookingId: reviewData.bookingId,
       rating: reviewData.rating,
       comment: reviewData.comment,
       imageUrls: reviewData.imageUrls || [],
-      isVerified: false, // Starts unverified, landlord verifies
     });
 
     return review;
@@ -76,12 +47,11 @@ export const ReviewService = {
   getReviewsByRoom: async (
     roomId: string,
     skip: number,
-    limit: number,
-    onlyVerified: boolean = true
+    limit: number
   ) => {
     const [reviews, total] = await Promise.all([
-      ReviewRepository.findByRoomId(roomId, skip, limit, onlyVerified),
-      ReviewRepository.countByRoomId(roomId, onlyVerified),
+      ReviewRepository.findByRoomId(roomId, skip, limit),
+      ReviewRepository.countByRoomId(roomId),
     ]);
 
     // Get rating statistics
@@ -176,24 +146,6 @@ export const ReviewService = {
     return updated;
   },
 
-  verifyReview: async (reviewId: string, landlordId: string) => {
-    const review = await ReviewRepository.findById(reviewId);
-    if (!review) {
-      throw new Error("Review not found");
-    }
-
-    // Verify landlord owns the room
-    if ((review.roomId as any).landlordId._id.toString() !== landlordId) {
-      throw new Error("You do not own this room");
-    }
-
-    const updated = await ReviewRepository.update(reviewId, {
-      isVerified: true,
-    });
-
-    return updated;
-  },
-
   getRoomRatingStats: async (roomId: string) => {
     const stats = await ReviewRepository.getAverageRatingByRoom(roomId);
     const distribution = await ReviewRepository.getRatingDistribution(roomId);
@@ -205,12 +157,4 @@ export const ReviewService = {
     };
   },
 
-  getPendingReviews: async (skip: number, limit: number) => {
-    const [reviews, total] = await Promise.all([
-      ReviewRepository.getPendingReviews(skip, limit),
-      ReviewRepository.countPendingReviews(),
-    ]);
-
-    return { reviews, total };
-  },
 };

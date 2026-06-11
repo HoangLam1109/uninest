@@ -71,12 +71,12 @@ export const budgetOptions = [
   { value: '8-12', label: '8 – 12 triệu' },
   { value: 'over-12', label: 'Trên 12 triệu' },
 ] as const
-
+  
 export const roomTypeOptions = [
   { value: 'studio', label: 'Studio' },
   { value: 'apartment', label: 'Căn hộ' },
-  { value: 'dorm', label: 'Ký túc xá' },
-  { value: 'room', label: 'Phòng trọ' },
+  { value: 'shared', label: 'Phòng ghép' },
+  { value: 'single', label: 'Phòng đơn' },
 ] as const
 
 export { images }

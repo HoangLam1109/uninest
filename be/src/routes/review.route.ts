@@ -4,12 +4,10 @@ import {
   createReview,
   deleteReview,
   getMyReviews,
-  getPendingReviews,
   getRoomRatingStats,
   getReviewById,
   getReviewsByRoom,
   updateReview,
-  verifyReview,
 } from "../controllers/review.controller.js";
 import authenticateMiddleware from "../middlewares/authenticate.middleware.js";
 
@@ -22,9 +20,6 @@ router.get("/room", getReviewsByRoom);
 // Protected middleware applied after public routes
 router.use(authenticateMiddleware.authenticateUser);
 
-// Specific protected routes before param routes
-router.get("/pending", getPendingReviews);
-
 // Tenant endpoints
 router.post("/", createReview);
 router.get("/", getMyReviews);
@@ -34,6 +29,5 @@ router.get("/:id", getReviewById);
 router.put("/:id", updateReview);
 router.delete("/:id", deleteReview);
 router.patch("/:id/reply", addLandlordReply);
-router.patch("/:id/verify", verifyReview);
 
 export default router;

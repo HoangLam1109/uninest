@@ -23,6 +23,7 @@ const router = express.Router();
 router.post("/create", authenticateMiddleware.authenticateUser, createRoom);
 router.get("/getAll", getAllRooms);
 router.get("/my", authenticateMiddleware.authenticateUser, getMyRooms);
+router.get("/search", searchRooms);
 router.get("/getById/:id", getRoomById);
 router.put("/update/:id", authenticateMiddleware.authenticateUser, updateRoom);
 router.delete("/delete/:id", authenticateMiddleware.authenticateUser, deleteRoom);

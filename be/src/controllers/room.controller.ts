@@ -205,7 +205,15 @@ export const getTenantListByLandlord = async (
  */
 export const searchRooms = async (req: Request, res: Response) => {
   try {
-    const { q, page = 1, limit = 10 } = req.query;
+    const {
+      q,
+      page = 1,
+      limit = 10,
+      status,
+      minPrice,
+      maxPrice,
+      roomType,
+    } = req.query;
 
     const keyword =
       q && typeof q === "string"
@@ -218,11 +226,20 @@ export const searchRooms = async (req: Request, res: Response) => {
             ],
           }
         : {};
+    const filter: any = { ...keyword };
+
+    if (status) filter.status = status;
+    if (roomType) filter.roomType = roomType;
+    if (minPrice || maxPrice) {
+      filter.pricePerMonth = {};
+      if (minPrice) filter.pricePerMonth.$gte = Number(minPrice);
+      if (maxPrice) filter.pricePerMonth.$lte = Number(maxPrice);
+    }
 
     const skip = (Number(page) - 1) * Number(limit);
 
     const { rooms, total } = await RoomService.searchRooms(
-      keyword,
+      filter,
       skip,
       Number(limit)
     );

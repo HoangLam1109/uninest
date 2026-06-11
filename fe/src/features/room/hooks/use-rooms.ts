@@ -5,6 +5,10 @@ import { roomApi } from '../api/room.api'
 import type {
   RoomImagePayload,
   RoomListParams,
+  RoomSearchParams,
+  RoomReviewListParams,
+  RoomReviewPayload,
+  RoomReviewReplyPayload,
   RoomPayload,
 } from '../types/room.type'
 
@@ -12,10 +16,14 @@ export const roomKeys = {
   all: ['rooms'] as const,
   lists: () => [...roomKeys.all, 'list'] as const,
   list: (params: RoomListParams) => [...roomKeys.lists(), params] as const,
+  searches: () => [...roomKeys.all, 'search'] as const,
+  search: (params: RoomSearchParams) => [...roomKeys.searches(), params] as const,
   myLists: () => [...roomKeys.all, 'my-list'] as const,
   myList: (params: RoomListParams) => [...roomKeys.myLists(), params] as const,
   detail: (id: string) => [...roomKeys.all, 'detail', id] as const,
   images: (roomId: string) => [...roomKeys.all, 'images', roomId] as const,
+  reviews: (roomId: string, params: RoomReviewListParams) =>
+    [...roomKeys.all, 'reviews', roomId, params] as const,
   favorites: () => [...roomKeys.all, 'favorites'] as const,
   favoritesList: (params: Pick<RoomListParams, 'page' | 'limit'>) =>
     [...roomKeys.favorites(), params] as const,
@@ -27,11 +35,23 @@ function getFavoriteRoomId(roomId: string | { _id: string }) {
   return typeof roomId === 'string' ? roomId : roomId._id
 }
 
-export function useGetRooms(params: RoomListParams) {
+export function useGetRooms(params: RoomListParams, enabled = true) {
   return useQuery({
     queryKey: roomKeys.list(params),
+    enabled,
     queryFn: async () => {
       const { data } = await roomApi.list(params)
+      return data
+    },
+  })
+}
+
+export function useSearchRooms(params: RoomSearchParams, enabled = true) {
+  return useQuery({
+    queryKey: roomKeys.search(params),
+    enabled,
+    queryFn: async () => {
+      const { data } = await roomApi.search(params)
       return data
     },
   })
@@ -197,6 +217,77 @@ export function useGetRoomImages(roomId: string | null, enabled = true) {
     queryFn: async () => {
       const { data } = await roomApi.listImages(roomId as string)
       return data.data
+    },
+  })
+}
+
+export function useGetRoomReviews(
+  roomId: string | null,
+  params: RoomReviewListParams = {},
+  enabled = true,
+) {
+  const queryParams = {
+    page: params.page ?? 1,
+    limit: params.limit ?? 10,
+  }
+
+  return useQuery({
+    queryKey: roomKeys.reviews(roomId ?? '', queryParams),
+    enabled: Boolean(roomId) && enabled,
+    queryFn: async () => {
+      const { data } = await roomApi.listReviews(roomId as string, queryParams)
+      return data
+    },
+  })
+}
+
+export function useCreateRoomReview() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: RoomReviewPayload) => {
+      const { data } = await roomApi.createReview(payload)
+      return data.data
+    },
+    onSuccess: (review) => {
+      const roomId = typeof review.roomId === 'string' ? review.roomId : ''
+      if (roomId) {
+        queryClient.invalidateQueries({ queryKey: roomKeys.all })
+      }
+      toast.success('Da gui danh gia', {
+        description: 'Danh gia cua ban da duoc hien thi.',
+      })
+    },
+    onError: (error) => {
+      toast.error('Khong the gui danh gia', {
+        description: getApiErrorMessage(error, 'Vui long kiem tra lai noi dung.'),
+      })
+    },
+  })
+}
+
+export function useReplyRoomReview() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      reviewId,
+      payload,
+    }: {
+      reviewId: string
+      payload: RoomReviewReplyPayload
+    }) => {
+      const { data } = await roomApi.replyReview(reviewId, payload)
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: roomKeys.all })
+      toast.success('Da gui phan hoi')
+    },
+    onError: (error) => {
+      toast.error('Khong the gui phan hoi', {
+        description: getApiErrorMessage(error, 'Vui long thu lai sau.'),
+      })
     },
   })
 }

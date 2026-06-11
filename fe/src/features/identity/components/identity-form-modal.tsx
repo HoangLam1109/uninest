@@ -5,7 +5,6 @@ import { Camera, Plus, Trash2, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
-import { cn } from '@/lib/utils'
 import {
   identityFormSchema,
   type IdentityFormValues,
@@ -281,7 +280,6 @@ export function IdentityFormModal({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
               className="h-auto gap-1 px-2 py-1 text-xs text-primary"
               onClick={() =>
                 append({ fullName: '', phone: '', dateOfBirth: '', cccdNumber: '' })
@@ -310,7 +308,6 @@ export function IdentityFormModal({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="sm"
                       className="h-auto p-1 text-red-500 hover:text-red-700"
                       onClick={() => remove(index)}
                     >

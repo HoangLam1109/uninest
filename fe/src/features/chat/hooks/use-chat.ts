@@ -49,6 +49,50 @@ function sortConversations(conversations: ChatConversation[]) {
   })
 }
 
+function syncChatPayloadToCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+  payload: MessageSocketPayload,
+) {
+  queryClient.setQueryData<ChatMessageListResponse>(
+    chatKeys.messages(payload.message.conversationId),
+    (current) =>
+      current
+        ? {
+            ...current,
+            data: upsertMessage(current.data, payload.message),
+            pagination: {
+              ...current.pagination,
+              total: current.data.some(
+                (message) => message._id === payload.message._id,
+              )
+                ? current.pagination.total
+                : current.pagination.total + 1,
+            },
+          }
+        : current,
+  )
+
+  queryClient.setQueryData<ChatConversation[]>(
+    chatKeys.conversations(),
+    (current) => {
+      if (!current) return current
+
+      const exists = current.some(
+        (conversation) => conversation._id === payload.conversation._id,
+      )
+      const next = exists
+        ? current.map((conversation) =>
+            conversation._id === payload.conversation._id
+              ? payload.conversation
+              : conversation,
+          )
+        : [payload.conversation, ...current]
+
+      return sortConversations(next)
+    },
+  )
+}
+
 export function useGetChatConversations() {
   return useQuery({
     queryKey: chatKeys.conversations(),
@@ -104,26 +148,7 @@ export function useSendChatMessage(conversationId: string | null) {
       return data.data
     },
     onSuccess: (data) => {
-      queryClient.setQueryData<ChatMessageListResponse>(
-        chatKeys.messages(data.message.conversationId),
-        (current) =>
-          current
-            ? { ...current, data: upsertMessage(current.data, data.message) }
-            : current,
-      )
-      queryClient.setQueryData<ChatConversation[]>(
-        chatKeys.conversations(),
-        (current) =>
-          current
-            ? sortConversations(
-                current.map((conversation) =>
-                  conversation._id === data.conversation._id
-                    ? data.conversation
-                    : conversation,
-                ),
-              )
-            : current,
-      )
+      syncChatPayloadToCache(queryClient, data)
     },
     onError: (error) => {
       toast.error('Không thể gửi tin nhắn', {
@@ -157,20 +182,7 @@ export function useChatSocket(conversationId: string | null) {
     socketRef.current = socket
 
     socket.on('message:new', (payload: MessageSocketPayload) => {
-      queryClient.setQueryData<ChatMessageListResponse>(
-        chatKeys.messages(payload.message.conversationId),
-        (current) =>
-          current
-            ? {
-                ...current,
-                data: upsertMessage(current.data, payload.message),
-                pagination: {
-                  ...current.pagination,
-                  total: current.pagination.total + 1,
-                },
-              }
-            : current,
-      )
+      syncChatPayloadToCache(queryClient, payload)
     })
 
     socket.on('conversation:updated', (conversation: ChatConversation) => {
@@ -221,11 +233,12 @@ export function useChatSocket(conversationId: string | null) {
                 reject(new Error(ack.message ?? 'Cannot send message'))
                 return
               }
+              syncChatPayloadToCache(queryClient, ack.data)
               resolve(ack.data)
             },
           )
         }),
     }),
-    [conversationId],
+    [conversationId, queryClient],
   )
 }

@@ -2,14 +2,27 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, MapPin, MessageCircle, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { USER_ROLES } from '@/constants/roles'
 import { MainLayout } from '@/layouts/main-layout'
 import { BookingRequestModal } from '@/features/booking'
 import { useCreateRoomConversation } from '@/features/chat'
-import { useGetRoomById, useGetRoomImages } from '../hooks/use-rooms'
-import { formatRoomCurrency, formatRoomFullLocation } from '../../../utils/room-display'
+import { useAuth } from '@/hooks/use-auth'
+import {
+  useCreateRoomReview,
+  useGetRoomById,
+  useGetRoomImages,
+  useGetRoomReviews,
+  useReplyRoomReview,
+} from '../hooks/use-rooms'
+import {
+  formatRoomCurrency,
+  formatRoomFullLocation,
+  formatRoomType,
+} from '../../../utils/room-display'
 import type { RoomImage } from '../types/room.type'
 import { RoomLocationMap } from '../components/room-location-map'
 import { RoomFavoriteButton } from '../components/room-favorite-button'
+import { RoomReviewsSection } from '../components/room-reviews-section'
 
 function sortImages(images: RoomImage[]) {
   return [...images].sort((first, second) => {
@@ -22,8 +35,12 @@ function sortImages(images: RoomImage[]) {
 export function RoomDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const roomQuery = useGetRoomById(id ?? null)
   const imagesQuery = useGetRoomImages(id ?? null)
+  const reviewsQuery = useGetRoomReviews(id ?? null, { page: 1, limit: 10 })
+  const createRoomReview = useCreateRoomReview()
+  const replyRoomReview = useReplyRoomReview()
   const createRoomConversation = useCreateRoomConversation()
   const room = roomQuery.data
   const images = sortImages(imagesQuery.data ?? [])
@@ -124,6 +141,33 @@ export function RoomDetailPage() {
                   address={formatRoomFullLocation(room)}
                   title={room.title}
                 />
+
+                <RoomReviewsSection
+                  reviews={reviewsQuery.data?.data ?? []}
+                  statistics={reviewsQuery.data?.statistics}
+                  isLoading={reviewsQuery.isLoading}
+                  isError={reviewsQuery.isError}
+                  isSubmitting={createRoomReview.isPending}
+                  canReply={user?.role === USER_ROLES.LANDLORD}
+                  replyingReviewId={
+                    replyRoomReview.variables?.reviewId && replyRoomReview.isPending
+                      ? replyRoomReview.variables.reviewId
+                      : null
+                  }
+                  onSubmitReview={async ({ rating, comment }) => {
+                    await createRoomReview.mutateAsync({
+                      roomId: room._id,
+                      rating,
+                      comment,
+                    })
+                  }}
+                  onSubmitReply={async ({ reviewId, reply }) => {
+                    await replyRoomReview.mutateAsync({
+                      reviewId,
+                      payload: { reply },
+                    })
+                  }}
+                />
               </div>
 
               <aside className="relative h-fit rounded-xl border border-primary/10 bg-white p-5">
@@ -170,7 +214,7 @@ export function RoomDetailPage() {
                   <div className="rounded-lg bg-surface p-3">
                     <p className="text-muted-foreground">Loại phòng</p>
                     <p className="mt-1 font-bold text-foreground">
-                      {room.roomType ?? 'Chưa chọn'}
+                      {formatRoomType(room.roomType)}
                     </p>
                   </div>
                 </div>

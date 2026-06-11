@@ -6,6 +6,7 @@ import type {
   LoginPayload,
   RefreshTokenResponse,
   RegisterPayload,
+  SendRegisterOtpPayload,
 } from '@/types/auth'
 
 export const authApi = {
@@ -14,6 +15,9 @@ export const authApi = {
 
   register: (payload: RegisterPayload) =>
     api.post<ApiResponse<{ message: string }>>('/auth/register', payload),
+
+  sendRegisterOtp: (payload: SendRegisterOtpPayload) =>
+    api.post<ApiResponse<{ message: string }>>('/auth/register/send-otp', payload),
 
   refresh: (refreshToken: string) =>
     api.post<ApiResponse<RefreshTokenResponse>>('/auth/refresh-token', {

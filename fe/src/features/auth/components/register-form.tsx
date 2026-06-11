@@ -4,15 +4,18 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { registerSchema } from '../schemas/auth.schema'
 import type { RegisterFormValues } from '../types/auth.type'
-import { useRegister } from '../hooks/use-register'
+import { useRegister, useSendRegisterOtp } from '../hooks/use-register'
 import { AuthField } from './auth-field'
 import { PasswordInput, authInputClassName } from './password-input'
 
 export function RegisterForm() {
   const registerMutation = useRegister()
+  const sendOtpMutation = useSendRegisterOtp()
   const {
     register,
     handleSubmit,
+    getValues,
+    trigger,
     formState: { errors },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -22,9 +25,17 @@ export function RegisterForm() {
       phone: '',
       password: '',
       confirmPassword: '',
+      otp: '',
       terms: false,
     },
   })
+
+  const handleSendOtp = async () => {
+    const isEmailValid = await trigger('email')
+    if (!isEmailValid) return
+
+    sendOtpMutation.mutate(getValues('email'))
+  }
 
   return (
     <form
@@ -105,6 +116,36 @@ export function RegisterForm() {
         />
       </AuthField>
 
+      <AuthField
+        id="register-otp"
+        label="Mã OTP"
+        hint={errors.otp ? undefined : 'Nhập mã 6 số được gửi đến email'}
+        error={errors.otp?.message}
+      >
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Input
+            id="register-otp"
+            type="text"
+            inputMode="numeric"
+            placeholder="123456"
+            autoComplete="one-time-code"
+            maxLength={6}
+            className={authInputClassName(!!errors.otp)}
+            aria-invalid={!!errors.otp}
+            {...register('otp')}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="shrink-0"
+            disabled={sendOtpMutation.isPending}
+            onClick={handleSendOtp}
+          >
+            {sendOtpMutation.isPending ? 'Đang gửi...' : 'Gửi OTP'}
+          </Button>
+        </div>
+      </AuthField>
+
       <div className="space-y-2">
         <label className="flex cursor-pointer gap-3 text-sm leading-relaxed text-muted-foreground">
           <input
@@ -142,9 +183,9 @@ export function RegisterForm() {
         type="submit"
         size="lg"
         className="w-full"
-        disabled={registerMutation.isPending}
+        disabled={registerMutation.isPending || sendOtpMutation.isPending}
       >
-        {registerMutation.isPending ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}
+        {registerMutation.isPending ? 'Đang xác nhận...' : 'Xác nhận đăng ký'}
       </Button>
     </form>
   )

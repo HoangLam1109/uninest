@@ -6,9 +6,7 @@ import {
   Gauge,
   Heart,
   Home,
-  LayoutGrid,
   MessageCircle,
-  MessageSquareWarning,
   Wrench,
 } from 'lucide-react'
 

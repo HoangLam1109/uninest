@@ -1,4 +1,9 @@
-import type { Room, RoomImage, RoomStatus } from '../features/room/types/room.type'
+import type {
+  Room,
+  RoomImage,
+  RoomStatus,
+  RoomType,
+} from '../features/room/types/room.type'
 
 type RoomLocation = Pick<Room, 'address'> &
   Partial<Pick<Room, 'ward' | 'district' | 'city'>>
@@ -23,6 +28,13 @@ export const roomStatusClasses: Record<RoomStatus, string> = {
   MAINTENANCE: 'bg-red-500/10 text-red-600',
 }
 
+export const roomTypeLabels: Record<RoomType, string> = {
+  STUDIO: 'Studio',
+  SINGLE: 'Phòng đơn',
+  SHARED: 'Phòng ghép',
+  APARTMENT: 'Căn hộ',
+}
+
 export function formatRoomCurrency(value?: number) {
   return roomCurrencyFormatter.format(value ?? 0)
 }
@@ -38,6 +50,10 @@ export function formatRoomFullLocation(room: RoomLocation) {
   return [room.address, room.ward, room.district, room.city]
     .filter(Boolean)
     .join(', ')
+}
+
+export function formatRoomType(roomType?: RoomType) {
+  return roomType ? roomTypeLabels[roomType] : 'Chưa chọn'
 }
 
 export function getPrimaryRoomImage(images: RoomImage[]) {

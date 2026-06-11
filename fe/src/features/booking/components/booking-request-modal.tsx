@@ -136,8 +136,7 @@ export function BookingRequestModal({
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  className="mt-3 gap-1.5"
+                  className="mt-3 h-8 min-w-0 gap-1.5 px-3 text-xs"
                   onClick={() => setShowIdentityForm(true)}
                 >
                   <Plus className="size-3.5" />

@@ -154,7 +154,10 @@ export function ChatWorkspace() {
   const user = useAuthStore((state) => state.user)
   const currentUserId = user?.id ?? ''
   const conversationsQuery = useGetChatConversations()
-  const conversations = conversationsQuery.data ?? []
+  const conversations = useMemo(
+    () => conversationsQuery.data ?? [],
+    [conversationsQuery.data],
+  )
   const selectedConversationId =
     searchParams.get('conversationId') ?? conversations[0]?._id ?? null
   const selectedConversation =
@@ -162,7 +165,8 @@ export function ChatWorkspace() {
     null
   const messagesQuery = useGetChatMessages(selectedConversationId)
   const sendMessageMutation = useSendChatMessage(selectedConversationId)
-  const markAsReadMutation = useMarkConversationAsRead(selectedConversationId)
+  const { mutate: markConversationAsRead } =
+    useMarkConversationAsRead(selectedConversationId)
   const chatSocket = useChatSocket(selectedConversationId)
 
   const filteredConversations = useMemo(() => {
@@ -184,8 +188,8 @@ export function ChatWorkspace() {
 
   useEffect(() => {
     if (!selectedConversationId) return
-    markAsReadMutation.mutate()
-  }, [selectedConversationId])
+    markConversationAsRead()
+  }, [markConversationAsRead, selectedConversationId])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })

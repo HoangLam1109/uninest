@@ -18,6 +18,11 @@ export type RegisterPayload = {
   email: string
   phone: string
   password: string
+  otp: string
+}
+
+export type SendRegisterOtpPayload = {
+  email: string
 }
 
 export type AuthResponse = {

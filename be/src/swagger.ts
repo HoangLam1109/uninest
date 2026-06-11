@@ -186,12 +186,10 @@ const options: swaggerJsDoc.Options = {
             _id: { type: "string" },
             reviewerId: { type: "string" },
             roomId: { type: "string" },
-            bookingId: { type: "string" },
             rating: { type: "number", minimum: 1, maximum: 5 },
             comment: { type: "string" },
             imageUrls: { type: "array", items: { type: "string" } },
             landlordReply: { type: "string" },
-            isVerified: { type: "boolean" },
             createdAt: { type: "string", format: "date-time" },
             updatedAt: { type: "string", format: "date-time" },
           },
@@ -716,10 +714,13 @@ const options: swaggerJsDoc.Options = {
       "/api/rooms/search": {
         get: {
           tags: ["Rooms"],
-          summary: "Search rooms by keyword",
-          security: [{ bearerAuth: [] }],
+          summary: "Search rooms",
           parameters: [
             { name: "q", in: "query", schema: { type: "string" }, description: "Search keyword (title, address, city, district)" },
+            { name: "status", in: "query", schema: { type: "string", enum: ["AVAILABLE", "DEPOSITED", "RENTED", "MAINTENANCE"] } },
+            { name: "roomType", in: "query", schema: { type: "string", enum: ["STUDIO", "SINGLE", "SHARED", "APARTMENT"] } },
+            { name: "minPrice", in: "query", schema: { type: "number" } },
+            { name: "maxPrice", in: "query", schema: { type: "number" } },
             { name: "page", in: "query", schema: { type: "number", default: 1 } },
             { name: "limit", in: "query", schema: { type: "number", default: 10 } },
           ],
@@ -1491,7 +1492,7 @@ const options: swaggerJsDoc.Options = {
       "/api/reviews/room": {
         get: {
           tags: ["Reviews"],
-          summary: "Get reviews by room (Public - verified only)",
+          summary: "Get reviews by room (Public)",
           parameters: [
             { name: "roomId", in: "query", required: true, schema: { type: "string" } },
             { name: "page", in: "query", schema: { type: "number", default: 1 } },
@@ -1500,20 +1501,6 @@ const options: swaggerJsDoc.Options = {
           responses: {
             200: { description: "Paginated list of reviews with statistics" },
             400: { description: "Valid room ID is required" },
-          },
-        },
-      },
-      "/api/reviews/pending": {
-        get: {
-          tags: ["Reviews"],
-          summary: "Get pending reviews (Landlord/Admin)",
-          security: [{ bearerAuth: [] }],
-          parameters: [
-            { name: "page", in: "query", schema: { type: "number", default: 1 } },
-            { name: "limit", in: "query", schema: { type: "number", default: 10 } },
-          ],
-          responses: {
-            200: { description: "Paginated list of pending reviews" },
           },
         },
       },
@@ -1528,10 +1515,9 @@ const options: swaggerJsDoc.Options = {
               "application/json": {
                 schema: {
                   type: "object",
-                  required: ["roomId", "bookingId", "rating", "comment"],
+                  required: ["roomId", "rating", "comment"],
                   properties: {
                     roomId: { type: "string" },
-                    bookingId: { type: "string" },
                     rating: { type: "number", minimum: 1, maximum: 5, example: 4 },
                     comment: { type: "string", minLength: 10, example: "Great room with excellent facilities!" },
                     imageUrls: { type: "array", items: { type: "string" } },
@@ -1542,7 +1528,7 @@ const options: swaggerJsDoc.Options = {
           },
           responses: {
             201: { description: "Review created successfully" },
-            400: { description: "Room ID, booking ID, rating, and comment are required" },
+            400: { description: "Room ID, rating, and comment are required" },
           },
         },
         get: {
@@ -1636,21 +1622,6 @@ const options: swaggerJsDoc.Options = {
           },
           responses: {
             200: { description: "Reply added successfully" },
-            403: { description: "Landlord does not own the room" },
-            404: { description: "Review not found" },
-          },
-        },
-      },
-      "/api/reviews/{id}/verify": {
-        patch: {
-          tags: ["Reviews"],
-          summary: "Verify review (Landlord)",
-          security: [{ bearerAuth: [] }],
-          parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
-          ],
-          responses: {
-            200: { description: "Review verified successfully" },
             403: { description: "Landlord does not own the room" },
             404: { description: "Review not found" },
           },
