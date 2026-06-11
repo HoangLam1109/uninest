@@ -108,8 +108,8 @@ export function InvoiceCard({
             {invoice.status === 'DRAFT' ? (
               <>
                 <Button
-                  size="sm"
                   variant="outline"
+                  className="h-8 min-w-0 px-3 text-xs"
                   disabled={isActionPending}
                   onClick={(e) => {
                     e.stopPropagation()
@@ -120,9 +120,8 @@ export function InvoiceCard({
                   Gửi
                 </Button>
                 <Button
-                  size="sm"
                   variant="ghost"
-                  className="text-red-600 hover:text-red-700"
+                  className="h-8 min-w-0 px-3 text-xs text-red-600 hover:text-red-700"
                   disabled={isActionPending}
                   onClick={(e) => {
                     e.stopPropagation()
@@ -136,7 +135,7 @@ export function InvoiceCard({
             ) : null}
             {invoice.status === 'SENT' || invoice.status === 'OVERDUE' ? (
               <Button
-                size="sm"
+                className="h-8 min-w-0 px-3 text-xs"
                 disabled={isActionPending}
                 onClick={(e) => {
                   e.stopPropagation()

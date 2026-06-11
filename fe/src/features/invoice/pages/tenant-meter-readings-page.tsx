@@ -1,7 +1,4 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { useGetMyMeterReadings } from '../hooks/use-invoices'
 import type { MeterReading, MeterType } from '../types/invoice.type'
 import {
@@ -22,16 +19,14 @@ const FILTERS: { key: FilterType; label: string }[] = [
 ]
 
 export function TenantMeterReadingsPage() {
-  const navigate = useNavigate()
   const [filter, setFilter] = useState<FilterType>('ALL')
 
   const meterType = filter === 'ALL' ? undefined : filter
   const readingsQuery = useGetMyMeterReadings(meterType ? { meterType } : undefined)
 
-  const readings = readingsQuery.data?.data ?? []
-
   // Group by billingMonth
   const groupedByMonth = useMemo(() => {
+    const readings = readingsQuery.data?.data ?? []
     const map = new Map<
       string,
       { electricity?: MeterReading; water?: MeterReading }
@@ -43,7 +38,7 @@ export function TenantMeterReadingsPage() {
       map.set(r.billingMonth, entry)
     }
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]))
-  }, [readings])
+  }, [readingsQuery.data?.data])
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">

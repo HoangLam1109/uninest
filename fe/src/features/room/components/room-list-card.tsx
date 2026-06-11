@@ -4,10 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   formatRoomCurrency,
+  formatRoomType,
   formatRoomLocation,
   getPrimaryRoomImage,
-  roomStatusClasses,
-  roomStatusLabels,
 } from '@/utils/room-display'
 import { useGetRoomImages } from '../hooks/use-rooms'
 import type { Room } from '../types/room.type'
@@ -54,7 +53,7 @@ export function RoomListCard({ room }: RoomListCardProps) {
         <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
           <span>{room.areaSqm ?? 0} m2</span>
           <span>{room.maxOccupants} người</span>
-          <span>{room.roomType ?? 'Chưa chọn'}</span>
+          <span>{formatRoomType(room.roomType)}</span>
           <span>{room.status}</span>
         </div>
 

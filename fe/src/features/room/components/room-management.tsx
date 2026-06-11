@@ -21,6 +21,7 @@ import {
 } from '../hooks/use-rooms'
 import {
   formatRoomCurrency,
+  formatRoomType,
   roomStatusClasses,
   roomStatusLabels,
 } from '../../../utils/room-display'
@@ -315,7 +316,7 @@ export function RoomManagement() {
                   <td className="px-4 py-4">
                     <p className="font-semibold text-slate-900">{room.title}</p>
                     <p className="mt-1 text-xs text-slate-500">
-                      {room.roomType ?? 'Chưa chọn'} · {room.areaSqm ?? 0} m2 ·{' '}
+                      {formatRoomType(room.roomType)} · {room.areaSqm ?? 0} m2 ·{' '}
                       {room.maxOccupants} người
                     </p>
                   </td>

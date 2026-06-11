@@ -21,6 +21,7 @@ export const registerSchema = z
       .regex(/^0\d{9,10}$/, 'Số điện thoại phải bắt đầu bằng 0'),
     password: z.string().min(8, 'Mật khẩu tối thiểu 8 ký tự'),
     confirmPassword: z.string().min(1, 'Vui lòng xác nhận mật khẩu'),
+    otp: z.string().regex(/^\d{6}$/, 'Mã OTP phải gồm 6 chữ số'),
     terms: z.boolean().refine((v) => v === true, {
       message: 'Bạn cần đồng ý điều khoản sử dụng',
     }),

@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileText, BarChart3 } from 'lucide-react'
 import { Pagination } from '@/components/common/pagination'
-import { Button } from '@/components/ui/button'
 import { InvoiceCard } from '../components/invoice-card'
 import { useGetTenantInvoices } from '../hooks/use-invoices'
 import { sumUnpaidAmount, formatPrice } from '../lib/invoice-display'

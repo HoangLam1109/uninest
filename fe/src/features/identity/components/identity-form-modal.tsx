@@ -5,7 +5,6 @@ import { Camera, Loader2, Search, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
-import { cn } from '@/lib/utils'
 import {
   identityFormSchema,
   type IdentityFormValues,
@@ -424,6 +423,7 @@ export function IdentityFormModal({
             ) : null}
           </label>
         </div>
+
 
         {/* Actions */}
         <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">

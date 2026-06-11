@@ -4,7 +4,6 @@ import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import type { Booking } from '@/features/booking/types/booking.type'
 import {
-  formatBookingDate,
   getBookingRoom,
   getBookingTenant,
 } from '@/features/booking/lib/booking-display'

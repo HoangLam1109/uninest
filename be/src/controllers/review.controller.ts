@@ -11,20 +11,17 @@ export const createReview = async (req: Request, res: Response) => {
     if (!reviewerId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
-    const { roomId, bookingId, rating, comment, imageUrls } = req.body;
+    const { roomId, rating, comment, imageUrls } = req.body;
 
-    if (!roomId || !bookingId || !rating || !comment) {
+    if (!roomId || !rating || !comment) {
       return res.status(400).json({
         success: false,
-        message: "Room ID, booking ID, rating, and comment are required",
+        message: "Room ID, rating, and comment are required",
       });
     }
 
     if (!mongoose.Types.ObjectId.isValid(roomId as string))
       return res.status(400).json({ success: false, message: "Invalid room id" });
-
-    if (!mongoose.Types.ObjectId.isValid(bookingId as string))
-      return res.status(400).json({ success: false, message: "Invalid booking id" });
 
     if (typeof rating !== "number" || rating < 1 || rating > 5) {
       return res.status(400).json({
@@ -41,7 +38,6 @@ export const createReview = async (req: Request, res: Response) => {
     }
 
     const review = await ReviewService.createReview(reviewerId, roomId, {
-      bookingId,
       rating,
       comment,
       imageUrls,
@@ -107,8 +103,7 @@ export const getReviewsByRoom = async (req: Request, res: Response) => {
     const { reviews, total, statistics } = await ReviewService.getReviewsByRoom(
       roomId as string,
       skip,
-      limitNumber,
-      true // Only verified reviews for public
+      limitNumber
     );
 
     return res.json({
@@ -282,41 +277,6 @@ export const addLandlordReply = async (req: Request, res: Response) => {
 };
 
 /**
- * VERIFY REVIEW (Landlord)
- */
-export const verifyReview = async (req: Request, res: Response) => {
-  try {
-    const landlordId = req.userId;
-    let { id: reviewId } = req.params;
-
-    if (!landlordId)
-      return res.status(401).json({ success: false, message: "Unauthorized" });
-
-    if (!reviewId || typeof reviewId !== "string" || !mongoose.Types.ObjectId.isValid(reviewId))
-      return res.status(400).json({ success: false, message: "Invalid review id" });
-
-    const review = await ReviewService.verifyReview(reviewId, landlordId);
-
-    if (!review)
-      return res.status(404).json({ success: false, message: "Review not found" });
-
-    return res.json({
-      success: true,
-      message: "Review verified successfully",
-      data: review,
-    });
-  } catch (err: any) {
-    const statusCode = err.message.includes("not found") ||
-      err.message.includes("do not own")
-      ? 403
-      : 500;
-    return res
-      .status(statusCode)
-      .json({ success: false, message: err.message });
-  }
-};
-
-/**
  * GET ROOM RATING STATISTICS (Public)
  */
 export const getRoomRatingStats = async (req: Request, res: Response) => {
@@ -338,37 +298,3 @@ export const getRoomRatingStats = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * GET PENDING REVIEWS (Landlord/Admin)
- */
-export const getPendingReviews = async (req: Request, res: Response) => {
-  try {
-    const userId = req.userId;
-    if (!userId)
-      return res.status(401).json({ success: false, message: "Unauthorized" });
-
-    const { page = 1, limit = 10 } = req.query;
-
-    const pageNumber = Number(page);
-    const limitNumber = Number(limit);
-    const skip = (pageNumber - 1) * limitNumber;
-
-    const { reviews, total } = await ReviewService.getPendingReviews(
-      skip,
-      limitNumber
-    );
-
-    return res.json({
-      success: true,
-      data: reviews,
-      pagination: {
-        total,
-        page: pageNumber,
-        limit: limitNumber,
-        totalPages: Math.ceil(total / limitNumber),
-      },
-    });
-  } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-};

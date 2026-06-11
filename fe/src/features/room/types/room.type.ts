@@ -77,6 +77,11 @@ export type RoomListParams = {
   status?: RoomStatus
   minPrice?: number
   maxPrice?: number
+  roomType?: RoomType
+}
+
+export type RoomSearchParams = RoomListParams & {
+  q?: string
 }
 
 export type RoomPagination = {
@@ -183,5 +188,62 @@ export type LandlordTenant = {
 export type LandlordTenantListResponse = {
   success: boolean
   data: LandlordTenant[]
+  message?: string
+}
+
+export type RoomReviewReviewer = {
+  _id: string
+  fullName?: string
+  avatar?: string
+}
+
+export type RoomReview = {
+  _id: string
+  reviewerId: string | RoomReviewReviewer
+  roomId: string
+  rating: number
+  comment: string
+  imageUrls?: string[]
+  landlordReply?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type RoomReviewStatistics = {
+  averageRating: number
+  reviewCount: number
+  ratingDistribution?: Array<{
+    _id: number
+    count: number
+  }>
+}
+
+export type RoomReviewListParams = {
+  page?: number
+  limit?: number
+}
+
+export type RoomReviewListResponse = {
+  success: boolean
+  data: RoomReview[]
+  statistics?: RoomReviewStatistics
+  pagination?: RoomPagination
+  message?: string
+}
+
+export type RoomReviewPayload = {
+  roomId: string
+  rating: number
+  comment: string
+  imageUrls?: string[]
+}
+
+export type RoomReviewReplyPayload = {
+  reply: string
+}
+
+export type RoomReviewResponse = {
+  success: boolean
+  data: RoomReview
   message?: string
 }

@@ -3,12 +3,10 @@ import { Schema, model, Document, Types } from "mongoose";
 export interface IReview extends Document {
   reviewerId: Types.ObjectId;
   roomId: Types.ObjectId;
-  bookingId: Types.ObjectId;
   rating: number; // 1-5
   comment: string;
   imageUrls?: string[];
   landlordReply?: string;
-  isVerified: boolean; // Only verified bookings can review
   deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -26,12 +24,6 @@ const ReviewSchema = new Schema<IReview>(
       type: Schema.Types.ObjectId,
       ref: "Room",
       required: [true, "Room ID is required"],
-      index: true,
-    },
-    bookingId: {
-      type: Schema.Types.ObjectId,
-      ref: "Booking",
-      required: [true, "Booking ID is required"],
       index: true,
     },
     rating: {
@@ -55,11 +47,6 @@ const ReviewSchema = new Schema<IReview>(
       type: String,
       trim: true,
     },
-    isVerified: {
-      type: Boolean,
-      default: false,
-      index: true,
-    },
     deletedAt: {
       type: Date,
       default: null,
@@ -75,7 +62,6 @@ const ReviewSchema = new Schema<IReview>(
 ReviewSchema.index({ roomId: 1, reviewerId: 1 }, { unique: true, sparse: true });
 
 // Indexes for filtering
-ReviewSchema.index({ roomId: 1, isVerified: 1 });
 ReviewSchema.index({ roomId: 1, rating: 1 });
 ReviewSchema.index({ deletedAt: 1 });
 

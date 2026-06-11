@@ -34,6 +34,16 @@ const LandlordBookingsPage = lazy(() =>
     default: module.LandlordBookingsPage,
   })),
 )
+const LandlordDashboardPage = lazy(() =>
+  import('@/features/landlord/components/landlord-dashboard').then((module) => ({
+    default: module.LandlordDashboardPage,
+  })),
+)
+const LandlordPlaceholderPage = lazy(() =>
+  import('@/features/landlord/components/landlord-placeholder').then((module) => ({
+    default: module.LandlordPlaceholderPage,
+  })),
+)
 const LandlordContractsPage = lazy(() =>
   import('@/features/contract/pages/landlord-contracts-page').then((module) => ({
     default: module.LandlordContractsPage,
@@ -94,19 +104,9 @@ const TenantContractsPage = lazy(() =>
     default: module.TenantContractsPage,
   })),
 )
-const TenantInvoicesPage = lazy(() =>
-  import('@/features/invoice/pages/tenant-invoices-page').then((module) => ({
-    default: module.TenantInvoicesPage,
-  })),
-)
-const TenantInvoiceDetailPage = lazy(() =>
-  import('@/features/invoice/pages/tenant-invoice-detail-page').then((module) => ({
-    default: module.TenantInvoiceDetailPage,
-  })),
-)
-const TenantMeterReadingsPage = lazy(() =>
-  import('@/features/invoice/pages/tenant-meter-readings-page').then((module) => ({
-    default: module.TenantMeterReadingsPage,
+const TenantDashboardPage = lazy(() =>
+  import('@/features/tenant/pages/tenant-dashboard-page').then((module) => ({
+    default: module.TenantDashboardPage,
   })),
 )
 const TenantFavoriteRoomsPage = lazy(() =>
@@ -114,6 +114,22 @@ const TenantFavoriteRoomsPage = lazy(() =>
     default: module.TenantFavoriteRoomsPage,
   })),
 )
+const TenantInvoiceDetailPage = lazy(() =>
+  import('@/features/invoice/pages/tenant-invoice-detail-page').then((module) => ({
+    default: module.TenantInvoiceDetailPage,
+  })),
+)
+const TenantInvoicesPage = lazy(() =>
+  import('@/features/invoice/pages/tenant-invoices-page').then((module) => ({
+    default: module.TenantInvoicesPage,
+  })),
+)
+const TenantMeterReadingsPage = lazy(() =>
+  import('@/features/invoice/pages/tenant-meter-readings-page').then((module) => ({
+    default: module.TenantMeterReadingsPage,
+  })),
+)
+
 const TenantProfilePage = lazy(() =>
   import('@/features/tenant/pages/tenant-profile-page').then((module) => ({
     default: module.TenantProfilePage,
@@ -130,6 +146,7 @@ export function AppRouter() {
         <Route path={paths.login} element={<LoginPage />} />
         <Route path={paths.register} element={<RegisterPage />} />
         <Route path={paths.dashboard} element={<DashboardRedirectPage />} />
+
         <Route element={<ProtectedRoute />}>
           <Route element={<RoleRoute allowedRoles={[USER_ROLES.LANDLORD]} />}>
             <Route path={paths.landlordDashboard} element={<LandlordLayout />}>
@@ -137,14 +154,17 @@ export function AppRouter() {
               <Route path="phong" element={<RoomManagementPage />} />
               <Route path="dat-phong" element={<LandlordBookingsPage />} />
               <Route path="hop-dong" element={<LandlordContractsPage />} />
+              <Route path="nguoi-thue" element={<LandlordTenantsPage />} />
+              <Route path="hoa-don" element={<LandlordInvoicesPage />} />
               <Route path="tin-nhan" element={<ChatPage />} />
               <Route path="hoa-don" element={<LandlordInvoicesPage />} />
               <Route
-                path="nguoi-thue"
-                element={<LandlordTenantsPage />}
+                path="tien-ich"
+                element={<LandlordPlaceholderPage title="Tien ich" />}
               />
             </Route>
           </Route>
+
           <Route element={<RoleRoute allowedRoles={[USER_ROLES.TENANT]} />}>
             <Route
               path={paths.tenantDashboard}
@@ -161,6 +181,7 @@ export function AppRouter() {
               <Route path="ho-so" element={<TenantProfilePage />} />
             </Route>
           </Route>
+
           <Route element={<RoleRoute allowedRoles={[USER_ROLES.ADMIN]} />}>
             <Route
               path={paths.adminDashboard}
@@ -175,6 +196,7 @@ export function AppRouter() {
               <Route path="ticket" element={<AdminDashboardPage />} />
             </Route>
           </Route>
+
           <Route element={<RoleRoute allowedRoles={[USER_ROLES.STAFF]} />}>
             <Route
               path={paths.staffDashboard}
@@ -190,6 +212,7 @@ export function AppRouter() {
             </Route>
           </Route>
         </Route>
+
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>

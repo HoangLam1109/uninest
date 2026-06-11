@@ -1,16 +1,85 @@
+import { useMemo, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { MainLayout } from '@/layouts/main-layout'
 import { RoomListCard } from '../components/room-list-card'
-import { useGetRooms } from '../hooks/use-rooms'
+import { useGetRooms, useSearchRooms } from '../hooks/use-rooms'
+import type { RoomSearchParams, RoomType } from '../types/room.type'
+
+function getNumberParam(value: string | null) {
+  if (!value) return undefined
+  const numberValue = Number(value)
+  return Number.isFinite(numberValue) ? numberValue : undefined
+}
+
+function getRoomTypeParam(value: string | null): RoomType | undefined {
+  if (
+    value === 'STUDIO' ||
+    value === 'SINGLE' ||
+    value === 'SHARED' ||
+    value === 'APARTMENT'
+  ) {
+    return value
+  }
+  return undefined
+}
 
 export function RoomListPage() {
-  const roomsQuery = useGetRooms({
-    page: 1,
-    limit: 12,
-    status: 'AVAILABLE',
-  })
-  const rooms = roomsQuery.data?.data ?? []
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialKeyword = searchParams.get('q') ?? ''
+  const [keyword, setKeyword] = useState(initialKeyword)
+
+  const searchQueryParams = useMemo<RoomSearchParams>(() => {
+    const q = searchParams.get('q')?.trim() || undefined
+    const minPrice = getNumberParam(searchParams.get('minPrice'))
+    const maxPrice = getNumberParam(searchParams.get('maxPrice'))
+    const roomType = getRoomTypeParam(searchParams.get('roomType'))
+
+    return {
+      page: 1,
+      limit: 12,
+      status: 'AVAILABLE',
+      q,
+      minPrice,
+      maxPrice,
+      roomType,
+    }
+  }, [searchParams])
+
+  const hasSearchCriteria = Boolean(
+    searchQueryParams.q ||
+      searchQueryParams.minPrice ||
+      searchQueryParams.maxPrice ||
+      searchQueryParams.roomType,
+  )
+
+  const roomsQuery = useGetRooms(
+    {
+      page: 1,
+      limit: 12,
+      status: 'AVAILABLE',
+    },
+    !hasSearchCriteria,
+  )
+  const searchRoomsQuery = useSearchRooms(searchQueryParams, hasSearchCriteria)
+  const activeQuery = hasSearchCriteria ? searchRoomsQuery : roomsQuery
+  const rooms = activeQuery.data?.data ?? []
+
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const nextParams = new URLSearchParams(searchParams)
+    const trimmedKeyword = keyword.trim()
+
+    if (trimmedKeyword) {
+      nextParams.set('q', trimmedKeyword)
+    } else {
+      nextParams.delete('q')
+    }
+
+    setSearchParams(nextParams)
+  }
 
   return (
     <MainLayout>
@@ -19,23 +88,24 @@ export function RoomListPage() {
           <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.14em] text-primary">
-                Danh sách phòng
+                Danh sach phong
               </p>
               <h1 className="mt-2 font-serif text-3xl font-bold text-foreground lg:text-5xl">
-                TÌm phòng phù hợp với bạn
+                Tim phong phu hop voi ban
               </h1>
             </div>
-            <div className="relative w-full lg:max-w-sm">
+            <form className="relative w-full lg:max-w-sm" onSubmit={handleSearch}>
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 className="h-11 rounded-lg border-primary/10 bg-white pl-9 shadow-none"
-                placeholder="Tìm theo tên, địa chỉ..."
-                disabled
+                placeholder="Tim theo ten, dia chi..."
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
               />
-            </div>
+            </form>
           </div>
 
-          {roomsQuery.isLoading ? (
+          {activeQuery.isLoading ? (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 6 }).map((_, index) => (
                 <div
@@ -46,19 +116,19 @@ export function RoomListPage() {
             </div>
           ) : null}
 
-          {roomsQuery.isError ? (
+          {activeQuery.isError ? (
             <div className="rounded-xl border border-red-500/20 bg-white p-8 text-center text-sm text-red-600">
-              Không thể tải danh sách phòng. Vui lòng thử lại sau.
+              Khong the tai danh sach phong. Vui long thu lai sau.
             </div>
           ) : null}
 
-          {!roomsQuery.isLoading && !roomsQuery.isError && rooms.length === 0 ? (
+          {!activeQuery.isLoading && !activeQuery.isError && rooms.length === 0 ? (
             <div className="rounded-xl border border-primary/10 bg-white p-8 text-center text-sm text-muted-foreground">
-              Chưa có phòng trống để hiển thị.
+              Chua co phong phu hop de hien thi.
             </div>
           ) : null}
 
-          {!roomsQuery.isLoading && !roomsQuery.isError && rooms.length > 0 ? (
+          {!activeQuery.isLoading && !activeQuery.isError && rooms.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {rooms.map((room) => (
                 <RoomListCard key={room._id} room={room} />

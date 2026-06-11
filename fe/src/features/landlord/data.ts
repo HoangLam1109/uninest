@@ -4,7 +4,6 @@ import {
   Building2,
   CalendarDays,
   FileText,
-  LayoutGrid,
   MessageCircle,
   ScrollText,
   Users,

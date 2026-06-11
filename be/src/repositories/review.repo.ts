@@ -1,4 +1,5 @@
 import { ReviewModel } from "../models/Review.model.js";
+import { Types } from "mongoose";
 
 export const ReviewRepository = {
   create: (data: any) => ReviewModel.create(data),
@@ -13,28 +14,17 @@ export const ReviewRepository = {
           path: "landlordId",
           select: "_id fullName",
         },
-      })
-      .populate("bookingId"),
+      }),
 
-  findByRoomId: (roomId: string, skip: number, limit: number, onlyVerified: boolean = true) => {
-    const query = onlyVerified 
-      ? { roomId, isVerified: true, deletedAt: null }
-      : { roomId, deletedAt: null };
-    
-    return ReviewModel.find(query)
+  findByRoomId: (roomId: string, skip: number, limit: number) =>
+    ReviewModel.find({ roomId, deletedAt: null })
       .populate("reviewerId", "fullName avatar")
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
-  },
+      .limit(limit),
 
-  countByRoomId: (roomId: string, onlyVerified: boolean = true) => {
-    const query = onlyVerified
-      ? { roomId, isVerified: true, deletedAt: null }
-      : { roomId, deletedAt: null };
-    
-    return ReviewModel.countDocuments(query);
-  },
+  countByRoomId: (roomId: string) =>
+    ReviewModel.countDocuments({ roomId, deletedAt: null }),
 
   findByReviewerId: (reviewerId: string, skip: number, limit: number) =>
     ReviewModel.find({ reviewerId, deletedAt: null })
@@ -45,11 +35,6 @@ export const ReviewRepository = {
 
   countByReviewerId: (reviewerId: string) =>
     ReviewModel.countDocuments({ reviewerId, deletedAt: null }),
-
-  findByBookingId: (bookingId: string) =>
-    ReviewModel.findOne({ bookingId, deletedAt: null })
-      .populate("reviewerId", "fullName avatar")
-      .populate("roomId", "name pricePerMonth"),
 
   checkIfReviewExists: (roomId: string, reviewerId: string) =>
     ReviewModel.findOne({ roomId, reviewerId, deletedAt: null }),
@@ -68,33 +53,16 @@ export const ReviewRepository = {
       { returnDocument: "after" }
     ),
 
-  deleteByBookingId: (bookingId: string) =>
-    ReviewModel.updateMany(
-      { bookingId, deletedAt: null },
-      { deletedAt: new Date() }
-    ),
-
   getAverageRatingByRoom: (roomId: string) =>
     ReviewModel.aggregate([
-      { $match: { roomId: new (require("mongoose").Types.ObjectId)(roomId), isVerified: true, deletedAt: null } },
+      { $match: { roomId: new Types.ObjectId(roomId), deletedAt: null } },
       { $group: { _id: "$roomId", averageRating: { $avg: "$rating" }, reviewCount: { $sum: 1 } } },
     ]),
 
   getRatingDistribution: (roomId: string) =>
     ReviewModel.aggregate([
-      { $match: { roomId: new (require("mongoose").Types.ObjectId)(roomId), isVerified: true, deletedAt: null } },
+      { $match: { roomId: new Types.ObjectId(roomId), deletedAt: null } },
       { $group: { _id: "$rating", count: { $sum: 1 } } },
       { $sort: { _id: 1 } },
     ]),
-
-  getPendingReviews: (skip: number, limit: number) =>
-    ReviewModel.find({ isVerified: false, deletedAt: null })
-      .populate("reviewerId", "fullName email")
-      .populate("roomId", "name")
-      .sort({ createdAt: 1 })
-      .skip(skip)
-      .limit(limit),
-
-  countPendingReviews: () =>
-    ReviewModel.countDocuments({ isVerified: false, deletedAt: null }),
 };

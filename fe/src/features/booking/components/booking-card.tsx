@@ -1,5 +1,14 @@
 import { useState } from 'react'
-import { CalendarDays, CheckCircle2, Eye, Home, Mail, Phone, Trash2, XCircle } from 'lucide-react'
+import {
+  CalendarDays,
+  CheckCircle2,
+  Eye,
+  Home,
+  Mail,
+  Phone,
+  Trash2,
+  XCircle,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
 import { cn } from '@/lib/utils'
@@ -37,15 +46,16 @@ export function BookingCard({
   const room = getBookingRoom(booking)
   const tenant = getBookingTenant(booking)
   const canLandlordReview = mode === 'landlord' && booking.status === 'PENDING'
-  const canTenantCancel =
-    mode === 'tenant' && booking.status === 'PENDING'
+  const canTenantCancel = mode === 'tenant' && booking.status === 'PENDING'
+  const canLandlordDelete = mode === 'landlord' && !canLandlordReview
 
   const [showIdentity, setShowIdentity] = useState(false)
   const [viewingIdentityId, setViewingIdentityId] = useState<string | null>(null)
 
-  const identityIds: string[] = booking.identityIds?.map((id: any) =>
-    typeof id === 'string' ? id : id._id,
-  ) ?? []
+  const identities = booking.identityIds ?? []
+  const identityIds = identities.map((identity) =>
+    typeof identity === 'string' ? identity : identity._id,
+  )
 
   const viewingIdentityQuery = useGetIdentityById(
     viewingIdentityId,
@@ -55,74 +65,70 @@ export function BookingCard({
   return (
     <>
       <article className="rounded-xl border border-primary/10 bg-white p-4 shadow-sm sm:p-5">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-        <div className="min-w-0 pr-0 lg:pr-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={cn(
-                'rounded-full px-3 py-1 text-xs font-bold',
-                bookingStatusStyles[booking.status],
-              )}
-            >
-              {bookingStatusLabels[booking.status]}
-            </span>
-            {booking.createdAt ? (
-              <span className="text-xs font-semibold text-slate-400">
-                Tạo ngày {formatBookingDate(booking.createdAt)}
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+          <div className="min-w-0 pr-0 lg:pr-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={cn(
+                  'rounded-full px-3 py-1 text-xs font-bold',
+                  bookingStatusStyles[booking.status],
+                )}
+              >
+                {bookingStatusLabels[booking.status]}
               </span>
-            ) : null}
+              {booking.createdAt ? (
+                <span className="text-xs font-semibold text-slate-400">
+                  Tạo ngày {formatBookingDate(booking.createdAt)}
+                </span>
+              ) : null}
+            </div>
+
+            <h2 className="mt-3 line-clamp-2 text-xl font-bold text-slate-950">
+              {room?.title ?? 'Phòng không khả dụng'}
+            </h2>
+            <p className="mt-2 flex min-w-0 items-start gap-2 text-sm text-slate-500">
+              <Home className="mt-0.5 size-4 shrink-0" />
+              {room
+                ? [room.address, room.district, room.city].filter(Boolean).join(', ')
+                : 'Chưa có thông tin phòng'}
+            </p>
           </div>
-          <h2 className="mt-3 line-clamp-2 text-xl font-bold text-slate-950">
-            {room?.title ?? 'Phòng không khả dụng'}
-          </h2>
-          <p className="mt-2 flex min-w-0 items-start gap-2 text-sm text-slate-500">
-            <Home className="mt-0.5 size-4 shrink-0" />
-            {room
-              ? [room.address, room.district, room.city].filter(Boolean).join(', ')
-              : 'Chưa có thông tin phòng'}
-          </p>
+
+          {room?.pricePerMonth ? (
+            <div className="w-full rounded-xl bg-primary/10 px-4 py-3 text-left sm:w-fit sm:min-w-44 lg:text-right">
+              <p className="text-xs font-bold uppercase text-primary">Giá phòng</p>
+              <p className="mt-1 whitespace-nowrap text-lg font-bold text-primary">
+                {formatBookingCurrency(room.pricePerMonth)}
+              </p>
+            </div>
+          ) : null}
         </div>
 
-        {room?.pricePerMonth ? (
-          <div className="w-full rounded-xl bg-primary/10 px-4 py-3 text-left sm:w-fit sm:min-w-44 lg:text-right">
-            <p className="text-xs font-bold uppercase text-primary">Giá phòng</p>
-            <p className="mt-1 whitespace-nowrap text-lg font-bold text-primary">
-              {formatBookingCurrency(room.pricePerMonth)}
-            </p>
-          </div>
-        ) : null}
-      </div>
-
-      <div className="mt-5 grid gap-3 text-sm md:grid-cols-3">
-        <div className="rounded-lg bg-surface p-3">
-          <p className="text-slate-500">Ngày nhận phòng</p>
-          <p className="mt-1 flex items-center gap-2 font-bold text-slate-950">
-            <CalendarDays className="size-4 text-primary" />
-            {formatBookingDate(booking.checkInDate)}
-          </p>
-        </div>
-        <div className="rounded-lg bg-surface p-3">
-          <p className="text-slate-500">Ngày trả phòng</p>
-          <p className="mt-1 font-bold text-slate-950">
-            {formatBookingDate(booking.checkOutDate)}
-          </p>
-        </div>
-        {mode === 'tenant' ? (
+        <div className="mt-5 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-3">
           <div className="rounded-lg bg-surface p-3">
-            <p className="text-slate-500">Tổng tiền</p>
-            <p className="mt-1 font-bold text-slate-950">
-              {formatBookingCurrency(booking.totalPrice)}
+            <p className="text-slate-500">Ngày nhận phòng</p>
+            <p className="mt-1 flex items-center gap-2 font-bold text-slate-950">
+              <CalendarDays className="size-4 text-primary" />
+              {formatBookingDate(booking.checkInDate)}
             </p>
           </div>
-        ) : (
           <div className="rounded-lg bg-surface p-3">
-            <p className="text-slate-500">Người thuê</p>
+            <p className="text-slate-500">Ngày trả phòng</p>
             <p className="mt-1 font-bold text-slate-950">
-              {tenant?.fullName ?? tenant?.email ?? 'Chưa có thông tin'}
+              {formatBookingDate(booking.checkOutDate)}
             </p>
           </div>
-        )}
-      </div>
+          <div className="rounded-lg bg-surface p-3">
+            <p className="text-slate-500">
+              {mode === 'landlord' ? 'Người thuê' : 'Trạng thái hiện tại'}
+            </p>
+            <p className="mt-1 font-bold text-slate-950">
+              {mode === 'landlord'
+                ? tenant?.fullName ?? tenant?.email ?? 'Chưa có thông tin'
+                : bookingStatusLabels[booking.status]}
+            </p>
+          </div>
+        </div>
 
       {mode === 'landlord' && tenant ? (
           <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-500">
@@ -147,7 +153,7 @@ export function BookingCard({
               Hồ sơ định danh ({identityIds.length})
             </p>
             <div className="space-y-2">
-              {booking.identityIds?.map((identity: any, index: number) => {
+              {identities.map((identity, index) => {
                 const id = typeof identity === 'string' ? identity : identity._id
                 const name = typeof identity === 'object' ? identity.fullName : `Người ${index + 1}`
                 const cccd = typeof identity === 'object' ? identity.cccdNumber : ''
@@ -155,20 +161,20 @@ export function BookingCard({
                 return (
                   <div
                     key={id}
-                    className="flex items-center justify-between rounded-md bg-white px-3 py-2 text-sm"
+                    className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 text-sm"
                   >
                     <div className="min-w-0">
                       <p className="truncate font-bold text-foreground">{name}</p>
                       <p className="truncate text-xs text-slate-500">
                         {cccd ? `CCCD: ${cccd}` : ''}
                         {cccd && phone ? ' • ' : ''}
-                        {phone || ''}
+                        {phone}
                       </p>
                     </div>
                     <Button
                       type="button"
                       variant="ghost"
-                      className="shrink-0 gap-1 text-xs text-primary"
+                      className="h-8 min-w-0 shrink-0 gap-1 px-2 text-xs text-primary"
                       onClick={() => {
                         setViewingIdentityId(id)
                         setShowIdentity(true)
@@ -184,21 +190,9 @@ export function BookingCard({
           </div>
         ) : null}
 
-      {canLandlordReview || canTenantCancel ? (
-        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
-          {canTenantCancel ? (
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isActionPending}
-              onClick={() => onCancel?.(booking._id)}
-            >
-              <XCircle className="size-4" />
-              Hủy booking
-            </Button>
-          ) : null}
-          {canLandlordReview ? (
-            <>
+        {canTenantCancel || canLandlordReview ? (
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+            {canTenantCancel ? (
               <Button
                 type="button"
                 variant="outline"
@@ -206,11 +200,11 @@ export function BookingCard({
                 onClick={() => onCancel?.(booking._id)}
               >
                 <XCircle className="size-4" />
-                Hủy booking
+                  Hủy booking
               </Button>
-            </>
-          ) : null}
-          {canLandlordReview ? (
+            ) : null}
+
+            {canLandlordReview ? (
               <>
                 <Button
                   type="button"
@@ -234,12 +228,12 @@ export function BookingCard({
           </div>
         ) : null}
 
-        {mode === 'landlord' && !canLandlordReview ? (
+        {canLandlordDelete ? (
           <div className="mt-5 flex justify-end">
             <Button
               type="button"
               variant="ghost"
-              className="gap-1.5 text-xs text-slate-400 hover:text-red-500"
+              className="h-8 min-w-0 gap-1.5 px-2 text-xs text-slate-400 hover:text-red-500"
               disabled={isActionPending}
               onClick={() => onDelete?.(booking._id)}
             >

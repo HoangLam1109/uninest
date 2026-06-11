@@ -15,6 +15,7 @@ export function useRegister() {
         email: values.email,
         phone: values.phone,
         password: values.password,
+        otp: values.otp,
       })
       return data
     },
@@ -25,6 +26,25 @@ export function useRegister() {
     onError: (error) => {
       toast.error('Đăng ký thất bại', {
         description: getApiErrorMessage(error, 'Vui lòng kiểm tra lại thông tin'),
+      })
+    },
+  })
+}
+
+export function useSendRegisterOtp() {
+  return useMutation({
+    mutationFn: async (email: string) => {
+      const { data } = await authApi.sendRegisterOtp({ email })
+      return data
+    },
+    onSuccess: () => {
+      toast.success('Đã gửi mã OTP', {
+        description: 'Vui lòng kiểm tra email của bạn.',
+      })
+    },
+    onError: (error) => {
+      toast.error('Không thể gửi OTP', {
+        description: getApiErrorMessage(error, 'Vui lòng kiểm tra lại email'),
       })
     },
   })

@@ -1,4 +1,4 @@
-# UNINEST - API DOCUMENTATION
+﻿# UNINEST - API DOCUMENTATION
 
 > **Base URL:** `http://localhost:<PORT>` (PORT từ biến môi trường)  
 > **Default PORT:** có thể là 3000 hoặc 5000  
@@ -2512,7 +2512,7 @@ Authorization: Bearer <accessToken>
 
 **URL:** `http://localhost:3000/api/reviews/room`
 
-**Chức năng:** Xem danh sách review của một phòng (công khai, chỉ hiển thị review đã verified).
+**Chức năng:** Xem danh sách review của một phòng (công khai).
 
 **Middleware:** Không có
 
@@ -2533,7 +2533,7 @@ Authorization: Bearer <accessToken>
 ```json
 {
   "success": true,
-  "data": [ /* Array of Review (chỉ verified) */ ],
+  "data": [ /* Array of Review */ ],
   "statistics": { /* Thống kê rating */ },
   "pagination": {
     "total": 12,
@@ -2546,55 +2546,13 @@ Authorization: Bearer <accessToken>
 
 **Luồng xử lý:**
 1. Validate `roomId`.
-2. Gọi `ReviewService.getReviewsByRoom` với `verifiedOnly = true`.
+2. Gọi `ReviewService.getReviewsByRoom`.
 3. Repository query MongoDB + populate reviewer.
 4. Trả về reviews + statistics + pagination.
 
 ---
 
-### 8.3 Lấy Reviews đang Chờ Duyệt
-
-**Method:** `GET`
-
-**URL:** `http://localhost:3000/api/reviews/pending`
-
-**Chức năng:** Landlord/Admin xem danh sách review chưa được verify.
-
-**Middleware:** `authenticateUser`
-
-**Query Params:**
-```
-?page=1&limit=10
-```
-
-**Headers:**
-```
-Authorization: Bearer <accessToken>
-```
-
-**Response Thành Công (200):**
-```json
-{
-  "success": true,
-  "data": [ /* Array of pending Review */ ],
-  "pagination": {
-    "total": 5,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 1
-  }
-}
-```
-
-**Luồng xử lý:**
-1. Middleware xác thực.
-2. Gọi `ReviewService.getPendingReviews`.
-3. Repository query review có `isVerified = false`.
-4. Trả về danh sách + pagination.
-
----
-
-### 8.4 Tạo Review
+### 8.3 Tạo Review
 
 **Method:** `POST`
 
@@ -2608,14 +2566,13 @@ Authorization: Bearer <accessToken>
 ```json
 {
   "roomId": "665a1b2c3d4e5f6a7b8c9d0e",
-  "bookingId": "665a1b2c3d4e5f6a7b8c9d0f",
   "rating": 4,
   "comment": "Phòng sạch sẽ, chủ nhà thân thiện, vị trí thuận tiện",
   "imageUrls": ["https://example.com/review1.jpg", "https://example.com/review2.jpg"]
 }
 ```
 
-> `roomId`, `bookingId`, `rating` (1-5), `comment` (tối thiểu 10 ký tự) là bắt buộc.  
+> `roomId`, `rating` (1-5), `comment` (tối thiểu 10 ký tự) là bắt buộc.  
 > `imageUrls` là optional.
 
 **Headers:**
@@ -2636,7 +2593,7 @@ Authorization: Bearer <accessToken>
 ```json
 {
   "success": false,
-  "message": "Room ID, booking ID, rating, and comment are required"
+  "message": "Room ID, rating, and comment are required"
 }
 ```
 ```json
@@ -2656,13 +2613,13 @@ Authorization: Bearer <accessToken>
 1. Middleware xác thực → `reviewerId`.
 2. Validate các trường bắt buộc, rating 1-5, comment >= 10 ký tự.
 3. Gọi `ReviewService.createReview`.
-4. Service kiểm tra booking tồn tại, thuộc tenant, đã APPROVED.
-5. Repository tạo review (status `isVerified = false`).
+4. Service kiểm tra tenant chưa tạo review cho phòng này.
+5. Repository tạo review.
 6. Trả về review vừa tạo.
 
 ---
 
-### 8.5 Lấy Reviews của tôi
+### 8.4 Lấy Reviews của tôi
 
 **Method:** `GET`
 
@@ -2704,7 +2661,7 @@ Authorization: Bearer <accessToken>
 
 ---
 
-### 8.6 Lấy chi tiết Review
+### 8.5 Lấy chi tiết Review
 
 **Method:** `GET`
 
@@ -2748,7 +2705,7 @@ Authorization: Bearer <accessToken>
 
 ---
 
-### 8.7 Cập nhật Review
+### 8.6 Cập nhật Review
 
 **Method:** `PUT`
 
@@ -2795,7 +2752,7 @@ Authorization: Bearer <accessToken>
 
 ---
 
-### 8.8 Xóa Review
+### 8.7 Xóa Review
 
 **Method:** `DELETE`
 
@@ -2832,7 +2789,7 @@ Authorization: Bearer <accessToken>
 
 ---
 
-### 8.9 Phản hồi Review (Landlord)
+### 8.8 Phản hồi Review (Landlord)
 
 **Method:** `PATCH`
 
@@ -2884,47 +2841,6 @@ Authorization: Bearer <accessToken>
 3. Gọi `ReviewService.addLandlordReply`.
 4. Service kiểm tra landlord sở hữu room của review.
 5. Repository cập nhật `landlordReply`.
-6. Trả về review đã update.
-
----
-
-### 8.10 Xác minh Review
-
-**Method:** `PATCH`
-
-**URL:** `http://localhost:3000/api/reviews/:id/verify`
-
-**Chức năng:** Landlord xác minh review (set `isVerified = true`).
-
-**Middleware:** `authenticateUser`
-
-**Path Params:**
-```
-:id - MongoDB ObjectId của review
-```
-
-**Request Body:** Không có
-
-**Headers:**
-```
-Authorization: Bearer <accessToken>
-```
-
-**Response Thành Công (200):**
-```json
-{
-  "success": true,
-  "message": "Review verified successfully",
-  "data": { /* Updated Review */ }
-}
-```
-
-**Luồng xử lý:**
-1. Middleware xác thực → `landlordId`.
-2. Validate ObjectId.
-3. Gọi `ReviewService.verifyReview`.
-4. Service kiểm tra landlord sở hữu room của review.
-5. Repository set `isVerified = true`.
 6. Trả về review đã update.
 
 ---
@@ -2987,18 +2903,16 @@ Authorization: Bearer <accessToken>
 | PUT | `/api/invoices/:id/detail` | authenticateUser | Cập nhật chi tiết điện nước |
 | GET | `/api/reviews/stats` | - | Thống kê rating (public) |
 | GET | `/api/reviews/room` | - | Reviews theo phòng (public) |
-| GET | `/api/reviews/pending` | authenticateUser | Reviews chờ duyệt |
 | POST | `/api/reviews` | authenticateUser | Tạo review |
 | GET | `/api/reviews` | authenticateUser | Reviews của tôi |
 | GET | `/api/reviews/:id` | authenticateUser | Chi tiết review |
 | PUT | `/api/reviews/:id` | authenticateUser | Cập nhật review |
 | DELETE | `/api/reviews/:id` | authenticateUser | Xóa review |
 | PATCH | `/api/reviews/:id/reply` | authenticateUser | Phản hồi review |
-| PATCH | `/api/reviews/:id/verify` | authenticateUser | Xác minh review |
 
 ---
 
-> **Tổng cộng: 58 API endpoints** (10 Auth/Property/Room/Favorite/Booking/Contract/Invoice/Review)
+> **Tổng cộng: 56 API endpoints** (10 Auth/Property/Room/Favorite/Booking/Contract/Invoice/Review)
 
 ---
 
@@ -3026,3 +2940,4 @@ Authorization: Bearer <accessToken>
 ### ObjectId Format
 Tất cả `:id`, `:roomId`, `:imageId`, `:bookingId` là MongoDB ObjectId (24 ký tự hex).  
 Ví dụ: `665a1b2c3d4e5f6a7b8c9d0e`
+

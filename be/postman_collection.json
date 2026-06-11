@@ -909,7 +909,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"roomId\": \"665a1b2c3d4e5f6a7b8c9d0e\",\n  \"bookingId\": \"665a1b2c3d4e5f6a7b8c9d0f\",\n  \"rating\": 4,\n  \"comment\": \"Great room with excellent facilities and friendly landlord!\",\n  \"imageUrls\": [\"https://example.com/review1.jpg\"]\n}"
+              "raw": "{\n  \"roomId\": \"665a1b2c3d4e5f6a7b8c9d0e\",\n  \"rating\": 4,\n  \"comment\": \"Great room with excellent facilities and friendly landlord!\",\n  \"imageUrls\": [\"https://example.com/review1.jpg\"]\n}"
             },
             "url": { "raw": "{{baseUrl}}/api/reviews/", "host": ["{{baseUrl}}"], "path": ["api", "reviews", ""] }
           }
@@ -922,21 +922,6 @@
               "raw": "{{baseUrl}}/api/reviews/?page=1&limit=10",
               "host": ["{{baseUrl}}"],
               "path": ["api", "reviews", ""],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Pending Reviews",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/api/reviews/pending?page=1&limit=10",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "reviews", "pending"],
               "query": [
                 { "key": "page", "value": "1" },
                 { "key": "limit", "value": "10" }
@@ -995,17 +980,6 @@
               "raw": "{{baseUrl}}/api/reviews/665a1b2c3d4e5f6a7b8c9d0e/reply",
               "host": ["{{baseUrl}}"],
               "path": ["api", "reviews", "665a1b2c3d4e5f6a7b8c9d0e", "reply"]
-            }
-          }
-        },
-        {
-          "name": "Verify Review",
-          "request": {
-            "method": "PATCH",
-            "url": {
-              "raw": "{{baseUrl}}/api/reviews/665a1b2c3d4e5f6a7b8c9d0e/verify",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "reviews", "665a1b2c3d4e5f6a7b8c9d0e", "verify"]
             }
           }
         }
