@@ -24,6 +24,11 @@ const DashboardRedirectPage = lazy(() =>
 const HomePage = lazy(() =>
   import('@/pages/home').then((module) => ({ default: module.HomePage })),
 )
+const AiRoomFinderPage = lazy(() =>
+  import('@/features/ai/pages/ai-room-finder-page').then((module) => ({
+    default: module.AiRoomFinderPage,
+  })),
+)
 const ChatPage = lazy(() =>
   import('@/features/chat/pages/chat-page').then((module) => ({
     default: module.ChatPage,
@@ -32,11 +37,6 @@ const ChatPage = lazy(() =>
 const LandlordBookingsPage = lazy(() =>
   import('@/features/booking/pages/landlord-bookings-page').then((module) => ({
     default: module.LandlordBookingsPage,
-  })),
-)
-const LandlordDashboardPage = lazy(() =>
-  import('@/features/landlord/components/landlord-dashboard').then((module) => ({
-    default: module.LandlordDashboardPage,
   })),
 )
 const LandlordPlaceholderPage = lazy(() =>
@@ -104,11 +104,6 @@ const TenantContractsPage = lazy(() =>
     default: module.TenantContractsPage,
   })),
 )
-const TenantDashboardPage = lazy(() =>
-  import('@/features/tenant/pages/tenant-dashboard-page').then((module) => ({
-    default: module.TenantDashboardPage,
-  })),
-)
 const TenantFavoriteRoomsPage = lazy(() =>
   import('@/features/tenant/pages/tenant-favorite-rooms-page').then((module) => ({
     default: module.TenantFavoriteRoomsPage,
@@ -141,6 +136,7 @@ export function AppRouter() {
     <Suspense fallback={<Loading />}>
       <Routes>
         <Route path={paths.home} element={<HomePage />} />
+        <Route path={paths.ai} element={<AiRoomFinderPage />} />
         <Route path={paths.rooms} element={<RoomListPage />} />
         <Route path={paths.roomDetail} element={<RoomDetailPage />} />
         <Route path={paths.login} element={<LoginPage />} />

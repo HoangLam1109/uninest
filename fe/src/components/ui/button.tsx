@@ -16,6 +16,7 @@ const buttonVariants = cva(
         ghost: 'bg-transparent text-foreground hover:bg-surface',
       },
       size: {
+        sm: 'h-9 min-w-[88px] px-4 text-sm',
         default: 'h-10 min-w-[100px] px-5',
         lg: 'h-12 px-8 text-base',
         icon: 'size-9 rounded-full p-0',

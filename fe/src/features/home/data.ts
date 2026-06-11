@@ -5,6 +5,7 @@ import { paths } from '@/config/constants'
 export const navLinks = [
   { label: 'Trang chủ', href: paths.home },
   { label: 'Phòng cho thuê', href: paths.rooms },
+  { label: 'AI tìm phòng', href: paths.ai },
   { label: 'Điều khiển', href: paths.landlordDashboard },
 ] as const
 

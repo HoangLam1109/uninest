@@ -1,9 +1,10 @@
-import { Link } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { images } from '@/assets/images'
 import { paths } from '@/config/constants'
 import { Button } from '@/components/ui/button'
 import { navLinks } from '@/features/home/data'
 import { useAuth } from '@/hooks/use-auth'
+import { cn } from '@/lib/utils'
 import { NavbarUserMenu } from './navbar-user-menu'
 
 export function Navbar() {
@@ -30,13 +31,20 @@ export function Navbar() {
           aria-label="Chính"
         >
           {navLinks.map((link) => (
-            <Link
+            <NavLink
               key={link.label}
               to={link.href}
-              className="text-sm font-semibold text-foreground transition-colors hover:text-primary"
+              className={({ isActive }) =>
+                cn(
+                  'border-b-2 pb-1 text-sm font-semibold transition-colors hover:text-primary',
+                  isActive
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-foreground',
+                )
+              }
             >
               {link.label}
-            </Link>
+            </NavLink>
           ))}
         </nav>
 
