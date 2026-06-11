@@ -1,8 +1,10 @@
 import express from "express";
 import {
   createIdentity,
+  getIdentitiesByUserId,
   getIdentityById,
   getMyIdentities,
+  searchIdentityByCccd,
   updateIdentity,
 } from "../controllers/identity.controller.js";
 import authenticateMiddleware from "../middlewares/authenticate.middleware.js";
@@ -25,6 +27,12 @@ router.post(
 
 // Get my identities (must be before :id)
 router.get("/my", getMyIdentities);
+
+// Get identities by user ID (must be before :id)
+router.get("/by-user/:userId", getIdentitiesByUserId);
+
+// Search identity by CCCD (must be before :id)
+router.get("/search", searchIdentityByCccd);
 
 // Get identity by ID
 router.get("/:id", getIdentityById);

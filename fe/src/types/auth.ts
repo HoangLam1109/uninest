@@ -6,6 +6,7 @@ export type AuthUser = {
   fullName: string
   phone?: string
   role?: UserRole
+  avatarUrl?: string
 }
 
 export type LoginPayload = {

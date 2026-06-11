@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CalendarDays, CreditCard, Eye, Mail, MapPin, Phone, Star, Users, X } from 'lucide-react'
+import { CalendarDays, CreditCard, Eye, Mail, MapPin, Phone, Star, X } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
@@ -137,12 +137,6 @@ export function LandlordTenantsPage() {
                     <span className="truncate">{tenant.cccdNumber}</span>
                   </p>
                 ) : null}
-                {tenant.coTenants && tenant.coTenants.length > 0 ? (
-                  <p className="flex items-center gap-2 text-muted-foreground">
-                    <Users className="size-3.5 shrink-0" />
-                    <span>{tenant.coTenants.length} người thuê cùng</span>
-                  </p>
-                ) : null}
               </div>
 
               <p className="text-xs text-muted-foreground">
@@ -188,23 +182,6 @@ export function LandlordTenantsPage() {
                 </div>
               ) : null}
             </div>
-            {selectedTenant.coTenants && selectedTenant.coTenants.length > 0 ? (
-              <div>
-                <p className="mb-2 text-sm font-semibold">Người thuê cùng</p>
-                <div className="space-y-2">
-                  {selectedTenant.coTenants.map((ct, idx) => (
-                    <div key={idx} className="rounded-lg border bg-surface p-2 text-sm">
-                      <p className="font-bold">{ct.fullName}</p>
-                      <div className="flex flex-wrap gap-x-3 text-xs text-slate-500">
-                        {ct.dateOfBirth ? <span>🎂 {formatDate(ct.dateOfBirth)}</span> : null}
-                        {ct.phone ? <span>📱 {ct.phone}</span> : null}
-                        {ct.cccdNumber ? <span>🪪 {ct.cccdNumber}</span> : null}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
           </div>
         ) : null}
       </Modal>

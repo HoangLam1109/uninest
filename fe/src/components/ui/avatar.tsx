@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
 function getInitials(name: string) {
@@ -9,10 +10,27 @@ function getInitials(name: string) {
 
 type AvatarProps = {
   name: string
+  src?: string
   className?: string
 }
 
-export function Avatar({ name, className }: AvatarProps) {
+export function Avatar({ name, src, className }: AvatarProps) {
+  const [imgError, setImgError] = useState(false)
+
+  if (src && !imgError) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        onError={() => setImgError(true)}
+        className={cn(
+          'inline-flex size-10 shrink-0 rounded-full object-cover',
+          className,
+        )}
+      />
+    )
+  }
+
   return (
     <span
       className={cn(

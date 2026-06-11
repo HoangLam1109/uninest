@@ -4,7 +4,6 @@ import {
   CreditCard,
   Phone,
   User,
-  Users,
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -129,31 +128,6 @@ export function IdentityDetail({ identity, className }: IdentityDetailProps) {
           </div>
         </div>
       </div>
-
-      {/* Co-tenants */}
-      {identity.coTenants.length > 0 ? (
-        <div>
-          <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground">
-            <Users className="size-4" />
-            Người thuê cùng ({identity.coTenants.length})
-          </p>
-          <div className="space-y-2">
-            {identity.coTenants.map((ct, index) => (
-              <div
-                key={index}
-                className="rounded-lg border border-border bg-surface p-3 text-sm"
-              >
-                <p className="font-bold text-foreground">{ct.fullName}</p>
-                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-slate-500">
-                  {ct.dateOfBirth ? <span>🎂 {formatDate(ct.dateOfBirth)}</span> : null}
-                  {ct.phone ? <span>📱 {ct.phone}</span> : null}
-                  {ct.cccdNumber ? <span>🪪 {ct.cccdNumber}</span> : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
     </div>
   )
 }

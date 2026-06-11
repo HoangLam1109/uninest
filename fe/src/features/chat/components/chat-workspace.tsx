@@ -35,12 +35,17 @@ function getParticipantName(conversation: ChatConversation, currentUserId: strin
   const landlordId = getUserId(conversation.landlordId)
   const user =
     landlordId === currentUserId ? conversation.tenantId : conversation.landlordId
-  return user.fullName || user.email || 'Người dùng UniNest'
+  return user?.fullName || user?.email || 'Người dùng UniNest'
 }
 
 function getParticipant(conversation: ChatConversation, currentUserId: string) {
   const landlordId = getUserId(conversation.landlordId)
   return landlordId === currentUserId ? conversation.tenantId : conversation.landlordId
+}
+
+function getParticipantAvatarUrl(conversation: ChatConversation, currentUserId: string) {
+  const participant = getParticipant(conversation, currentUserId)
+  return participant?.avatarUrl
 }
 
 function formatMessageTime(value?: string) {
@@ -89,6 +94,7 @@ function ChatConversationRow({
     >
       <Avatar
         name={name}
+        src={getParticipantAvatarUrl(conversation, currentUserId)}
         className={cn(selected ? 'bg-white text-primary' : 'bg-primary/10 text-primary')}
       />
       <span className="min-w-0">
@@ -99,7 +105,7 @@ function ChatConversationRow({
             selected ? 'text-white/80' : 'text-slate-500',
           )}
         >
-          {conversation.lastMessage || conversation.roomId.title}
+          {conversation.lastMessage || conversation.roomId?.title}
         </span>
       </span>
       <span
@@ -125,6 +131,7 @@ function MessageBubble({
       {!isMine ? (
         <Avatar
           name={message.senderId.fullName || message.senderId.email || 'UniNest'}
+          src={message.senderId.avatarUrl}
           className="mt-1 size-8 bg-primary/10 text-xs text-primary"
         />
       ) : null}
@@ -175,7 +182,7 @@ export function ChatWorkspace() {
 
     return conversations.filter((conversation) => {
       const name = getParticipantName(conversation, currentUserId).toLowerCase()
-      const roomTitle = conversation.roomId.title.toLowerCase()
+      const roomTitle = (conversation.roomId?.title || '').toLowerCase()
       return name.includes(normalizedKeyword) || roomTitle.includes(normalizedKeyword)
     })
   }, [conversations, currentUserId, keyword])
@@ -293,6 +300,7 @@ export function ChatWorkspace() {
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar
                       name={participant.fullName || participant.email || 'UniNest'}
+                      src={participant.avatarUrl}
                       className="bg-primary text-white"
                     />
                     <div className="min-w-0">

@@ -20,6 +20,46 @@ export const BookingRepository = {
       .skip(skip)
       .limit(limit),
 
+  /** Tìm booking theo tenantId HOẶC theo identityIds (dành cho người thuê kèm) */
+  findByTenantOrIdentity: (
+    tenantId: string,
+    identityIds: string[],
+    skip: number,
+    limit: number,
+  ) =>
+    BookingModel.find({
+      deletedAt: null,
+      $or: [
+        { tenantId },
+        ...(identityIds.length > 0 ? [{ identityIds: { $in: identityIds } }] : []),
+      ],
+    })
+      .populate("roomId", "title address pricePerMonth city district")
+      .populate("tenantId", "fullName email phone")
+      .populate("identityIds")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+
+  /** Tìm tất cả booking IDs mà user liên quan (tenant chính hoặc thuê kèm) */
+  findIdsByTenantOrIdentity: (tenantId: string, identityIds: string[]) =>
+    BookingModel.find({
+      deletedAt: null,
+      $or: [
+        { tenantId },
+        ...(identityIds.length > 0 ? [{ identityIds: { $in: identityIds } }] : []),
+      ],
+    }).select("_id"),
+
+  countByTenantOrIdentity: (tenantId: string, identityIds: string[]) =>
+    BookingModel.countDocuments({
+      deletedAt: null,
+      $or: [
+        { tenantId },
+        ...(identityIds.length > 0 ? [{ identityIds: { $in: identityIds } }] : []),
+      ],
+    }),
+
   countByTenantId: (tenantId: string) =>
     BookingModel.countDocuments({ tenantId, deletedAt: null }),
 

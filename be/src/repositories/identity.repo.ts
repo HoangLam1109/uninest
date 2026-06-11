@@ -11,6 +11,14 @@ export const IdentityRepository = {
   findByCccdNumber: (cccdNumber: string) =>
     IdentityModel.findOne({ cccdNumber, deletedAt: null }),
 
+  /** Search identity by CCCD for booking (only non-rejected, limited fields) */
+  findByCccdNumberPublic: (cccdNumber: string) =>
+    IdentityModel.findOne({
+      cccdNumber,
+      status: { $ne: "REJECTED" },
+      deletedAt: null,
+    }).select("_id fullName cccdNumber status userId"),
+
   findByUserId: (userId: string) =>
     IdentityModel.find({ userId, deletedAt: null })
       .sort({ createdAt: -1 }),

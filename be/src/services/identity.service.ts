@@ -13,7 +13,6 @@ export const IdentityService = {
     cccdNumber: string;
     cccdFrontImage: string;
     cccdBackImage: string;
-    coTenants?: { fullName: string; dateOfBirth?: Date; phone?: string; cccdNumber?: string }[];
   }) => {
     // Check if cccdNumber is already used
     const existing = await IdentityRepository.findByCccdNumber(data.cccdNumber);
@@ -29,7 +28,6 @@ export const IdentityService = {
       cccdNumber: data.cccdNumber,
       cccdFrontImage: data.cccdFrontImage,
       cccdBackImage: data.cccdBackImage,
-      coTenants: data.coTenants || [],
       status: IDENTITY_STATUS.PENDING_VERIFICATION,
     });
 
@@ -60,13 +58,22 @@ export const IdentityService = {
     return IdentityRepository.findByUserId(userId);
   },
 
+  /**
+   * Search identity by CCCD number for booking purposes.
+   * Only returns non-rejected identities with limited info.
+   */
+  searchByCccd: async (cccdNumber: string) => {
+    const identity = await IdentityRepository.findByCccdNumberPublic(cccdNumber);
+    if (!identity) throw new Error("Không tìm thấy hồ sơ định danh với số CCCD này");
+    return identity;
+  },
+
   updateIdentity: async (id: string, userId: string, data: {
     fullName?: string;
     dateOfBirth?: Date;
     phone?: string;
     cccdFrontImage?: string;
     cccdBackImage?: string;
-    coTenants?: { fullName: string; dateOfBirth?: Date; phone?: string; cccdNumber?: string }[];
   }) => {
     const identity = await IdentityRepository.findById(id);
     if (!identity) throw new Error("Identity not found");

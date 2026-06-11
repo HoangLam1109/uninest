@@ -130,6 +130,12 @@ const TenantMeterReadingsPage = lazy(() =>
   })),
 )
 
+const TenantProfilePage = lazy(() =>
+  import('@/features/tenant/pages/tenant-profile-page').then((module) => ({
+    default: module.TenantProfilePage,
+  })),
+)
+
 export function AppRouter() {
   return (
     <Suspense fallback={<Loading />}>
@@ -144,13 +150,14 @@ export function AppRouter() {
         <Route element={<ProtectedRoute />}>
           <Route element={<RoleRoute allowedRoles={[USER_ROLES.LANDLORD]} />}>
             <Route path={paths.landlordDashboard} element={<LandlordLayout />}>
-              <Route index element={<LandlordDashboardPage />} />
+              <Route index element={<RoomManagementPage />} />
               <Route path="phong" element={<RoomManagementPage />} />
               <Route path="dat-phong" element={<LandlordBookingsPage />} />
               <Route path="hop-dong" element={<LandlordContractsPage />} />
               <Route path="nguoi-thue" element={<LandlordTenantsPage />} />
               <Route path="hoa-don" element={<LandlordInvoicesPage />} />
               <Route path="tin-nhan" element={<ChatPage />} />
+              <Route path="hoa-don" element={<LandlordInvoicesPage />} />
               <Route
                 path="tien-ich"
                 element={<LandlordPlaceholderPage title="Tien ich" />}
@@ -159,8 +166,11 @@ export function AppRouter() {
           </Route>
 
           <Route element={<RoleRoute allowedRoles={[USER_ROLES.TENANT]} />}>
-            <Route path={paths.tenantDashboard} element={<TenantLayout />}>
-              <Route index element={<TenantDashboardPage />} />
+            <Route
+              path={paths.tenantDashboard}
+              element={<TenantLayout />}
+            >
+              <Route index element={<TenantBookingsPage />} />
               <Route path="dat-phong" element={<TenantBookingsPage />} />
               <Route path="hoa-don" element={<TenantInvoicesPage />} />
               <Route path="hoa-don/:id" element={<TenantInvoiceDetailPage />} />
@@ -168,6 +178,7 @@ export function AppRouter() {
               <Route path="phong-da-luu" element={<TenantFavoriteRoomsPage />} />
               <Route path="hop-dong" element={<TenantContractsPage />} />
               <Route path="tin-nhan" element={<ChatPage />} />
+              <Route path="ho-so" element={<TenantProfilePage />} />
             </Route>
           </Route>
 

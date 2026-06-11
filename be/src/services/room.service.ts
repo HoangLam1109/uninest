@@ -128,6 +128,7 @@ export const RoomService = {
     const rooms =
       await RoomRepository.getTenantListByLandlord(landlordId);
 
+    const seen = new Set<string>();
     const results: any[] = [];
 
     for (const room of rooms as any[]) {
@@ -135,8 +136,15 @@ export const RoomService = {
         const user = tenant.tenantId;
         if (!user) continue;
 
+        const userId = user._id.toString();
+
+        // Skip if this tenant has already been added (avoid duplicates
+        // when the same tenant rents multiple rooms from the same landlord)
+        if (seen.has(userId)) continue;
+        seen.add(userId);
+
         // Fetch verified identity for this user
-        const identity = await IdentityRepository.findVerifiedByUserId(user._id.toString());
+        const identity = await IdentityRepository.findVerifiedByUserId(userId);
 
         results.push({
           tenantId: user._id,
@@ -149,7 +157,6 @@ export const RoomService = {
           cccdFrontImage: identity?.cccdFrontImage || '',
           cccdBackImage: identity?.cccdBackImage || '',
           dateOfBirth: identity?.dateOfBirth || '',
-          coTenants: identity?.coTenants || [],
           roomTitle: room.title,
           address: room.address,
         });

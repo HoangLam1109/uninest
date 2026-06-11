@@ -181,12 +181,6 @@ export type LandlordTenant = {
   cccdFrontImage?: string
   cccdBackImage?: string
   dateOfBirth?: string
-  coTenants?: Array<{
-    fullName: string
-    dateOfBirth?: string
-    phone?: string
-    cccdNumber?: string
-  }>
   roomTitle: string
   address: string
 }

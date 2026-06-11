@@ -49,4 +49,18 @@ export class UserRepository implements IUserRepository {
   async findByPhone(phone: string): Promise<any> {
     return await this.userModel.findOne({ phone });
   }
+
+  async searchUsers(query: string): Promise<any[]> {
+    const regex = new RegExp(query, 'i');
+    return await this.userModel
+      .find({
+        $or: [
+          { fullName: regex },
+          { phone: regex },
+          { email: regex },
+        ],
+      })
+      .select('_id fullName phone email')
+      .limit(10);
+  }
 }
