@@ -109,6 +109,11 @@ const TenantFavoriteRoomsPage = lazy(() =>
     default: module.TenantFavoriteRoomsPage,
   })),
 )
+const TenantProfilePage = lazy(() =>
+  import('@/features/tenant/pages/tenant-profile-page').then((module) => ({
+    default: module.TenantProfilePage,
+  })),
+)
 
 export function AppRouter() {
   return (
@@ -148,6 +153,7 @@ export function AppRouter() {
             <Route path="chi-so" element={<TenantMeterReadingsPage />} />
             <Route path="phong-da-luu" element={<TenantFavoriteRoomsPage />} />
             <Route path="hop-dong" element={<TenantContractsPage />} />
+            <Route path="ho-so" element={<TenantProfilePage />} />
           </Route>
         </Route>
         <Route element={<RoleRoute allowedRoles={[USER_ROLES.ADMIN]} />}>

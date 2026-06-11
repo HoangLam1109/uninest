@@ -6,13 +6,6 @@ export enum IDENTITY_STATUS {
   REJECTED = "REJECTED",
 }
 
-export interface ICoTenant {
-  fullName: string;
-  dateOfBirth?: Date;
-  phone?: string;
-  cccdNumber?: string;
-}
-
 export interface IIdentity extends Document {
   userId: Types.ObjectId;
   fullName: string;
@@ -21,7 +14,6 @@ export interface IIdentity extends Document {
   cccdNumber: string;
   cccdFrontImage: string;
   cccdBackImage: string;
-  coTenants: ICoTenant[];
   status: IDENTITY_STATUS;
   verifiedAt?: Date;
   verifiedBy?: Types.ObjectId;
@@ -29,28 +21,6 @@ export interface IIdentity extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
-
-const CoTenantSchema = new Schema<ICoTenant>(
-  {
-    fullName: {
-      type: String,
-      required: [true, "Co-tenant full name is required"],
-      trim: true,
-    },
-    dateOfBirth: {
-      type: Date,
-    },
-    phone: {
-      type: String,
-      trim: true,
-    },
-    cccdNumber: {
-      type: String,
-      trim: true,
-    },
-  },
-  { _id: false }
-);
 
 const IdentitySchema = new Schema<IIdentity>(
   {
@@ -87,10 +57,6 @@ const IdentitySchema = new Schema<IIdentity>(
     cccdBackImage: {
       type: String,
       required: [true, "CCCD back image is required"],
-    },
-    coTenants: {
-      type: [CoTenantSchema],
-      default: [],
     },
     status: {
       type: String,

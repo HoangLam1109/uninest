@@ -6,6 +6,7 @@ import {
   Gauge,
   Heart,
   Home,
+  User,
   Wrench,
 } from 'lucide-react'
 
@@ -14,6 +15,7 @@ export const tenantNavItems = [
   { label: 'Đặt phòng', href: '/cu-dan/dat-phong', icon: CalendarDays },
   { label: 'Hóa đơn', href: '/cu-dan/hoa-don', icon: FileText },
   { label: 'Chỉ số điện nước', href: '/cu-dan/chi-so', icon: Gauge },
+  { label: 'Hồ sơ cá nhân', href: '/cu-dan/ho-so', icon: User },
   { label: 'Phòng đã lưu', href: '/cu-dan/phong-da-luu', icon: Heart },
   { label: 'Hợp đồng', href: '/cu-dan/hop-dong', icon: Home },
 ] as const

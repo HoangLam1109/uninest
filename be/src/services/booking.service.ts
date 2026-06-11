@@ -26,18 +26,24 @@ export const BookingService = {
       );
     }
 
-    // Verify all identities exist and belong to tenant
+    // Verify all identities exist and are valid.
+    // At least one identity must belong to the booking tenant.
+    let hasOwnIdentity = false;
     for (const id of identityIds) {
       const identity = await IdentityRepository.findById(id);
       if (!identity) {
         throw new Error(`Identity profile ${id} not found`);
       }
-      if (identity.userId._id.toString() !== tenantId) {
-        throw new Error(`Identity profile ${id} does not belong to you`);
+      if (identity.userId._id.toString() === tenantId) {
+        hasOwnIdentity = true;
       }
       if (identity.status === IDENTITY_STATUS.REJECTED) {
         throw new Error(`Identity profile ${id} has been rejected. Please create a new one.`);
       }
+    }
+
+    if (!hasOwnIdentity) {
+      throw new Error("You must include at least one identity profile that belongs to you");
     }
 
     // Check if tenant already has pending/approved booking for this room

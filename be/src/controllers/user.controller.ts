@@ -136,3 +136,20 @@ export const getUserById = async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
+
+/**
+ * GET /api/users/search?q=keyword
+ * Tìm kiếm user theo tên, số điện thoại hoặc email
+ */
+export const searchUsers = async (req: Request, res: Response) => {
+  try {
+    const { q } = req.query;
+    if (!q || typeof q !== 'string' || q.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'Thiếu từ khóa tìm kiếm' });
+    }
+    const users = await userService.searchUsers(q.trim());
+    return res.json({ success: true, data: users });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};

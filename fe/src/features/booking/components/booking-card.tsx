@@ -107,16 +107,21 @@ export function BookingCard({
               {formatBookingDate(booking.checkOutDate)}
             </p>
           </div>
-          <div className="rounded-lg bg-surface p-3">
-            <p className="text-slate-500">
-              {mode === 'landlord' ? 'Người thuê' : 'Trạng thái hiện tại'}
-            </p>
-            <p className="mt-1 font-bold text-slate-950">
-              {mode === 'landlord'
-                ? tenant?.fullName ?? tenant?.email ?? 'Chưa có thông tin'
-                : bookingStatusLabels[booking.status]}
-            </p>
-          </div>
+          {mode === 'tenant' ? (
+            <div className="rounded-lg bg-surface p-3">
+              <p className="text-slate-500">Tổng tiền</p>
+              <p className="mt-1 font-bold text-slate-950">
+                {formatBookingCurrency(booking.totalPrice)}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-lg bg-surface p-3">
+              <p className="text-slate-500">Người thuê</p>
+              <p className="mt-1 font-bold text-slate-950">
+                {tenant?.fullName ?? tenant?.email ?? 'Chưa có thông tin'}
+              </p>
+            </div>
+          )}
         </div>
 
         {mode === 'landlord' && tenant ? (

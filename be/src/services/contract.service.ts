@@ -144,7 +144,6 @@ export const ContractService = {
         cccdNumber: verifiedIdentity.cccdNumber,
         cccdFrontImage: verifiedIdentity.cccdFrontImage,
         cccdBackImage: verifiedIdentity.cccdBackImage,
-        coTenants: verifiedIdentity.coTenants,
       },
     };
   },

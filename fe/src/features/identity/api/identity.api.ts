@@ -14,8 +14,8 @@ function buildIdentityFormData(payload: CreateIdentityPayload | UpdateIdentityPa
 
     if (key === 'cccdFront' || key === 'cccdBack') {
       formData.append(key, value as File)
-    } else if (key === 'coTenants') {
-      formData.append(key, JSON.stringify(value))
+    } else if (key === 'targetUserId') {
+      formData.append(key, String(value))
     } else {
       formData.append(key, String(value))
     }
@@ -37,6 +37,14 @@ export const identityApi = {
 
   getById: (id: string) =>
     api.get<IdentityResponse>(`/identities/${id}`),
+
+  /** Get identities for a specific user (for landlord/staff creating booking) */
+  getByUserId: (userId: string) =>
+    api.get<IdentityListResponse>(`/identities/by-user/${userId}`),
+
+  /** Search identity by CCCD number (for adding co-renter to booking) */
+  searchByCccd: (cccd: string) =>
+    api.get<IdentityResponse>('/identities/search', { params: { cccd } }),
 
   update: (id: string, payload: UpdateIdentityPayload) => {
     const formData = buildIdentityFormData(payload)
