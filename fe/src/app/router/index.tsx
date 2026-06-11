@@ -1,11 +1,10 @@
+import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { USER_ROLES } from '@/constants/roles'
 import { paths } from '@/config/constants'
-import { adminSidebarConfig, AdminDashboardPage } from '@/features/admin'
-import { LoginPage, RegisterPage } from '@/features/auth'
-import { LandlordBookingsPage, TenantBookingsPage } from '@/features/booking'
 import { ProtectedRoute } from '@/app/router/protected-route'
 import { RoleRoute } from '@/app/router/role-route'
+import { Loading } from '@/components/common/loading'
 import { DashboardLayout } from '@/layouts/dashboard-layout'
 import { LandlordLayout } from '@/layouts/landlord-layout'
 <<<<<<< Updated upstream
@@ -129,7 +128,8 @@ const TenantFavoriteRoomsPage = lazy(() =>
 
 export function AppRouter() {
   return (
-    <Routes>
+    <Suspense fallback={<Loading />}>
+      <Routes>
       <Route path={paths.home} element={<HomePage />} />
       <Route path={paths.rooms} element={<RoomListPage />} />
       <Route path={paths.roomDetail} element={<RoomDetailPage />} />
@@ -160,10 +160,6 @@ export function AppRouter() {
             <Route
               path="tien-ich"
               element={<LandlordPlaceholderPage title="Tiện ích" />}
-            />
-            <Route
-              path="cai-dat"
-              element={<LandlordPlaceholderPage title="Cài đặt" />}
             />
           </Route>
         </Route>
@@ -217,6 +213,7 @@ export function AppRouter() {
         </Route>
       </Route>
       <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   )
 }

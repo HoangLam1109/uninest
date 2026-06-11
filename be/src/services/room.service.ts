@@ -112,8 +112,7 @@ export const RoomService = {
   },
 
   setPrimaryImage: async (imageId: string, roomId: string) => {
-    const result = await RoomImageRepository.setPrimaryImage(roomId, imageId);
-    return result[1];
+    return await RoomImageRepository.setPrimaryImage(roomId, imageId);
   },
   getTenantListByLandlord : async (landlordId: string) => {
     const rooms =

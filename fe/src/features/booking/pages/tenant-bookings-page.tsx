@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Pagination } from '@/components/common/pagination'
 import { BookingCard } from '../components/booking-card'
 import { useCancelBooking, useGetTenantBookings } from '../hooks/use-bookings'
 
@@ -18,10 +18,10 @@ export function TenantBookingsPage() {
 >>>>>>> Stashed changes
       <header>
         <p className="text-sm font-semibold uppercase text-primary">
-          Booking cua toi
+          Booking của tôi
         </p>
         <h1 className="mt-1 text-2xl font-bold text-slate-950 md:text-3xl">
-          Theo doi yeu cau dat phong
+          Theo dõi yêu cầu đặt phòng
         </h1>
       </header>
 
@@ -35,13 +35,13 @@ export function TenantBookingsPage() {
 
       {bookingsQuery.isError ? (
         <div className="rounded-xl border border-red-500/20 bg-white p-8 text-center text-sm text-red-600">
-          Khong the tai danh sach booking.
+          Không thể tải danh sách đặt phòng.
         </div>
       ) : null}
 
       {!bookingsQuery.isLoading && !bookingsQuery.isError && bookings.length === 0 ? (
         <div className="rounded-xl border border-primary/10 bg-white p-8 text-center text-sm text-slate-500">
-          Ban chua co booking nao.
+          Ban chưa có người đặt phòng.
         </div>
       ) : null}
 
@@ -59,32 +59,13 @@ export function TenantBookingsPage() {
         </div>
       ) : null}
 
-      {pagination && pagination.totalPages > 1 ? (
-        <div className="flex items-center justify-end gap-3">
-          <span className="text-sm text-slate-500">
-            Trang {pagination.page}/{pagination.totalPages}
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={page <= 1 || bookingsQuery.isFetching}
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
-            className="bg-white"
-          >
-            Truoc
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={bookingsQuery.isFetching || page >= pagination.totalPages}
-            onClick={() =>
-              setPage((current) => Math.min(pagination.totalPages, current + 1))
-            }
-            className="bg-white"
-          >
-            Sau
-          </Button>
-        </div>
+      {pagination ? (
+        <Pagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          isDisabled={bookingsQuery.isFetching}
+          onPageChange={setPage}
+        />
       ) : null}
     </div>
   )

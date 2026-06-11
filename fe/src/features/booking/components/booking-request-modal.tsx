@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type ComponentProps } from 'react'
 import { CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,7 +27,7 @@ export function BookingRequestModal({
   const [checkOutDate, setCheckOutDate] = useState('')
   const [notes, setNotes] = useState('')
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const handleSubmit: ComponentProps<'form'>['onSubmit'] = (event) => {
     event.preventDefault()
 
     createBooking.mutate(
@@ -57,7 +57,7 @@ export function BookingRequestModal({
         </div>
 
         <label className="block space-y-2 text-sm font-semibold text-foreground">
-          <span>Ngay nhan phong *</span>
+          <span>Ngày nhận phòng *</span>
           <Input
             type="date"
             required
@@ -67,7 +67,7 @@ export function BookingRequestModal({
         </label>
 
         <label className="block space-y-2 text-sm font-semibold text-foreground">
-          <span>Ngay tra phong du kien</span>
+          <span>Ngày trả phòng dự kiến</span>
           <Input
             type="date"
             min={checkInDate || undefined}
@@ -77,13 +77,13 @@ export function BookingRequestModal({
         </label>
 
         <label className="block space-y-2 text-sm font-semibold text-foreground">
-          <span>Ghi chu</span>
+          <span>Ghi chú</span>
           <textarea
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
             rows={4}
             className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-            placeholder="Vi du: toi muon thue dai han, can tu van lich xem phong..."
+            placeholder="Vi du:tôi muốn thuê dài hạn, cần tư vấn về phòng"
           />
         </label>
 
@@ -98,7 +98,7 @@ export function BookingRequestModal({
           </Button>
           <Button type="submit" disabled={createBooking.isPending}>
             <CalendarDays className="size-4" />
-            {createBooking.isPending ? 'Dang gui...' : 'Gui yeu cau'}
+            {createBooking.isPending ? 'Đang gửi' : 'Gửi yêu cầu'}
           </Button>
         </div>
       </form>

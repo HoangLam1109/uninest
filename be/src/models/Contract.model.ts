@@ -2,6 +2,7 @@ import { Schema, model, Document, Types } from "mongoose";
 
 export enum CONTRACT_STATUS {
   DRAFT = "DRAFT",
+  PENDING_TENANT_SIGNATURE = "PENDING_TENANT_SIGNATURE",
   ACTIVE = "ACTIVE",
   EXPIRED = "EXPIRED",
   TERMINATED = "TERMINATED",
@@ -18,6 +19,10 @@ export interface IContract extends Document {
   depositAmount?: number;
   terms?: string;
   contractFileUrl?: string;
+  signedContractFileUrl?: string;
+  signedContractStorageKey?: string;
+  tenantSignatureDataUrl?: string;
+  tenantConfirmedAt?: Date;
   status: CONTRACT_STATUS;
   signedAt?: Date;
   deletedAt?: Date;
@@ -73,6 +78,20 @@ const ContractSchema = new Schema<IContract>(
     contractFileUrl: {
       type: String,
       trim: true,
+    },
+    signedContractFileUrl: {
+      type: String,
+      trim: true,
+    },
+    signedContractStorageKey: {
+      type: String,
+      trim: true,
+    },
+    tenantSignatureDataUrl: {
+      type: String,
+    },
+    tenantConfirmedAt: {
+      type: Date,
     },
     status: {
       type: String,

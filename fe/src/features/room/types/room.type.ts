@@ -29,7 +29,6 @@ export type Room = {
   waterRate?: number
   areaSqm?: number
   maxOccupants: number
-  tenants?: TenantPopulated[]
   roomType?: RoomType
   status: RoomStatus
   isPublished: boolean
@@ -152,7 +151,6 @@ export type RoomPayload = {
   waterRate?: number
   areaSqm?: number
   maxOccupants: number
-  tenants?: TenantRef[]
   roomType?: RoomType
   status?: RoomStatus
   isPublished?: boolean

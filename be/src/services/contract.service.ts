@@ -4,6 +4,68 @@ import { RoomRepository } from "../repositories/room.repo.js";
 import { CONTRACT_STATUS } from "../models/Contract.model.js";
 import { BOOKING_STATUS } from "../models/Booking.model.js";
 import { ROOM_STATUS } from "../models/Room.model.js";
+import { PDFDocument } from "pdf-lib";
+import {
+  openPdfFromGridFs,
+  openPdfFromUrl,
+  uploadPdfToGridFs,
+} from "../config/gridfs.config.js";
+
+function getDataUrlBuffer(dataUrl: string) {
+  const match = dataUrl.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/);
+  if (!match?.[2]) {
+    throw new Error("Invalid signature image");
+  }
+
+  return {
+    format: match[1],
+    buffer: Buffer.from(match[2], "base64"),
+  };
+}
+
+function uploadSignedPdf(buffer: Buffer, contractId: string) {
+  const filename = `${contractId}-${Date.now()}.pdf`;
+  return uploadPdfToGridFs(filename, buffer, { contractId, type: "signed" });
+}
+
+async function createSignedContractPdf(
+  contractFileUrl: string,
+  tenantSignatureDataUrl: string,
+  contractId: string
+) {
+  const response = await fetch(contractFileUrl);
+  if (!response.ok) {
+    throw new Error("Cannot download contract PDF");
+  }
+
+  const pdfBytes = await response.arrayBuffer();
+  const pdfDocument = await PDFDocument.load(pdfBytes);
+  const pages = pdfDocument.getPages();
+  const page = pages[pages.length - 1];
+  if (!page) {
+    throw new Error("Contract PDF has no pages");
+  }
+
+  const signature = getDataUrlBuffer(tenantSignatureDataUrl);
+  const signatureImage =
+    signature.format === "png"
+      ? await pdfDocument.embedPng(signature.buffer)
+      : await pdfDocument.embedJpg(signature.buffer);
+  const signatureWidth = 160;
+  const signatureHeight =
+    (signatureImage.height / signatureImage.width) * signatureWidth;
+  const { width } = page.getSize();
+
+  page.drawImage(signatureImage, {
+    x: Math.max(width - signatureWidth - 72, 36),
+    y: 48,
+    width: signatureWidth,
+    height: signatureHeight,
+  });
+
+  const signedPdfBytes = await pdfDocument.save();
+  return uploadSignedPdf(Buffer.from(signedPdfBytes), contractId);
+}
 
 export const ContractService = {
   createContractFromBooking: async (
@@ -15,6 +77,7 @@ export const ContractService = {
       terms?: string;
       contractFileUrl?: string;
       startDate?: Date;
+      endDate?: Date;
     }
   ) => {
     // Fetch booking
@@ -51,6 +114,7 @@ export const ContractService = {
       terms: contractData.terms,
       contractFileUrl: contractData.contractFileUrl,
       startDate: contractData.startDate || new Date(),
+      endDate: contractData.endDate,
       status: CONTRACT_STATUS.DRAFT,
     });
 
@@ -149,7 +213,7 @@ export const ContractService = {
       throw new Error("You do not own this contract");
     }
 
-    // Only allow activation from DRAFT status
+    // Only allow sending from DRAFT status
     if (contract.status !== CONTRACT_STATUS.DRAFT) {
       throw new Error(
         `Cannot activate contract with status: ${contract.status}`
@@ -157,11 +221,86 @@ export const ContractService = {
     }
 
     const updated = await ContractRepository.update(contractId, {
-      status: CONTRACT_STATUS.ACTIVE,
-      signedAt: new Date(),
+      status: CONTRACT_STATUS.PENDING_TENANT_SIGNATURE,
     });
 
     return updated;
+  },
+
+  confirmContractByTenant: async (
+    contractId: string,
+    tenantId: string,
+    signatureData: {
+      tenantSignatureDataUrl: string;
+    }
+  ) => {
+    const contract = await ContractRepository.findById(contractId);
+    if (!contract) {
+      throw new Error("Contract not found");
+    }
+
+    if (contract.tenantId._id.toString() !== tenantId) {
+      throw new Error("You do not have access to this contract");
+    }
+
+    if (contract.status !== CONTRACT_STATUS.PENDING_TENANT_SIGNATURE) {
+      throw new Error(
+        `Cannot confirm contract with status: ${contract.status}`
+      );
+    }
+
+    if (!signatureData.tenantSignatureDataUrl) {
+      throw new Error("Tenant signature is required");
+    }
+
+    const signedContractStorageKey = contract.contractFileUrl
+      ? await createSignedContractPdf(
+          contract.contractFileUrl,
+          signatureData.tenantSignatureDataUrl,
+          contractId
+        )
+      : undefined;
+
+    const updateData: any = {
+      status: CONTRACT_STATUS.ACTIVE,
+      signedAt: new Date(),
+      tenantConfirmedAt: new Date(),
+      tenantSignatureDataUrl: signatureData.tenantSignatureDataUrl,
+    };
+
+    if (signedContractStorageKey) {
+      updateData.signedContractStorageKey = signedContractStorageKey;
+      delete updateData.signedContractFileUrl;
+    }
+
+    const updated = await ContractRepository.update(contractId, updateData);
+
+    return updated;
+  },
+
+  getContractFile: async (contractId: string, userId: string) => {
+    const contract = await ContractRepository.findById(contractId);
+    if (!contract) {
+      throw new Error("Contract not found");
+    }
+
+    const isLandlord = contract.landlordId._id.toString() === userId;
+    const isTenant = contract.tenantId._id.toString() === userId;
+
+    if (!isLandlord && !isTenant) {
+      throw new Error("You do not have access to this contract");
+    }
+
+    if (contract.signedContractStorageKey) {
+      return openPdfFromGridFs(contract.signedContractStorageKey);
+    }
+
+    const fileUrl = contract.signedContractFileUrl ?? contract.contractFileUrl;
+    if (!fileUrl) {
+      throw new Error("Contract file not found");
+    }
+
+    return openPdfFromUrl(fileUrl);
   },
 
   terminateContract: async (contractId: string, landlordId: string) => {

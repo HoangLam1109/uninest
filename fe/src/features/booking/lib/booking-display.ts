@@ -6,10 +6,10 @@ import type {
 } from '../types/booking.type'
 
 export const bookingStatusLabels: Record<BookingStatus, string> = {
-  PENDING: 'Cho duyet',
-  APPROVED: 'Da duyet',
-  REJECTED: 'Tu choi',
-  CANCELLED: 'Da huy',
+  PENDING: 'Chờ duyệt',
+  APPROVED: 'Đã duyệt',
+  REJECTED: 'Từ chối',
+  CANCELLED: 'Đã hủy',
 }
 
 export const bookingStatusStyles: Record<BookingStatus, string> = {
