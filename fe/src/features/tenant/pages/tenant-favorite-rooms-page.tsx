@@ -54,7 +54,7 @@ export function TenantFavoriteRoomsPage() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               className="h-11 border-primary/10 bg-white pl-9 shadow-none"
-              placeholder="Tim theo ten, dia chi..."
+              placeholder="Tìm theo tên, địa chỉ"
             />
           </div>
           <div
@@ -122,7 +122,7 @@ export function TenantFavoriteRoomsPage() {
       !favoritesQuery.isError &&
       visibleRooms.length === 0 ? (
         <div className="rounded-xl border border-primary/10 bg-white p-8 text-center text-sm text-slate-500">
-          Chua co phong yeu thich phu hop.
+          Chưa có phòng yêu thích phù hợp.
         </div>
       ) : null}
 

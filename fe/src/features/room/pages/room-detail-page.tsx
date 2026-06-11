@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, MapPin, Users } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, CheckCircle2, MapPin, MessageCircle, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MainLayout } from '@/layouts/main-layout'
 import { BookingRequestModal } from '@/features/booking'
+import { useCreateRoomConversation } from '@/features/chat'
 import { useGetRoomById, useGetRoomImages } from '../hooks/use-rooms'
 import { formatRoomCurrency, formatRoomFullLocation } from '../../../utils/room-display'
 import type { RoomImage } from '../types/room.type'
@@ -20,14 +21,22 @@ function sortImages(images: RoomImage[]) {
 
 export function RoomDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const roomQuery = useGetRoomById(id ?? null)
   const imagesQuery = useGetRoomImages(id ?? null)
+  const createRoomConversation = useCreateRoomConversation()
   const room = roomQuery.data
   const images = sortImages(imagesQuery.data ?? [])
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
   const selectedImage =
     images.find((image) => image._id === selectedImageId) ?? images[0]
+
+  async function handleOpenChat() {
+    if (!room?._id) return
+    const conversation = await createRoomConversation.mutateAsync(room._id)
+    navigate(`/cu-dan/tin-nhan?conversationId=${conversation._id}`)
+  }
 
   return (
     <MainLayout>
@@ -62,12 +71,12 @@ export function RoomDetailPage() {
           {room ? (
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
               <div className="space-y-4">
-                <div className="flex h-[460px] items-center justify-center overflow-hidden rounded-xl bg-border/60">
+                <div className="flex aspect-[16/10] max-h-[520px] min-h-[280px] items-center justify-center overflow-hidden rounded-xl bg-border/60">
                   {selectedImage ? (
                     <img
                       src={selectedImage.url}
                       alt={selectedImage.caption || room.title}
-                      className="max-h-full max-w-full object-contain"
+                      className="size-full object-cover object-center"
                       decoding="async"
                     />
                   ) : (
@@ -95,7 +104,8 @@ export function RoomDetailPage() {
                           <img
                             src={image.url}
                             alt={image.caption || room.title}
-                            className="size-full object-cover"
+                            className="size-full object-cover object-center"
+                            decoding="async"
                           />
                         </button>
                       )
@@ -186,7 +196,16 @@ export function RoomDetailPage() {
                 >
                   Đặt phòng
                 </Button>
-                <Button className="mt-6 w-full">Liên hệ tư vấn</Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-3 w-full"
+                  onClick={handleOpenChat}
+                  disabled={createRoomConversation.isPending}
+                >
+                  <MessageCircle className="size-4" />
+                  Nhắn tin chủ phòng
+                </Button>
               </aside>
             </div>
           ) : null}

@@ -33,7 +33,7 @@ export function RoomListCard({ room }: RoomListCardProps) {
           />
         ) : (
           <div className="flex size-full items-center justify-center text-sm font-semibold text-muted-foreground">
-            Chua co anh dai dien
+            Chưa có ảnh đại diện
           </div>
         )}
       </Link>
@@ -53,22 +53,18 @@ export function RoomListCard({ room }: RoomListCardProps) {
 
         <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
           <span>{room.areaSqm ?? 0} m2</span>
-          <span>{room.maxOccupants} nguoi</span>
-          <span>{room.roomType ?? 'Chua chon'}</span>
-          <span
-            className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${roomStatusClasses[room.status]}`}
-          >
-            {roomStatusLabels[room.status]}
-          </span>
+          <span>{room.maxOccupants} người</span>
+          <span>{room.roomType ?? 'Chưa chọn'}</span>
+          <span>{room.status}</span>
         </div>
 
         <div className="mt-auto flex items-center justify-between gap-3">
           <p className="text-lg font-bold text-primary">
             {formatRoomCurrency(room.pricePerMonth)}
-            <span className="text-xs font-normal text-muted-foreground">/thang</span>
+            <span className="text-xs font-normal text-muted-foreground">/tháng</span>
           </p>
           <Button asChild variant="ghost" size="icon" className="bg-border/60">
-            <Link to={`/phong/${room._id}`} aria-label="Xem chi tiet phong">
+            <Link to={`/phong/${room._id}`} aria-label="Xem chi tiết phòng">
               <ArrowRight className="size-4 text-foreground" />
             </Link>
           </Button>

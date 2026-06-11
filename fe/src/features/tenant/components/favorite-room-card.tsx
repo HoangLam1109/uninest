@@ -48,7 +48,7 @@ export function FavoriteRoomCard({ room, view }: FavoriteRoomCardProps) {
           />
         ) : (
           <div className="flex size-full items-center justify-center text-sm font-semibold text-muted-foreground">
-            Chua co anh dai dien
+            Chưa có ảnh đại diện
           </div>
         )}
       </Link>
@@ -74,7 +74,7 @@ export function FavoriteRoomCard({ room, view }: FavoriteRoomCardProps) {
             </Link>
             <p className="mt-1 flex items-start gap-1 text-sm text-slate-500">
               <MapPin className="mt-0.5 size-3.5 shrink-0" />
-              {formatRoomFullLocation(room) || 'Chua co dia chi'}
+              {formatRoomFullLocation(room) || 'Chưa có địa chỉ'}
             </p>
           </div>
           <span

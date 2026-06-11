@@ -28,10 +28,10 @@ export function getBookingTenant(booking: Booking): BookingUser | null {
 }
 
 export function formatBookingDate(value?: string) {
-  if (!value) return 'Chua cap nhat'
+  if (!value) return 'Chưa cập nhật'
 
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Chua cap nhat'
+  if (Number.isNaN(date.getTime())) return 'Chưa cập nhật'
 
   return new Intl.DateTimeFormat('vi-VN', {
     day: '2-digit',
@@ -41,7 +41,7 @@ export function formatBookingDate(value?: string) {
 }
 
 export function formatBookingCurrency(value?: number) {
-  if (typeof value !== 'number') return 'Chua cap nhat'
+  if (typeof value !== 'number') return 'Chưa cập nhật'
 
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
