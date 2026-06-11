@@ -6,20 +6,29 @@ export const ContractRepository = {
 
   findById: (id: string) =>
     ContractModel.findOne({ _id: id, deletedAt: null })
-      .populate("bookingId")
+      .populate({
+        path: "bookingId",
+        populate: { path: "roomId", select: "title address" },
+      })
       .populate("landlordId", "fullName email phone")
       .populate("tenantId", "fullName email phone")
       .populate("renewalFromId"),
 
   findByBookingId: (bookingId: string) =>
     ContractModel.findOne({ bookingId, deletedAt: null })
-      .populate("bookingId")
+      .populate({
+        path: "bookingId",
+        populate: { path: "roomId", select: "title address" },
+      })
       .populate("landlordId", "fullName email phone")
       .populate("tenantId", "fullName email phone"),
 
   findByLandlordId: (landlordId: string, skip: number, limit: number) =>
     ContractModel.find({ landlordId, deletedAt: null })
-      .populate("bookingId")
+      .populate({
+        path: "bookingId",
+        populate: { path: "roomId", select: "title address" },
+      })
       .populate("landlordId", "fullName email phone")
       .populate("tenantId", "fullName email phone")
       .sort({ createdAt: -1 })
@@ -31,7 +40,10 @@ export const ContractRepository = {
 
   findByTenantId: (tenantId: string, skip: number, limit: number) =>
     ContractModel.find({ tenantId, deletedAt: null })
-      .populate("bookingId")
+      .populate({
+        path: "bookingId",
+        populate: { path: "roomId", select: "title address" },
+      })
       .populate("landlordId", "fullName email phone")
       .populate("tenantId", "fullName email phone")
       .sort({ createdAt: -1 })
@@ -74,7 +86,10 @@ export const ContractRepository = {
 
   findByStatus: (status: CONTRACT_STATUS, skip: number, limit: number) =>
     ContractModel.find({ status, deletedAt: null })
-      .populate("bookingId")
+      .populate({
+        path: "bookingId",
+        populate: { path: "roomId", select: "title address" },
+      })
       .populate("landlordId", "fullName email phone")
       .populate("tenantId", "fullName email phone")
       .sort({ createdAt: -1 })

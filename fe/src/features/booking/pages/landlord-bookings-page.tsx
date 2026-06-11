@@ -10,6 +10,7 @@ import {
 import { BookingCard } from '../components/booking-card'
 import {
   useApproveBooking,
+  useDeleteBooking,
   useGetLandlordBookings,
   useRejectBooking,
 } from '../hooks/use-bookings'
@@ -26,7 +27,7 @@ const statusOptions: Array<{ value: 'ALL' | BookingStatus; label: string }> = [
 
 export function LandlordBookingsPage() {
   const [page, setPage] = useState(1)
-  const [status, setStatus] = useState<'ALL' | BookingStatus>('PENDING')
+  const [status, setStatus] = useState<'ALL' | BookingStatus>('ALL')
   const bookingsQuery = useGetLandlordBookings({
     page,
     limit: 10,
@@ -34,6 +35,7 @@ export function LandlordBookingsPage() {
   })
   const approveBooking = useApproveBooking()
   const rejectBooking = useRejectBooking()
+  const deleteBooking = useDeleteBooking()
   const bookings = bookingsQuery.data?.data ?? []
   const pagination = bookingsQuery.data?.pagination
 
@@ -41,9 +43,6 @@ export function LandlordBookingsPage() {
     <div className="flex w-full flex-col gap-6">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase text-primary">
-            Đặt phòng
-          </p>
           <h1 className="mt-1 text-2xl font-bold text-slate-950 md:text-3xl">
             Duyệt yêu cầu đặt phòng
           </h1>
@@ -99,7 +98,8 @@ export function LandlordBookingsPage() {
               mode="landlord"
               onApprove={approveBooking.mutate}
               onReject={rejectBooking.mutate}
-              isActionPending={approveBooking.isPending || rejectBooking.isPending}
+              onDelete={deleteBooking.mutate}
+              isActionPending={approveBooking.isPending || rejectBooking.isPending || deleteBooking.isPending}
             />
           ))}
         </div>

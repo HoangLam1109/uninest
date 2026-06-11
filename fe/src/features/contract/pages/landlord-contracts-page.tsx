@@ -83,9 +83,6 @@ export function LandlordContractsPage() {
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase text-primary">
-            Hợp đồng
-          </p>
           <h1 className="mt-1 text-2xl font-bold text-slate-950 md:text-3xl">
             Quản lý hợp đồng thuê phòng
           </h1>

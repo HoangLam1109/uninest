@@ -8,12 +8,14 @@ export const BookingRepository = {
     BookingModel.findOne({ _id: id, deletedAt: null })
       .populate("roomId", "title address pricePerMonth landlordId status")
       .populate("tenantId", "fullName email phone")
+      .populate("identityIds")
       .populate("contractId"),
 
   findByTenantId: (tenantId: string, skip: number, limit: number) =>
     BookingModel.find({ tenantId, deletedAt: null })
       .populate("roomId", "title address pricePerMonth city district")
       .populate("tenantId", "fullName email phone")
+      .populate("identityIds")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
@@ -25,6 +27,7 @@ export const BookingRepository = {
     BookingModel.find({ roomId: { $in: roomIds }, deletedAt: null })
       .populate("roomId", "title address landlordId")
       .populate("tenantId", "fullName email phone")
+      .populate("identityIds")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
@@ -73,4 +76,11 @@ export const BookingRepository = {
       { roomId, deletedAt: null },
       { deletedAt: new Date() }
     ),
+
+  findByIdentityIds: (identityIds: string[]) =>
+    BookingModel.find({
+      identityIds: { $in: identityIds },
+      deletedAt: null,
+    })
+      .populate("roomId", "title address landlordId"),
 };

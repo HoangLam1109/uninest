@@ -279,7 +279,7 @@ export function RoomLocationMap({
           </div>
         </div>
 
-        <div className="relative mt-4 overflow-hidden rounded-lg border border-border">
+        <div className="relative isolate mt-4 overflow-hidden rounded-lg border border-border">
           <div ref={containerRef} className="h-80 w-full bg-surface" />
           {isLoading ? (
             <div className="absolute inset-0 flex items-center justify-center bg-white/80 text-sm font-semibold text-muted-foreground">

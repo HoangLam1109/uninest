@@ -1,12 +1,15 @@
 import { BookingRepository } from "../repositories/booking.repo.js";
 import { RoomRepository } from "../repositories/room.repo.js";
+import { IdentityRepository } from "../repositories/identity.repo.js";
 import { BOOKING_STATUS } from "../models/Booking.model.js";
+import { IDENTITY_STATUS } from "../models/Identity.model.js";
 import { ROOM_STATUS } from "../models/Room.model.js";
 
 export const BookingService = {
   createBooking: async (
     roomId: string,
     tenantId: string,
+    identityIds: string[],
     checkInDate: Date,
     checkOutDate?: Date,
     notes?: string
@@ -21,6 +24,20 @@ export const BookingService = {
       throw new Error(
         `Room is not available. Current status: ${room.status}`
       );
+    }
+
+    // Verify all identities exist and belong to tenant
+    for (const id of identityIds) {
+      const identity = await IdentityRepository.findById(id);
+      if (!identity) {
+        throw new Error(`Identity profile ${id} not found`);
+      }
+      if (identity.userId._id.toString() !== tenantId) {
+        throw new Error(`Identity profile ${id} does not belong to you`);
+      }
+      if (identity.status === IDENTITY_STATUS.REJECTED) {
+        throw new Error(`Identity profile ${id} has been rejected. Please create a new one.`);
+      }
     }
 
     // Check if tenant already has pending/approved booking for this room
@@ -54,6 +71,7 @@ export const BookingService = {
     const booking = await BookingRepository.create({
       roomId,
       tenantId,
+      identityIds,
       checkInDate,
       checkOutDate,
       totalPrice,
@@ -120,12 +138,23 @@ export const BookingService = {
       status: BOOKING_STATUS.APPROVED,
     });
 
-    // Update room status to RENTED
+    // Update room status to DEPOSITED (đã cọc)
     await RoomRepository.update(
       booking.roomId._id.toString(),
       landlordId,
-      { status: ROOM_STATUS.RENTED }
+      { status: ROOM_STATUS.DEPOSITED }
     );
+
+    // Verify all tenant's identities
+    const identities = (booking as any).identityIds || [];
+    for (const identity of identities) {
+      const identityId = identity._id || identity;
+      await IdentityRepository.update(identityId.toString(), {
+        status: IDENTITY_STATUS.VERIFIED,
+        verifiedAt: new Date(),
+        verifiedBy: landlordId,
+      });
+    }
 
     return updatedBooking;
   },
@@ -150,9 +179,21 @@ export const BookingService = {
     }
 
     // Update booking status
-    return await BookingRepository.update(bookingId, {
+    const updated = await BookingRepository.update(bookingId, {
       status: BOOKING_STATUS.REJECTED,
     });
+
+    // Reject all identities
+    const identities = (booking as any).identityIds || [];
+    for (const identity of identities) {
+      const identityId = identity._id || identity;
+      await IdentityRepository.update(identityId.toString(), {
+        status: IDENTITY_STATUS.REJECTED,
+        verifiedBy: landlordId,
+      });
+    }
+
+    return updated;
   },
 
   cancelBooking: async (bookingId: string, tenantId: string) => {
@@ -187,5 +228,21 @@ export const BookingService = {
     return await BookingRepository.update(bookingId, {
       status: BOOKING_STATUS.CANCELLED,
     });
+  },
+
+  deleteBookingByLandlord: async (bookingId: string, landlordId: string) => {
+    // Fetch booking
+    const booking = await BookingRepository.findById(bookingId);
+    if (!booking) {
+      throw new Error("Booking not found");
+    }
+
+    // Verify landlord owns the room
+    if ((booking.roomId as any).landlordId.toString() !== landlordId) {
+      throw new Error("You do not own this room");
+    }
+
+    // Soft delete
+    return await BookingRepository.softDelete(bookingId);
   },
 };

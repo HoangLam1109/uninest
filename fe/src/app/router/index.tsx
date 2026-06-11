@@ -7,9 +7,9 @@ import { RoleRoute } from '@/app/router/role-route'
 import { Loading } from '@/components/common/loading'
 import { DashboardLayout } from '@/layouts/dashboard-layout'
 import { LandlordLayout } from '@/layouts/landlord-layout'
+import { TenantLayout } from '@/layouts/tenant-layout'
 import { adminSidebarConfig } from '@/features/admin/data'
 import { staffSidebarConfig } from '@/features/staff/data'
-import { tenantSidebarConfig } from '@/features/tenant/data'
 
 const AdminDashboardPage = lazy(() =>
   import('@/features/admin/pages/admin-dashboard-page').then((module) => ({
@@ -39,14 +39,19 @@ const LandlordContractsPage = lazy(() =>
     default: module.LandlordContractsPage,
   })),
 )
-const LandlordDashboardPage = lazy(() =>
-  import('@/features/landlord/components/landlord-dashboard').then((module) => ({
-    default: module.LandlordDashboardPage,
+const LandlordInvoicesPage = lazy(() =>
+  import('@/features/invoice/pages/landlord-invoices-page').then((module) => ({
+    default: module.LandlordInvoicesPage,
   })),
 )
-const LandlordPlaceholderPage = lazy(() =>
-  import('@/features/landlord/components/landlord-placeholder').then((module) => ({
-    default: module.LandlordPlaceholderPage,
+const LandlordTenantsPage = lazy(() =>
+  import('@/features/landlord/components/landlord-tenants-page').then((module) => ({
+    default: module.LandlordTenantsPage,
+  })),
+)
+const LandlordBookingsPage = lazy(() =>
+  import('@/features/booking/pages/landlord-bookings-page').then((module) => ({
+    default: module.LandlordBookingsPage,
   })),
 )
 const LoginPage = lazy(() =>
@@ -94,9 +99,19 @@ const TenantContractsPage = lazy(() =>
     default: module.TenantContractsPage,
   })),
 )
-const TenantDashboardPage = lazy(() =>
-  import('@/features/tenant/pages/tenant-dashboard-page').then((module) => ({
-    default: module.TenantDashboardPage,
+const TenantInvoicesPage = lazy(() =>
+  import('@/features/invoice/pages/tenant-invoices-page').then((module) => ({
+    default: module.TenantInvoicesPage,
+  })),
+)
+const TenantInvoiceDetailPage = lazy(() =>
+  import('@/features/invoice/pages/tenant-invoice-detail-page').then((module) => ({
+    default: module.TenantInvoiceDetailPage,
+  })),
+)
+const TenantMeterReadingsPage = lazy(() =>
+  import('@/features/invoice/pages/tenant-meter-readings-page').then((module) => ({
+    default: module.TenantMeterReadingsPage,
   })),
 )
 const TenantFavoriteRoomsPage = lazy(() =>

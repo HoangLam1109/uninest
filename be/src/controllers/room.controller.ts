@@ -4,6 +4,29 @@ import { configureCloudinary } from "../config/cloudinary.config.js";
 import { RoomService } from "../services/room.service.js";
 import { UserService } from "../services/user.service.js";
 
+function handleError(res: Response, err: any, context: string) {
+  console.error(`[RoomController] ${context}:`, err.message ?? err);
+
+  // Mongoose ValidationError
+  if (err.name === "ValidationError") {
+    const messages = Object.values(err.errors ?? {}).map((e: any) => e.message);
+    return res.status(400).json({
+      success: false,
+      message: messages.length > 0 ? messages.join("; ") : err.message,
+    });
+  }
+
+  // Mongoose CastError (invalid ObjectId, etc.)
+  if (err.name === "CastError") {
+    return res.status(400).json({
+      success: false,
+      message: `Invalid value for ${err.path}: ${err.value}`,
+    });
+  }
+
+  return res.status(500).json({ success: false, message: err.message || "Internal server error" });
+}
+
 function uploadBufferToCloudinary(file: Express.Multer.File, roomId: string) {
   const cloudinary = configureCloudinary();
 
@@ -53,7 +76,7 @@ export const createRoom = async (req: Request, res: Response) => {
       data: room,
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message });
+    return handleError(res, err, "createRoom");
   }
 };
 
@@ -98,7 +121,7 @@ export const getAllRooms = async (req: Request, res: Response) => {
       },
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message });
+    return handleError(res, err, "getAllRooms");
   }
 };
 
@@ -147,7 +170,7 @@ export const getMyRooms = async (req: Request, res: Response) => {
       },
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message });
+    return handleError(res, err, "getMyRooms");
   }
 };
 
@@ -173,10 +196,7 @@ export const getTenantListByLandlord = async (
       data: tenants,
     });
   } catch (error: any) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    return handleError(res, error, "getTenantListByLandlord");
   }
 };
 
@@ -218,7 +238,7 @@ export const searchRooms = async (req: Request, res: Response) => {
       },
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message });
+    return handleError(res, err, "searchRooms");
   }
 };
 
@@ -239,7 +259,7 @@ export const getRoomById = async (req: Request, res: Response) => {
 
     return res.json({ success: true, data: room });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message });
+    return handleError(res, err, "getRoomById");
   }
 };
 
@@ -264,7 +284,7 @@ export const updateRoom = async (req: Request, res: Response) => {
 
     return res.json({ success: true, data: room });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message });
+    return handleError(res, err, "updateRoom");
   }
 };
 
@@ -289,7 +309,7 @@ export const deleteRoom = async (req: Request, res: Response) => {
 
     return res.json({ success: true, message: "Deleted successfully" });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message });
+    return handleError(res, err, "deleteRoom");
   }
 };
 
@@ -318,7 +338,7 @@ export const publishRoom = async (req: Request, res: Response) => {
       data: room,
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message });
+    return handleError(res, err, "publishRoom");
   }
 };
 
@@ -347,7 +367,7 @@ export const unpublishRoom = async (req: Request, res: Response) => {
       data: room,
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message });
+    return handleError(res, err, "unpublishRoom");
   }
 };
 
@@ -396,7 +416,7 @@ export const uploadRoomImage = async (req: Request, res: Response) => {
       data: image,
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message });
+    return handleError(res, err, "uploadRoomImage");
   }
 };
 
@@ -417,7 +437,7 @@ export const getRoomImages = async (req: Request, res: Response) => {
       data: images,
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message });
+    return handleError(res, err, "getRoomImages");
   }
 };
 
@@ -465,7 +485,7 @@ export const deleteRoomImage = async (req: Request, res: Response) => {
       message: "Image deleted successfully",
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message });
+    return handleError(res, err, "deleteRoomImage");
   }
 };
 
@@ -505,6 +525,6 @@ export const setPrimaryImage = async (req: Request, res: Response) => {
       data: image,
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message });
+    return handleError(res, err, "setPrimaryImage");
   }
 };

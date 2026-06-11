@@ -1,6 +1,8 @@
 import express from "express";
 import {
+  createInitialMeterReading,
   createInvoice,
+  createUtilityInvoice,
   deleteInvoice,
   getInvoiceById,
   getInvoiceDetail,
@@ -20,6 +22,12 @@ router.use(authenticateMiddleware.authenticateUser);
 
 // Create invoice
 router.post("/", createInvoice);
+
+// Create utility invoice (auto-calculate electricity/water)
+router.post("/utility", createUtilityInvoice);
+
+// Create initial meter reading (first time tenant moves in)
+router.post("/initial-reading", createInitialMeterReading);
 
 // Specific paths before param routes
 router.get("/landlord", getLandlordInvoices);

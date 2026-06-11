@@ -1,5 +1,6 @@
 import { api } from '@/lib/axios'
 import type {
+  LandlordTenantListResponse,
   RoomFavoriteCheckResponse,
   RoomFavoriteListResponse,
   RoomFavoriteResponse,
@@ -20,6 +21,9 @@ export const roomApi = {
     api.get<RoomListResponse>('/rooms/my', { params }),
 
   getById: (id: string) => api.get<RoomResponse>(`/rooms/getById/${id}`),
+
+  getTenants: () =>
+    api.get<LandlordTenantListResponse>('/rooms/tenants'),
 
   listFavorites: (params: Pick<RoomListParams, 'page' | 'limit'>) =>
     api.get<RoomFavoriteListResponse>('/favorites', { params }),

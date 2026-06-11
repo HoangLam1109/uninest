@@ -6,6 +6,8 @@ import {
   formatRoomCurrency,
   formatRoomLocation,
   getPrimaryRoomImage,
+  roomStatusClasses,
+  roomStatusLabels,
 } from '@/utils/room-display'
 import { useGetRoomImages } from '../hooks/use-rooms'
 import type { Room } from '../types/room.type'

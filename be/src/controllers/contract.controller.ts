@@ -40,7 +40,7 @@ export const createContractFromBooking = async (req: Request, res: Response) => 
     if (startDate) contractData.startDate = new Date(startDate);
     if (endDate) contractData.endDate = new Date(endDate);
 
-    const contract = await ContractService.createContractFromBooking(
+    const result = await ContractService.createContractFromBooking(
       bookingId,
       landlordId,
       contractData
@@ -48,8 +48,8 @@ export const createContractFromBooking = async (req: Request, res: Response) => 
 
     return res.status(201).json({
       success: true,
-      message: "Contract created successfully",
-      data: contract,
+      message: "Contract created successfully with verified tenant identity",
+      data: result,
     });
   } catch (err: any) {
     const statusCode = err.message.includes("not found") ||

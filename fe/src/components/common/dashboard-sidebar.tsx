@@ -19,6 +19,8 @@ export type DashboardSidebarConfig = {
   navItems: readonly DashboardNavItem[]
   ctaLabel?: string
   ctaIcon?: LucideIcon
+  ctaOnClick?: () => void
+  ctaHref?: string
 }
 
 type DashboardSidebarProps = {
@@ -132,10 +134,25 @@ export function DashboardSidebar({
 
           {config.ctaLabel && CtaIcon ? (
             <div className="border-t border-primary/10 pt-4 md:pt-6">
-              <Button className="h-auto w-full gap-2 py-2.5 text-sm shadow-lg shadow-primary/20 md:py-3 md:text-base">
-                <CtaIcon className="size-4 shrink-0" />
-                <span className="text-center leading-snug">{config.ctaLabel}</span>
-              </Button>
+              {config.ctaHref ? (
+                <Button
+                  asChild
+                  className="h-auto w-full gap-2 py-2.5 text-sm shadow-lg shadow-primary/20 md:py-3 md:text-base"
+                >
+                  <Link to={config.ctaHref} onClick={onMobileClose}>
+                    <CtaIcon className="size-4 shrink-0" />
+                    <span className="text-center leading-snug">{config.ctaLabel}</span>
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  className="h-auto w-full gap-2 py-2.5 text-sm shadow-lg shadow-primary/20 md:py-3 md:text-base"
+                  onClick={config.ctaOnClick}
+                >
+                  <CtaIcon className="size-4 shrink-0" />
+                  <span className="text-center leading-snug">{config.ctaLabel}</span>
+                </Button>
+              )}
             </div>
           ) : null}
         </div>

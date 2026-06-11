@@ -1,5 +1,6 @@
 import { RoomRepository } from "../repositories/room.repo.js";
 import { RoomImageRepository } from "../repositories/room-image.repo.js";
+import { IdentityRepository } from "../repositories/identity.repo.js";
 import { ROOM_STATUS, RoomModel, type ITenantRef } from "../models/Room.model.js";
 
 /**
@@ -60,18 +61,27 @@ export const RoomService = {
   },
 
   updateRoom: async (id: string, landlordId: string, data: any) => {
+    // Strip internal/system fields that should never be directly updated
+    const {
+      tenants,
+      embedding: _embedding,
+      deletedAt: _deletedAt,
+      landlordId: _landlordId,
+      ...allowedFields
+    } = data;
+
     // Validate tenants if present in update data
-    if (data.tenants !== undefined) {
-      // Fetch current room to resolve maxOccupants if not provided
-      let maxOccupants = data.maxOccupants;
+    if (tenants !== undefined) {
+      let maxOccupants = allowedFields.maxOccupants;
       if (maxOccupants === undefined) {
         const currentRoom = await RoomRepository.findById(id, landlordId);
         maxOccupants = currentRoom?.maxOccupants ?? 1;
       }
-      validateTenants(data.tenants, maxOccupants);
+      validateTenants(tenants, maxOccupants);
+      (allowedFields as any).tenants = tenants;
     }
 
-    return await RoomRepository.update(id, landlordId, data);
+    return await RoomRepository.update(id, landlordId, allowedFields);
   },
 
   deleteRoom: async (id: string, landlordId: string) => {
@@ -118,22 +128,34 @@ export const RoomService = {
     const rooms =
       await RoomRepository.getTenantListByLandlord(landlordId);
 
-    return rooms.flatMap((room: any) =>
-      room.tenants.map((tenant: any) => {
-        const user = tenant.tenantId;
+    const results: any[] = [];
 
-        return {
+    for (const room of rooms as any[]) {
+      for (const tenant of room.tenants) {
+        const user = tenant.tenantId;
+        if (!user) continue;
+
+        // Fetch verified identity for this user
+        const identity = await IdentityRepository.findVerifiedByUserId(user._id.toString());
+
+        results.push({
           tenantId: user._id,
-          tenantName: user.fullName,
+          tenantName: identity?.fullName || user.fullName,
           tenantEmail: user.email,
-          tenantPhone: user.phone,
+          tenantPhone: identity?.phone || user.phone,
           tenantAvatarUrl: user.avatarUrl,
           isPrimaryTenant: tenant.isPrimaryTenant,
-
+          cccdNumber: identity?.cccdNumber || '',
+          cccdFrontImage: identity?.cccdFrontImage || '',
+          cccdBackImage: identity?.cccdBackImage || '',
+          dateOfBirth: identity?.dateOfBirth || '',
+          coTenants: identity?.coTenants || [],
           roomTitle: room.title,
           address: room.address,
-        };
-      })
-    );
+        });
+      }
+    }
+
+    return results;
   }
 };

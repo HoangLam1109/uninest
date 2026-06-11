@@ -9,6 +9,7 @@ import { useGetRoomById, useGetRoomImages } from '../hooks/use-rooms'
 import { formatRoomCurrency, formatRoomFullLocation } from '../../../utils/room-display'
 import type { RoomImage } from '../types/room.type'
 import { RoomLocationMap } from '../components/room-location-map'
+import { RoomFavoriteButton } from '../components/room-favorite-button'
 
 function sortImages(images: RoomImage[]) {
   return [...images].sort((first, second) => {
@@ -125,7 +126,8 @@ export function RoomDetailPage() {
                 />
               </div>
 
-              <aside className="h-fit rounded-xl border border-primary/10 bg-white p-5">
+              <aside className="relative h-fit rounded-xl border border-primary/10 bg-white p-5">
+                <RoomFavoriteButton roomId={room._id} />
                 <p className="text-sm font-bold uppercase tracking-[0.14em] text-primary">
                   Chi tiết phòng
                 </p>

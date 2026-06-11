@@ -10,6 +10,7 @@ export enum BOOKING_STATUS {
 export interface IBooking extends Document {
   roomId: Types.ObjectId;
   tenantId: Types.ObjectId;
+  identityIds: Types.ObjectId[];
   contractId?: Types.ObjectId;
   checkInDate: Date;
   checkOutDate?: Date;
@@ -36,6 +37,18 @@ const BookingSchema = new Schema<IBooking>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: [true, "Tenant ID is required"],
+      index: true,
+    },
+    identityIds: {
+      type: [Schema.Types.ObjectId],
+      ref: "Identity",
+      required: [true, "At least one identity profile is required"],
+      validate: {
+        validator: function (v: Types.ObjectId[]) {
+          return Array.isArray(v) && v.length > 0;
+        },
+        message: "At least one identity profile is required",
+      },
       index: true,
     },
     contractId: {
