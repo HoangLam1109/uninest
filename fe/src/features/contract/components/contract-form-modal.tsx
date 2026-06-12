@@ -118,8 +118,8 @@ function ContractFormFields({
     { page: 1, limit: 100, status: 'APPROVED' },
     mode === 'create',
   )
-  const bookingOptions = landlordBookingsQuery.data?.data ?? []
   const filteredBookingOptions = useMemo(() => {
+    const bookingOptions = landlordBookingsQuery.data?.data ?? []
     const keyword = bookingId.trim().toLowerCase()
 
     if (!keyword) return bookingOptions.slice(0, 8)
@@ -127,7 +127,7 @@ function ContractFormFields({
     return bookingOptions
       .filter((booking) => getBookingSearchText(booking).includes(keyword))
       .slice(0, 8)
-  }, [bookingId, bookingOptions])
+  }, [bookingId, landlordBookingsQuery.data?.data])
 
   const handleSubmit: ComponentProps<'form'>['onSubmit'] = (event) => {
     event.preventDefault()

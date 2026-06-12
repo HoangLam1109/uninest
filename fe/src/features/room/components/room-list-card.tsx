@@ -6,6 +6,7 @@ import {
   formatRoomCurrency,
   formatRoomType,
   formatRoomLocation,
+  getRoomAmenityNames,
   getPrimaryRoomImage,
 } from '@/utils/room-display'
 import { useGetRoomImages } from '../hooks/use-rooms'
@@ -19,6 +20,7 @@ type RoomListCardProps = {
 export function RoomListCard({ room }: RoomListCardProps) {
   const imagesQuery = useGetRoomImages(room._id)
   const primaryImage = getPrimaryRoomImage(imagesQuery.data ?? [])
+  const amenityNames = getRoomAmenityNames(room)
 
   return (
     <Card className="group relative flex flex-col overflow-hidden">
@@ -56,6 +58,24 @@ export function RoomListCard({ room }: RoomListCardProps) {
           <span>{formatRoomType(room.roomType)}</span>
           <span>{room.status}</span>
         </div>
+
+        {amenityNames.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {amenityNames.slice(0, 3).map((amenity) => (
+              <span
+                key={amenity}
+                className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary"
+              >
+                {amenity}
+              </span>
+            ))}
+            {amenityNames.length > 3 ? (
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+                +{amenityNames.length - 3}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="mt-auto flex items-center justify-between gap-3">
           <p className="text-lg font-bold text-primary">

@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
@@ -9,7 +9,8 @@ import {
   type RoomFormInput,
   type RoomFormValues,
 } from '../schemas/room.schema'
-import type { Room, RoomPayload, RoomStatus, RoomType } from '../types/room.type'
+import { useGetAmenities } from '../hooks/use-rooms'
+import type { Amenity, Room, RoomPayload, RoomStatus, RoomType } from '../types/room.type'
 
 
 const roomTypeOptions: Array<{ value: RoomType; label: string }> = [
@@ -29,10 +30,14 @@ const statusOptions: Array<{ value: RoomStatus; label: string }> = [
 const inputClassName =
   'h-11 rounded-lg border border-primary/10 px-3 text-sm shadow-none focus-visible:ring-2'
 
+function getAmenityId(amenity: string | Amenity) {
+  return typeof amenity === 'string' ? amenity : amenity._id
+}
+
 function toDefaultValues(room?: Room | null): RoomFormInput {
   return {
     propertyId: room?.propertyId ?? '',
-    amenityIds: room?.amenityIds?.join(', ') ?? '',
+    amenityIds: room?.amenityIds?.map(getAmenityId) ?? [],
     title: room?.title ?? '',
     description: room?.description ?? '',
     address: room?.address ?? '',
@@ -83,11 +88,26 @@ export function RoomFormModal({
     register,
     handleSubmit,
     reset,
+    setValue,
+    control,
     formState: { errors },
   } = useForm<RoomFormInput, unknown, RoomFormValues>({
     resolver: zodResolver(roomSchema),
     defaultValues: toDefaultValues(room),
   })
+  const amenitiesQuery = useGetAmenities()
+  const selectedAmenityIds = useWatch({ control, name: 'amenityIds' }) ?? []
+
+  function toggleAmenity(amenityId: string) {
+    const nextAmenityIds = selectedAmenityIds.includes(amenityId)
+      ? selectedAmenityIds.filter((id) => id !== amenityId)
+      : [...selectedAmenityIds, amenityId]
+
+    setValue('amenityIds', nextAmenityIds, {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+  }
 
 
   useEffect(() => {
@@ -238,6 +258,47 @@ export function RoomFormModal({
             ))}
           </select>
         </label>
+
+        <fieldset className="md:col-span-2">
+          <legend className="mb-2 block text-sm font-semibold text-slate-700">
+            Tiện ích phòng
+          </legend>
+          {amenitiesQuery.isLoading ? (
+            <div className="rounded-lg border border-primary/10 bg-slate-50 px-3 py-3 text-sm text-slate-500">
+              Đang tải tiện ích...
+            </div>
+          ) : null}
+          {!amenitiesQuery.isLoading && amenitiesQuery.data?.length === 0 ? (
+            <div className="rounded-lg border border-primary/10 bg-slate-50 px-3 py-3 text-sm text-slate-500">
+              Chưa có tiện ích preset.
+            </div>
+          ) : null}
+          {amenitiesQuery.data && amenitiesQuery.data.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {amenitiesQuery.data.map((amenity) => {
+                const checked = selectedAmenityIds.includes(amenity._id)
+                return (
+                  <label
+                    key={amenity._id}
+                    className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition ${
+                      checked
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-primary/10 bg-white text-slate-600 hover:border-primary/40'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="size-4 accent-primary"
+                      checked={checked}
+                      onChange={() => toggleAmenity(amenity._id)}
+                    />
+                    {amenity.name}
+                  </label>
+                )
+              })}
+            </div>
+          ) : null}
+        </fieldset>
 
         <label>
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">

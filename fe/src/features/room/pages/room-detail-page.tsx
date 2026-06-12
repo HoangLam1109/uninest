@@ -18,6 +18,7 @@ import {
   formatRoomCurrency,
   formatRoomFullLocation,
   formatRoomType,
+  getRoomAmenityNames,
 } from '../../../utils/room-display'
 import type { RoomImage } from '../types/room.type'
 import { RoomLocationMap } from '../components/room-location-map'
@@ -48,6 +49,7 @@ export function RoomDetailPage() {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
   const selectedImage =
     images.find((image) => image._id === selectedImageId) ?? images[0]
+  const amenityNames = room ? getRoomAmenityNames(room) : []
 
   async function handleOpenChat() {
     if (!room?._id) return
@@ -136,6 +138,23 @@ export function RoomDetailPage() {
                     {room.description || 'Phòng này chưa có mô tả chi tiết.'}
                   </p>
                 </article>
+
+                {amenityNames.length > 0 ? (
+                  <article className="rounded-xl border border-primary/10 bg-white p-5">
+                    <h2 className="text-xl font-bold text-foreground">Tiện ích</h2>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {amenityNames.map((amenity) => (
+                        <span
+                          key={amenity}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-sm font-semibold text-primary"
+                        >
+                          <CheckCircle2 className="size-4" />
+                          {amenity}
+                        </span>
+                      ))}
+                    </div>
+                  </article>
+                ) : null}
 
                 <RoomLocationMap
                   address={formatRoomFullLocation(room)}

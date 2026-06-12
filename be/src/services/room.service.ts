@@ -1,7 +1,10 @@
 import { RoomRepository } from "../repositories/room.repo.js";
 import { RoomImageRepository } from "../repositories/room-image.repo.js";
 import { IdentityRepository } from "../repositories/identity.repo.js";
-import { ROOM_STATUS, RoomModel, type ITenantRef } from "../models/Room.model.js";
+import { Types } from "mongoose";
+import { ROOM_STATUS, type ITenantRef } from "../models/Room.model.js";
+import { AmenityModel } from "../models/Amenity.model.js";
+import { RagRoomService } from "./rag-room.service.js";
 
 /**
  * Validate tenants array against business rules:
@@ -25,17 +28,69 @@ const validateTenants = (tenants: ITenantRef[], maxOccupants: number): void => {
   }
 };
 
+const ROOM_RAG_FIELDS = new Set([
+  "title",
+  "description",
+  "address",
+  "city",
+  "district",
+  "ward",
+  "pricePerMonth",
+  "depositAmount",
+  "areaSqm",
+  "maxOccupants",
+  "roomType",
+  "status",
+  "isPublished",
+  "amenityIds",
+]);
+
+const shouldRebuildRoomRag = (data: Record<string, unknown>) => {
+  return Object.keys(data).some((key) => ROOM_RAG_FIELDS.has(key));
+};
+
+const validateAmenityIds = async (amenityIds?: unknown) => {
+  if (amenityIds === undefined) return;
+  if (!Array.isArray(amenityIds)) {
+    throw new Error("amenityIds must be an array");
+  }
+
+  const invalidAmenityId = amenityIds.find(
+    (amenityId) => typeof amenityId !== "string" || !Types.ObjectId.isValid(amenityId)
+  );
+  if (invalidAmenityId) {
+    throw new Error(`Invalid amenity id: ${invalidAmenityId}`);
+  }
+
+  if (amenityIds.length === 0) return;
+
+  const existingCount = await AmenityModel.countDocuments({
+    _id: { $in: amenityIds },
+  });
+
+  if (existingCount !== amenityIds.length) {
+    throw new Error("One or more amenities do not exist");
+  }
+};
+
 export const RoomService = {
   createRoom: async (data: any, landlordId: string) => {
     const tenants: ITenantRef[] = data.tenants ?? [];
     const maxOccupants = data.maxOccupants ?? 1;
     validateTenants(tenants, maxOccupants);
+    await validateAmenityIds(data.amenityIds);
 
-    return await RoomRepository.create({
+    const room = await RoomRepository.create({
       ...data,
       landlordId,
       status: ROOM_STATUS.AVAILABLE,
     });
+
+    if (room.isPublished) {
+      void RagRoomService.rebuildRoomEmbeddingBestEffort(room._id.toString());
+    }
+
+    return room;
   },
 
   getAllRooms: async (filter: any, skip: number, limit: number) => {
@@ -69,6 +124,7 @@ export const RoomService = {
       landlordId: _landlordId,
       ...allowedFields
     } = data;
+    await validateAmenityIds(allowedFields.amenityIds);
 
     // Validate tenants if present in update data
     if (tenants !== undefined) {
@@ -81,7 +137,13 @@ export const RoomService = {
       (allowedFields as any).tenants = tenants;
     }
 
-    return await RoomRepository.update(id, landlordId, allowedFields);
+    const room = await RoomRepository.update(id, landlordId, allowedFields);
+
+    if (room && shouldRebuildRoomRag(allowedFields)) {
+      void RagRoomService.rebuildRoomEmbeddingBestEffort(room._id.toString());
+    }
+
+    return room;
   },
 
   deleteRoom: async (id: string, landlordId: string) => {
@@ -90,7 +152,11 @@ export const RoomService = {
 
   // Publish/Unpublish
   publishRoom: async (id: string, landlordId: string) => {
-    return await RoomRepository.update(id, landlordId, { isPublished: true });
+    const room = await RoomRepository.update(id, landlordId, { isPublished: true });
+    if (room) {
+      void RagRoomService.rebuildRoomEmbeddingBestEffort(room._id.toString());
+    }
+    return room;
   },
 
   unpublishRoom: async (id: string, landlordId: string) => {

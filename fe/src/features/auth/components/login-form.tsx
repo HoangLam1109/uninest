@@ -6,7 +6,8 @@ import { loginSchema } from '../schemas/auth.schema'
 import type { LoginFormValues } from '../types/auth.type'
 import { useLogin } from '../hooks/use-login'
 import { AuthField } from './auth-field'
-import { PasswordInput, authInputClassName } from './password-input'
+import { authInputClassName } from './auth-input-class'
+import { PasswordInput } from './password-input'
 
 export function LoginForm() {
   const login = useLogin()

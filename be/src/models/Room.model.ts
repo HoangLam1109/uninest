@@ -41,6 +41,10 @@ export interface IRoom extends Document {
   roomType?: ROOM_TYPE;
   status: ROOM_STATUS;
   isPublished: boolean;
+  ragText?: string;
+  ragUpdatedAt?: Date;
+  ratingAvg?: number;
+  reviewCount?: number;
   embedding?: number[];
   deletedAt?: Date;
   createdAt: Date;
@@ -116,7 +120,7 @@ const RoomSchema = new Schema<IRoom>(
       ],
       default: [],
       validate: {
-        validator: function (this: IRoom, value: ITenantRef[]) {
+        validator: function (value: ITenantRef[]) {
           // At most one primary tenant
           const primaryCount = value.filter((t) => t.isPrimaryTenant).length;
           return primaryCount <= 1;
@@ -136,6 +140,25 @@ const RoomSchema = new Schema<IRoom>(
     isPublished: {
       type: Boolean,
       default: false,
+    },
+    ragText: {
+      type: String,
+      default: "",
+    },
+    ragUpdatedAt: {
+      type: Date,
+      default: null,
+    },
+    ratingAvg: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+    reviewCount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     embedding: {
       type: [Number],

@@ -6,7 +6,8 @@ import { registerSchema } from '../schemas/auth.schema'
 import type { RegisterFormValues } from '../types/auth.type'
 import { useRegister, useSendRegisterOtp } from '../hooks/use-register'
 import { AuthField } from './auth-field'
-import { PasswordInput, authInputClassName } from './password-input'
+import { authInputClassName } from './auth-input-class'
+import { PasswordInput } from './password-input'
 
 export function RegisterForm() {
   const registerMutation = useRegister()

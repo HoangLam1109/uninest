@@ -14,6 +14,8 @@ import invoiceRouter from "./routes/invoice.route.js";
 import meterReadingRouter from "./routes/meter-reading.route.js";
 import reviewRouter from "./routes/review.route.js";
 import chatRouter from "./routes/chat.route.js";
+import aiRouter from "./routes/ai.route.js";
+import amenityRouter from "./routes/amenity.route.js";
 import connectDB from "./config/database.config.js";
 import { setupSwagger } from "./swagger.js";
 import { initializeChatSocket } from "./socket.js";
@@ -48,6 +50,8 @@ app.use("/api/invoices", invoiceRouter);
 app.use("/api/meter-readings", meterReadingRouter);
 app.use("/api/reviews", reviewRouter);
 app.use("/api/chats", chatRouter);
+app.use("/api/ai", aiRouter);
+app.use("/api/amenities", amenityRouter);
 
 setupSwagger(app);
 

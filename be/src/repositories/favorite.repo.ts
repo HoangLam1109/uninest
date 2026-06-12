@@ -9,7 +9,11 @@ export const FavoriteRepository = {
 
   findByTenant: (tenantId: string, skip: number, limit: number) =>
     FavoriteModel.find({ tenantId })
-      .populate("roomId", "title address pricePerMonth city district status isPublished")
+      .populate({
+        path: "roomId",
+        select: "title address pricePerMonth city district status isPublished amenityIds amenities",
+        populate: { path: "amenityIds", select: "name" },
+      })
       .populate("tenantId", "fullName email")
       .sort({ createdAt: -1 })
       .skip(skip)

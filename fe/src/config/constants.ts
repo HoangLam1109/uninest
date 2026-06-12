@@ -1,5 +1,6 @@
 export const paths = {
   home: '/',
+  ai: '/ai',
   login: '/dang-nhap',
   register: '/dang-ky',
   rooms: '/phong',

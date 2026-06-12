@@ -1,4 +1,5 @@
 import { ReviewRepository } from "../repositories/review.repo.js";
+import { RagRoomService } from "./rag-room.service.js";
 
 export const ReviewService = {
   createReview: async (
@@ -32,6 +33,8 @@ export const ReviewService = {
       comment: reviewData.comment,
       imageUrls: reviewData.imageUrls || [],
     });
+
+    void RagRoomService.rebuildRoomEmbeddingBestEffort(roomId);
 
     return review;
   },
@@ -107,6 +110,9 @@ export const ReviewService = {
     }
 
     const updated = await ReviewRepository.update(reviewId, updateData);
+    if (updated) {
+      void RagRoomService.rebuildRoomEmbeddingBestEffort(review.roomId._id.toString());
+    }
     return updated;
   },
 
@@ -121,7 +127,12 @@ export const ReviewService = {
       throw new Error("You can only delete your own reviews");
     }
 
-    return await ReviewRepository.softDelete(reviewId);
+    const deleted = await ReviewRepository.softDelete(reviewId);
+    if (deleted) {
+      void RagRoomService.rebuildRoomEmbeddingBestEffort(review.roomId._id.toString());
+    }
+
+    return deleted;
   },
 
   addLandlordReply: async (
@@ -142,6 +153,10 @@ export const ReviewService = {
     const updated = await ReviewRepository.update(reviewId, {
       landlordReply: reply,
     });
+
+    if (updated) {
+      void RagRoomService.rebuildRoomEmbeddingBestEffort((review.roomId as any)._id.toString());
+    }
 
     return updated;
   },

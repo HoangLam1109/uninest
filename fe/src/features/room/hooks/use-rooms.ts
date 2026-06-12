@@ -14,6 +14,7 @@ import type {
 
 export const roomKeys = {
   all: ['rooms'] as const,
+  amenities: () => ['amenities'] as const,
   lists: () => [...roomKeys.all, 'list'] as const,
   list: (params: RoomListParams) => [...roomKeys.lists(), params] as const,
   searches: () => [...roomKeys.all, 'search'] as const,
@@ -33,6 +34,73 @@ export const roomKeys = {
 
 function getFavoriteRoomId(roomId: string | { _id: string }) {
   return typeof roomId === 'string' ? roomId : roomId._id
+}
+
+export function useGetAmenities() {
+  return useQuery({
+    queryKey: roomKeys.amenities(),
+    queryFn: async () => {
+      const { data } = await roomApi.listAmenities()
+      return data.data
+    },
+  })
+}
+
+export function useCreateAmenity() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: { name: string }) => {
+      const { data } = await roomApi.createAmenity(payload)
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: roomKeys.amenities() })
+      toast.success('Đã thêm tiện ích')
+    },
+    onError: (error) => {
+      toast.error('Không thể thêm tiện ích', {
+        description: getApiErrorMessage(error, 'Vui lòng kiểm tra lại tên tiện ích.'),
+      })
+    },
+  })
+}
+
+export function useUpdateAmenity() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { data } = await roomApi.updateAmenity(id, { name })
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: roomKeys.amenities() })
+      toast.success('Đã cập nhật tiện ích')
+    },
+    onError: (error) => {
+      toast.error('Không thể cập nhật tiện ích', {
+        description: getApiErrorMessage(error, 'Vui lòng thử lại sau.'),
+      })
+    },
+  })
+}
+
+export function useDeleteAmenity() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => roomApi.deleteAmenity(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: roomKeys.amenities() })
+      toast.success('Đã xóa tiện ích')
+    },
+    onError: (error) => {
+      toast.error('Không thể xóa tiện ích', {
+        description: getApiErrorMessage(error, 'Vui lòng thử lại sau.'),
+      })
+    },
+  })
 }
 
 export function useGetRooms(params: RoomListParams, enabled = true) {

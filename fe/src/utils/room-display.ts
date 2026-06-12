@@ -1,4 +1,5 @@
 import type {
+  Amenity,
   Room,
   RoomImage,
   RoomStatus,
@@ -7,6 +8,11 @@ import type {
 
 type RoomLocation = Pick<Room, 'address'> &
   Partial<Pick<Room, 'ward' | 'district' | 'city'>>
+
+type RoomAmenitySource = {
+  amenityIds?: Array<string | Amenity>
+  amenities?: string[]
+}
 
 export const roomCurrencyFormatter = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -54,6 +60,28 @@ export function formatRoomFullLocation(room: RoomLocation) {
 
 export function formatRoomType(roomType?: RoomType) {
   return roomType ? roomTypeLabels[roomType] : 'Chưa chọn'
+}
+
+export function getRoomAmenityNames(room: RoomAmenitySource) {
+  const names = new Set<string>()
+
+  room.amenities?.forEach((amenity) => {
+    const name = amenity.trim()
+    if (name) names.add(name)
+  })
+
+  room.amenityIds?.forEach((amenity) => {
+    if (typeof amenity === 'string') {
+      const value = amenity.trim()
+      if (value && !/^[a-f\d]{24}$/i.test(value)) names.add(value)
+      return
+    }
+
+    const name = amenity.name.trim()
+    if (name) names.add(name)
+  })
+
+  return Array.from(names)
 }
 
 export function getPrimaryRoomImage(images: RoomImage[]) {

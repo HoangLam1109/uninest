@@ -9,11 +9,18 @@ export type RoomLandlord = {
   phone?: string
 }
 
+export type Amenity = {
+  _id: string
+  name: string
+  createdAt?: string
+  updatedAt?: string
+}
+
 export type Room = {
   _id: string
   propertyId?: string | null
   landlordId?: string | RoomLandlord
-  amenityIds?: string[]
+  amenityIds?: Array<string | Amenity>
   amenities?: string[]
   title: string
   description?: string
@@ -67,6 +74,8 @@ export type RoomFavoriteRoom = Pick<
   | 'status'
   | 'pricePerMonth'
   | 'isPublished'
+  | 'amenityIds'
+  | 'amenities'
 >
 
 export type RoomListParams = {
@@ -95,6 +104,18 @@ export type RoomListResponse = {
   success: boolean
   data: Room[]
   pagination: RoomPagination
+  message?: string
+}
+
+export type AmenityListResponse = {
+  success: boolean
+  data: Amenity[]
+  message?: string
+}
+
+export type AmenityResponse = {
+  success: boolean
+  data: Amenity
   message?: string
 }
 
