@@ -1,9 +1,13 @@
-const DEFAULT_EMBEDDING_MODEL = "text-embedding-004";
+const DEFAULT_EMBEDDING_MODEL = "gemini-embedding-2";
+const DEFAULT_EMBEDDING_DIMENSION = 768;
 
 type GeminiEmbeddingResponse = {
   embedding?: {
     values?: number[];
   };
+  embeddings?: Array<{
+    values?: number[];
+  }>;
 };
 
 function getGeminiApiKey() {
@@ -17,6 +21,9 @@ function getGeminiApiKey() {
 export const EmbeddingService = {
   embedText: async (text: string): Promise<number[]> => {
     const model = process.env.GEMINI_EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODEL;
+    const outputDimensionality = Number(
+      process.env.GEMINI_EMBEDDING_DIMENSION || DEFAULT_EMBEDDING_DIMENSION
+    );
     const apiKey = getGeminiApiKey();
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:embedContent?key=${apiKey}`;
 
@@ -30,6 +37,9 @@ export const EmbeddingService = {
         content: {
           parts: [{ text }],
         },
+        ...(Number.isFinite(outputDimensionality)
+          ? { output_dimensionality: outputDimensionality }
+          : {}),
       }),
     });
 
@@ -39,7 +49,7 @@ export const EmbeddingService = {
     }
 
     const data = (await response.json()) as GeminiEmbeddingResponse;
-    const values = data.embedding?.values;
+    const values = data.embedding?.values || data.embeddings?.[0]?.values;
 
     if (!values || values.length === 0) {
       throw new Error("Gemini embedding response did not include vector values");

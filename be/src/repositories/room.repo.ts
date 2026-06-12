@@ -5,6 +5,7 @@ export const RoomRepository = {
   findAll: (filter: any, skip: number, limit: number) =>
     RoomModel.find(filter)
       .populate("landlordId", "fullName email phone")
+      .populate("amenityIds", "name")
       .populate("tenants.tenantId", "fullName email phone avatarUrl")
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -17,10 +18,14 @@ export const RoomRepository = {
       return RoomModel.findOne({
         _id: id,
         landlordId,
-      }).populate("landlordId", "fullName email phone");
+      })
+        .populate("landlordId", "fullName email phone")
+        .populate("amenityIds", "name");
     }
 
-    return RoomModel.findById(id).populate("landlordId", "fullName email phone");
+    return RoomModel.findById(id)
+      .populate("landlordId", "fullName email phone")
+      .populate("amenityIds", "name");
   },
 
 
@@ -37,6 +42,7 @@ export const RoomRepository = {
   search: (keyword: any, skip: number, limit: number) =>
     RoomModel.find(keyword)
       .populate("landlordId", "fullName email phone")
+      .populate("amenityIds", "name")
       .populate("tenants.tenantId", "fullName email phone avatarUrl")
       .sort({ createdAt: -1 })
       .skip(skip)

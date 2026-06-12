@@ -73,8 +73,6 @@ export function useGetIdentityById(id: string | null, enabled = true) {
 }
 
 export function useSearchIdentityByCccd() {
-  const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: async (cccd: string) => {
       const { data } = await identityApi.searchByCccd(cccd)

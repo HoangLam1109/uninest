@@ -1,7 +1,9 @@
 import { RoomRepository } from "../repositories/room.repo.js";
 import { RoomImageRepository } from "../repositories/room-image.repo.js";
 import { IdentityRepository } from "../repositories/identity.repo.js";
-import { ROOM_STATUS, RoomModel, type ITenantRef } from "../models/Room.model.js";
+import { Types } from "mongoose";
+import { ROOM_STATUS, type ITenantRef } from "../models/Room.model.js";
+import { AmenityModel } from "../models/Amenity.model.js";
 import { RagRoomService } from "./rag-room.service.js";
 
 /**
@@ -47,11 +49,36 @@ const shouldRebuildRoomRag = (data: Record<string, unknown>) => {
   return Object.keys(data).some((key) => ROOM_RAG_FIELDS.has(key));
 };
 
+const validateAmenityIds = async (amenityIds?: unknown) => {
+  if (amenityIds === undefined) return;
+  if (!Array.isArray(amenityIds)) {
+    throw new Error("amenityIds must be an array");
+  }
+
+  const invalidAmenityId = amenityIds.find(
+    (amenityId) => typeof amenityId !== "string" || !Types.ObjectId.isValid(amenityId)
+  );
+  if (invalidAmenityId) {
+    throw new Error(`Invalid amenity id: ${invalidAmenityId}`);
+  }
+
+  if (amenityIds.length === 0) return;
+
+  const existingCount = await AmenityModel.countDocuments({
+    _id: { $in: amenityIds },
+  });
+
+  if (existingCount !== amenityIds.length) {
+    throw new Error("One or more amenities do not exist");
+  }
+};
+
 export const RoomService = {
   createRoom: async (data: any, landlordId: string) => {
     const tenants: ITenantRef[] = data.tenants ?? [];
     const maxOccupants = data.maxOccupants ?? 1;
     validateTenants(tenants, maxOccupants);
+    await validateAmenityIds(data.amenityIds);
 
     const room = await RoomRepository.create({
       ...data,
@@ -97,6 +124,7 @@ export const RoomService = {
       landlordId: _landlordId,
       ...allowedFields
     } = data;
+    await validateAmenityIds(allowedFields.amenityIds);
 
     // Validate tenants if present in update data
     if (tenants !== undefined) {

@@ -8,6 +8,7 @@ import {
   formatRoomCurrency,
   formatRoomFullLocation,
   getDisplayRoomImage,
+  getRoomAmenityNames,
   roomStatusClasses,
   roomStatusLabels,
 } from '@/utils/room-display'
@@ -25,6 +26,7 @@ export function FavoriteRoomCard({ room, view }: FavoriteRoomCardProps) {
   const removeFavorite = useRemoveRoomFavorite()
   const primaryImage = getDisplayRoomImage(imagesQuery.data ?? [])
   const isListView = view === 'list'
+  const amenityNames = getRoomAmenityNames(room)
 
   return (
     <Card
@@ -86,6 +88,29 @@ export function FavoriteRoomCard({ room, view }: FavoriteRoomCardProps) {
             {roomStatusLabels[room.status]}
           </span>
         </div>
+
+        {amenityNames.length > 0 ? (
+          <div
+            className={cn(
+              'flex flex-wrap gap-1.5',
+              isListView ? 'md:max-w-xs' : '',
+            )}
+          >
+            {amenityNames.slice(0, 3).map((amenity) => (
+              <span
+                key={amenity}
+                className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary"
+              >
+                {amenity}
+              </span>
+            ))}
+            {amenityNames.length > 3 ? (
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+                +{amenityNames.length - 3}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
 
         <div
           className={cn(

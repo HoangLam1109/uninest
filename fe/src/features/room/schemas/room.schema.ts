@@ -10,20 +10,9 @@ const optionalCoordinate = z.preprocess(
   z.coerce.number().optional(),
 )
 
-const optionalStringArray = z.preprocess((value) => {
-  if (typeof value !== 'string') return value
-
-  const values = value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-
-  return values.length > 0 ? values : undefined
-}, z.array(z.string().trim().min(1)).optional())
-
 export const roomSchema = z.object({
   propertyId: z.string().trim().optional(),
-  amenityIds: optionalStringArray,
+  amenityIds: z.array(z.string().trim().min(1)).optional(),
   title: z.string().trim().min(2, 'Ten phong phai co it nhat 2 ky tu'),
   description: z.string().trim().optional(),
   address: z.string().trim().min(3, 'Vui long nhap dia chi'),

@@ -1,5 +1,7 @@
 import { api } from '@/lib/axios'
 import type {
+  AmenityListResponse,
+  AmenityResponse,
   LandlordTenantListResponse,
   RoomFavoriteCheckResponse,
   RoomFavoriteListResponse,
@@ -20,6 +22,18 @@ import type {
 } from '../types/room.type'
 
 export const roomApi = {
+  listAmenities: () =>
+    api.get<AmenityListResponse>('/amenities'),
+
+  createAmenity: (payload: { name: string }) =>
+    api.post<AmenityResponse>('/amenities', payload),
+
+  updateAmenity: (id: string, payload: { name: string }) =>
+    api.put<AmenityResponse>(`/amenities/${id}`, payload),
+
+  deleteAmenity: (id: string) =>
+    api.delete<{ success: boolean; message?: string }>(`/amenities/${id}`),
+
   list: (params: RoomListParams) =>
     api.get<RoomListResponse>('/rooms/getAll', { params }),
 

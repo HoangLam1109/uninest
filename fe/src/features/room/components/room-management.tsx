@@ -22,6 +22,7 @@ import {
 import {
   formatRoomCurrency,
   formatRoomType,
+  getRoomAmenityNames,
   roomStatusClasses,
   roomStatusLabels,
 } from '../../../utils/room-display'
@@ -48,6 +49,7 @@ function searchRooms(rooms: Room[], search: string) {
       room.description,
       room.roomType,
       room.status,
+      ...getRoomAmenityNames(room),
     ]
       .filter(Boolean)
       .some((value) => value?.toLowerCase().includes(keyword)),
@@ -311,7 +313,10 @@ export function RoomManagement() {
                 </tr>
               ) : null}
 
-              {displayedRooms.map((room) => (
+              {displayedRooms.map((room) => {
+                const amenityNames = getRoomAmenityNames(room)
+
+                return (
                 <tr key={room._id} className="align-top">
                   <td className="px-4 py-4">
                     <p className="font-semibold text-slate-900">{room.title}</p>
@@ -319,6 +324,23 @@ export function RoomManagement() {
                       {formatRoomType(room.roomType)} · {room.areaSqm ?? 0} m2 ·{' '}
                       {room.maxOccupants} người
                     </p>
+                    {amenityNames.length > 0 ? (
+                      <div className="mt-2 flex max-w-xs flex-wrap gap-1.5">
+                        {amenityNames.slice(0, 3).map((amenity) => (
+                          <span
+                            key={amenity}
+                            className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary"
+                          >
+                            {amenity}
+                          </span>
+                        ))}
+                        {amenityNames.length > 3 ? (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">
+                            +{amenityNames.length - 3}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </td>
                   <td className="px-4 py-4 text-sm text-slate-600">
                     <p>{room.address}</p>
@@ -381,7 +403,8 @@ export function RoomManagement() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>

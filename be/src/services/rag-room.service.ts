@@ -63,7 +63,79 @@ function buildVectorFilter(filters: RoomAiFilters) {
 }
 
 function buildMongoFilter(filters: RoomAiFilters) {
-  return buildVectorFilter(filters);
+  const mongoFilter: Record<string, any> = {
+    isPublished: true,
+    status: ROOM_STATUS.AVAILABLE,
+  };
+
+  if (filters.city) mongoFilter.city = createLocationRegex(filters.city);
+  if (filters.district) mongoFilter.district = createLocationRegex(filters.district);
+  if (filters.roomType) mongoFilter.roomType = filters.roomType;
+
+  if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
+    mongoFilter.pricePerMonth = {};
+    if (filters.minPrice !== undefined) mongoFilter.pricePerMonth.$gte = filters.minPrice;
+    if (filters.maxPrice !== undefined) mongoFilter.pricePerMonth.$lte = filters.maxPrice;
+  }
+
+  if (filters.minRating !== undefined) {
+    mongoFilter.ratingAvg = { $gte: filters.minRating };
+  }
+
+  return mongoFilter;
+}
+
+function createLocationRegex(value: string) {
+  const normalized = normalizeLocation(value);
+  const escapedValue = escapeRegex(value);
+
+  if (normalized.match(/^(quan|district)\s+\d+$/)) {
+    const districtNumber = normalized.match(/\d+/)?.[0];
+    if (districtNumber) {
+      return new RegExp(`(quan|quận|district|q)\\s*${districtNumber}\\b`, "i");
+    }
+  }
+
+  return new RegExp(escapedValue, "i");
+}
+
+function normalizeLocation(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function isVectorSearchConfigurationError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("needs to be indexed as filter") ||
+    message.includes("$vectorSearch") ||
+    message.includes("PlanExecutor error during aggregation")
+  );
+}
+
+function getAnswer(aiAnswer: { answer: string }, rooms: RagRoomSearchResult[]) {
+  const normalizedAnswer = aiAnswer.answer
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  const saysNoData =
+    normalizedAnswer.includes("chua co du du lieu") ||
+    normalizedAnswer.includes("khong tim thay");
+
+  if (rooms.length > 0 && saysNoData) {
+    return `Mình tìm thấy ${rooms.length} phòng phù hợp với dữ liệu hiện có. Bạn có thể xem các gợi ý bên dưới.`;
+  }
+
+  return aiAnswer.answer;
 }
 
 function buildContext(rooms: RagRoomSearchResult[]) {
@@ -224,7 +296,10 @@ export const RagRoomService = {
     const numCandidates = Math.max(limit * 20, 100);
     let source: "vector" | "fallback" = "vector";
 
-    let rooms = await RoomModel.aggregate<RagRoomSearchResult>([
+    let rooms: RagRoomSearchResult[] = [];
+
+    try {
+      rooms = await RoomModel.aggregate<RagRoomSearchResult>([
         {
           $vectorSearch: {
             index: process.env.MONGODB_ROOM_VECTOR_INDEX || "room_vector_index",
@@ -256,6 +331,15 @@ export const RagRoomService = {
           },
         },
       ]);
+    } catch (error) {
+      if (!isVectorSearchConfigurationError(error)) {
+        throw error;
+      }
+
+      source = "fallback";
+      console.warn("[RagRoomService] vector search unavailable, using fallback search:", error);
+      rooms = await fallbackSearchRooms(filters, limit);
+    }
 
     if (rooms.length === 0) {
       source = "fallback";
@@ -277,7 +361,7 @@ export const RagRoomService = {
     });
 
     return {
-      answer: aiAnswer.answer,
+      answer: getAnswer(aiAnswer, rooms),
       rooms: aiAnswer.rooms,
       missingInfo: aiAnswer.missingInfo,
       matches: rooms,

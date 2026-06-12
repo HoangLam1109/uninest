@@ -1,64 +1,132 @@
-import { useMemo, useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, type FormEvent, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import {
+  ArrowRight,
   Bot,
   GraduationCap,
-  Home,
-  Info,
+  Loader2,
+  Send,
   ShieldCheck,
   Sparkles,
   Star,
-  WalletCards,
+  UserRound,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { paths } from '@/config/constants'
+import { useAiRoomSearch } from '@/features/ai/hooks/use-ai-room-search'
+import type {
+  AiRoomMatch,
+  AiRoomSearchResult,
+  AiRoomSuggestion,
+} from '@/features/ai/types/ai.type'
 import { Navbar } from '@/features/home/components/navbar'
-import { cn } from '@/lib/utils'
+import {
+  formatRoomCurrency,
+  formatRoomFullLocation,
+  getRoomAmenityNames,
+} from '@/utils/room-display'
 
-const roomStyleOptions = [
-  'Yên tĩnh để học',
-  'Gần trung tâm sôi động',
-  'Có ban công/Cửa sổ lớn',
-  'Đầy đủ nội thất',
-] as const
+type ChatMessage = {
+  id: string
+  role: 'assistant' | 'user'
+  content: string
+  result?: AiRoomSearchResult
+}
 
-const amenityOptions = ['Máy lạnh', 'Máy giặt riêng', 'Kệ bếp', 'Giờ giấc tự do'] as const
+const initialMessages: ChatMessage[] = [
+  {
+    id: 'welcome',
+    role: 'assistant',
+    content:
+      'Chào bạn, hãy mô tả phòng bạn muốn tìm. Ví dụ: phòng dưới 4 triệu, gần Đại học Bách Khoa, yên tĩnh, có máy lạnh và chỗ để xe.',
+  },
+]
 
-const distanceOptions = ['< 1km', '1 - 3km', '3 - 5km', '> 5km'] as const
+function parseBudgetRange(value: string) {
+  const normalized = value.toLowerCase()
+  const hasMillionUnit = /tr|triệu|m/.test(normalized)
+  const numbers =
+    normalized.match(/\d+(?:[.,]\d+)*/g)?.map((token) => {
+      const parts = token.split(/[.,]/)
+      const isDecimalMillion =
+        parts.length === 2 && parts[1].length <= 2 && Number(parts[0]) < 1000
+      const numberValue = isDecimalMillion
+        ? Number(token.replace(',', '.'))
+        : Number(token.replace(/[.,]/g, ''))
+
+      if (!Number.isFinite(numberValue)) return undefined
+      if (numberValue < 1000 && (hasMillionUnit || numbersShouldBeMillions(normalized))) {
+        return Math.round(numberValue * 1_000_000)
+      }
+      return Math.round(numberValue)
+    }) ?? []
+
+  const validNumbers = numbers.filter((number): number is number => typeof number === 'number')
+  if (validNumbers.length === 0) return {}
+
+  return {
+    minPrice: Math.min(...validNumbers),
+    maxPrice: validNumbers.length > 1 ? Math.max(...validNumbers) : undefined,
+  }
+}
+
+function numbersShouldBeMillions(value: string) {
+  return !/\d{6,}/.test(value.replace(/[.,\s]/g, ''))
+}
+
+function createMessageId(role: ChatMessage['role']) {
+  return `${role}-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
 
 export function AiRoomFinderPage() {
-  const navigate = useNavigate()
-  const [distance, setDistance] = useState<(typeof distanceOptions)[number]>('1 - 3km')
-  const [roomStyles, setRoomStyles] = useState<Set<string>>(
-    () => new Set(['Yên tĩnh để học', 'Có ban công/Cửa sổ lớn']),
-  )
-  const [amenities, setAmenities] = useState<Set<string>>(
-    () => new Set(['Máy lạnh', 'Kệ bếp', 'Giờ giấc tự do']),
-  )
+  const aiRoomSearch = useAiRoomSearch()
+  const [draft, setDraft] = useState('')
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
 
-  const progress = useMemo(() => {
-    const selected = roomStyles.size + amenities.size + (distance ? 1 : 0)
-    return Math.min(50 + selected * 6, 92)
-  }, [amenities.size, distance, roomStyles.size])
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
 
-  function toggleOption(value: string, setter: (next: Set<string>) => void, current: Set<string>) {
-    const next = new Set(current)
-    if (next.has(value)) next.delete(value)
-    else next.add(value)
-    setter(next)
-  }
+    const question = draft.trim()
+    if (!question || aiRoomSearch.isPending) return
 
-  function handleSubmit() {
-    const params = new URLSearchParams({
-      ai: 'true',
-      distance,
-      amenities: Array.from(amenities).join(','),
-      roomStyles: Array.from(roomStyles).join(','),
-      minPrice: '2000000',
-      maxPrice: '4500000',
-    })
+    const { minPrice, maxPrice } = parseBudgetRange(question)
+    const userMessage: ChatMessage = {
+      id: createMessageId('user'),
+      role: 'user',
+      content: question,
+    }
 
-    navigate(`${paths.rooms}?${params.toString()}`)
+    setMessages((current) => [...current, userMessage])
+    setDraft('')
+
+    try {
+      const result = await aiRoomSearch.mutateAsync({
+        question,
+        filters: {
+          minPrice,
+          maxPrice,
+          limit: 5,
+        },
+      })
+
+      setMessages((current) => [
+        ...current,
+        {
+          id: createMessageId('assistant'),
+          role: 'assistant',
+          content: result.answer,
+          result,
+        },
+      ])
+    } catch {
+      setMessages((current) => [
+        ...current,
+        {
+          id: createMessageId('assistant'),
+          role: 'assistant',
+          content: 'AI chưa thể xử lý yêu cầu này. Bạn thử nhập lại rõ hơn về khu vực, ngân sách hoặc tiện ích nhé.',
+        },
+      ])
+    }
   }
 
   return (
@@ -66,219 +134,318 @@ export function AiRoomFinderPage() {
       <Navbar />
       <main className="text-[#0f172a]">
         <section className="mx-auto flex w-full max-w-6xl flex-col items-center px-4 py-12 sm:px-6 lg:px-10 lg:py-16">
-        <div className="max-w-4xl pb-10 text-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white px-4 py-2 text-sm font-bold text-primary shadow-sm lg:hidden">
-            <Bot className="size-4" />
-            UniNest AI
-          </div>
-          <h1 className="text-balance text-4xl font-black leading-tight tracking-normal text-[#0f172a] sm:text-5xl">
-            Tìm phòng trọ <span className="text-primary">lý tưởng</span> bằng AI
-          </h1>
-          <p className="mx-auto mt-4 max-w-3xl text-base leading-7 text-[#475569] sm:text-lg">
-            Chỉ mất 2 phút để thuật toán của UniNest phân tích thói quen và sở
-            thích của bạn để kết nối với những người bạn "tâm đầu ý hợp".
-          </p>
-        </div>
-
-        <div className="w-full overflow-hidden rounded-2xl border border-primary/10 bg-white shadow-2xl shadow-black/10">
-          <div className="border-b border-primary/10 bg-primary/5 px-6 py-6">
-            <div className="mb-3 flex items-center justify-between gap-4">
-              <p className="text-xs font-bold uppercase tracking-[0.06em] text-primary">
-                Tiến trình khảo sát
-              </p>
-              <p className="text-sm font-black text-[#0f172a]">{progress}% Hoàn thành</p>
+          <div className="max-w-4xl pb-10 text-center">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white px-4 py-2 text-sm font-bold text-primary shadow-sm lg:hidden">
+              <Bot className="size-4" />
+              UniNest AI
             </div>
-            <div className="h-3 overflow-hidden rounded-full bg-primary/20">
-              <div
-                className="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+            <h1 className="text-balance text-4xl font-black leading-tight tracking-normal text-[#0f172a] sm:text-5xl">
+              Chat với AI để tìm <span className="text-primary">phòng trọ phù hợp</span>
+            </h1>
+            <p className="mx-auto mt-4 max-w-3xl text-base leading-7 text-[#475569] sm:text-lg">
+              Nhập nhu cầu của bạn bằng ngôn ngữ tự nhiên, UniNest AI sẽ phân tích và gợi ý phòng
+              đang còn trống trong hệ thống.
+            </p>
           </div>
 
-          <div className="grid lg:grid-cols-[396px_minmax(0,1fr)]">
-            <aside className="hidden bg-primary/5 p-8 lg:flex lg:flex-col lg:items-center lg:justify-center">
-              <img
-                src="/ai-student-lifestyle.png"
-                alt="Sinh viên đang học tại phòng trọ"
-                className="aspect-square w-full rounded-2xl object-cover shadow-lg"
-                width={332}
-                height={332}
-              />
-              <div className="pt-6 text-center">
-                <h2 className="text-base font-bold text-[#1e293b]">
-                  Tại sao chọn ghép đôi AI?
-                </h2>
-                <p className="mt-2 text-sm leading-5 text-[#64748b]">
-                  Giảm thiểu xung đột, tăng cường sự gắn kết và tiết kiệm thời
-                  gian tìm kiếm.
-                </p>
-              </div>
-            </aside>
-
-            <div className="flex flex-col gap-10 p-6 sm:p-8 lg:p-12">
-              <section className="space-y-6">
-                <SectionHeading
-                  icon={<WalletCards className="size-5" />}
-                  title="Ngân sách & Khoảng cách"
+          <div className="w-full overflow-hidden rounded-2xl border border-primary/10 bg-white shadow-2xl shadow-black/10">
+            <div className="grid lg:grid-cols-[360px_minmax(0,1fr)]">
+              <aside className="hidden bg-primary/5 p-8 lg:flex lg:flex-col lg:items-center lg:justify-center">
+                <img
+                  src="/ai-student-lifestyle.png"
+                  alt="Sinh viên đang học tại phòng trọ"
+                  className="aspect-square w-full rounded-2xl object-cover shadow-lg"
+                  width={304}
+                  height={304}
                 />
+                <div className="pt-6 text-center">
+                  <h2 className="text-base font-bold text-[#1e293b]">
+                    Tìm phòng bằng hội thoại
+                  </h2>
+                  <p className="mt-2 text-sm leading-5 text-[#64748b]">
+                    Bạn có thể hỏi theo ngân sách, khu vực, tiện ích, khoảng cách tới trường hoặc
+                    phong cách sống mong muốn.
+                  </p>
+                </div>
+              </aside>
 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <label className="text-sm font-semibold text-[#334155]">
-                      Ngân sách hàng tháng (VNĐ)
-                    </label>
-                    <span className="text-base font-bold text-primary">2.0M - 4.5M</span>
-                  </div>
-                  <div className="relative h-8">
-                    <div className="absolute left-0 right-0 top-3 h-2 rounded-full bg-primary/20" />
-                    <div className="absolute left-[20%] right-[30%] top-3 h-2 rounded-full bg-primary" />
-                    <span className="absolute left-[20%] top-1 size-5 rounded-full border-4 border-white bg-primary shadow-md" />
-                    <span className="absolute left-[66%] top-1 size-5 rounded-full border-4 border-white bg-primary shadow-md" />
-                  </div>
-                  <div className="flex items-center justify-between text-xs font-medium text-[#94a3b8]">
-                    <span>0đ</span>
-                    <span>10.000.000đ+</span>
+              <section className="flex min-h-[620px] flex-col bg-white">
+                <div className="border-b border-primary/10 bg-primary/5 px-6 py-5">
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-10 items-center justify-center rounded-full bg-primary text-white">
+                      <Bot className="size-5" />
+                    </span>
+                    <div>
+                      <p className="text-base font-black text-[#0f172a]">UniNest AI</p>
+                      <p className="text-sm text-[#64748b]">Trợ lý tìm phòng theo nhu cầu của bạn</p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-semibold text-[#334155]">
-                      Khoảng cách tới trường tối đa
-                    </label>
-                    <Info className="size-3 text-[#94a3b8]" aria-hidden />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {distanceOptions.map((option) => (
-                      <button
-                        key={option}
-                        type="button"
-                        onClick={() => setDistance(option)}
-                        className={cn(
-                          'h-10 rounded-lg border px-3 text-sm transition-colors',
-                          option === distance
-                            ? 'border-primary bg-primary font-bold text-white shadow-lg shadow-primary/20'
-                            : 'border-primary/20 bg-white text-[#0f172a] hover:bg-primary/5',
-                        )}
-                      >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex-1 space-y-5 overflow-y-auto px-4 py-6 sm:px-6">
+                  {messages.map((message) => (
+                    <ChatBubble key={message.id} message={message} />
+                  ))}
+
+                  {aiRoomSearch.isPending ? (
+                    <div className="flex items-start gap-3">
+                      <Avatar role="assistant" />
+                      <div className="rounded-2xl rounded-tl-sm bg-primary/5 px-4 py-3 text-sm text-[#475569]">
+                        <span className="inline-flex items-center gap-2">
+                          <Loader2 className="size-4 animate-spin text-primary" />
+                          AI đang tìm phòng phù hợp...
+                        </span>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
+
+                <form className="border-t border-primary/10 bg-white p-4 sm:p-6" onSubmit={handleSubmit}>
+                  <div className="flex items-end gap-3 rounded-2xl border border-primary/15 bg-[#faf9f7] p-3 focus-within:ring-2 focus-within:ring-ring">
+                    <textarea
+                      value={draft}
+                      onChange={(event) => setDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' && !event.shiftKey) {
+                          event.preventDefault()
+                          event.currentTarget.form?.requestSubmit()
+                        }
+                      }}
+                      placeholder="Ví dụ: Mình cần phòng dưới 4 triệu, gần Quận 10, yên tĩnh, có máy lạnh..."
+                      className="max-h-36 min-h-12 flex-1 resize-none bg-transparent px-2 py-3 text-sm leading-6 text-[#0f172a] outline-none placeholder:text-[#94a3b8]"
+                      rows={1}
+                    />
+                    <Button
+                      type="submit"
+                      size="icon"
+                      className="size-11 shrink-0"
+                      disabled={!draft.trim() || aiRoomSearch.isPending}
+                      aria-label="Gửi tin nhắn"
+                    >
+                      {aiRoomSearch.isPending ? (
+                        <Loader2 className="size-5 animate-spin" />
+                      ) : (
+                        <Send className="size-5" />
+                      )}
+                    </Button>
+                  </div>
+                </form>
               </section>
-
-              <div className="h-px bg-[#e2e8f0]" />
-
-              <section className="space-y-6">
-                <SectionHeading icon={<Home className="size-5" />} title="Tiện ích phòng ở" />
-                <div className="grid gap-6 md:grid-cols-2">
-                  <ChoiceGroup
-                    title="Bạn muốn một căn phòng như thế nào?"
-                    options={roomStyleOptions}
-                    selected={roomStyles}
-                    onToggle={(value) => toggleOption(value, setRoomStyles, roomStyles)}
-                  />
-                  <ChoiceGroup
-                    title="Tiện ích phòng bắt buộc?"
-                    options={amenityOptions}
-                    selected={amenities}
-                    onToggle={(value) => toggleOption(value, setAmenities, amenities)}
-                  />
-                </div>
-              </section>
-
-              <div className="space-y-4 pt-2">
-                <Button
-                  type="button"
-                  size="lg"
-                  className="h-14 w-full rounded-xl text-lg font-black shadow-2xl shadow-primary/30"
-                  onClick={handleSubmit}
-                >
-                  <Sparkles className="size-5" />
-                  Tìm phòng cho tôi
-                </Button>
-                <p className="text-center text-xs text-[#94a3b8]">
-                  * Thông tin của bạn được bảo mật tuyệt đối bởi UniNest AI
-                </p>
-              </div>
             </div>
           </div>
-        </div>
 
-        <div className="grid w-full gap-5 px-2 pt-12 text-[#475569]/70 sm:grid-cols-3 lg:px-16">
-          <TrustBadge icon={<ShieldCheck className="size-5" />} text="10,000+ Ghép đôi thành công" />
-          <TrustBadge icon={<GraduationCap className="size-5" />} text="Đối tác 50+ Trường Đại học" />
-          <TrustBadge icon={<Star className="size-5" />} text="Đánh giá 4.9/5 sao" />
-        </div>
+          <div className="grid w-full gap-5 px-2 pt-12 text-[#475569]/70 sm:grid-cols-3 lg:px-16">
+            <TrustBadge icon={<ShieldCheck className="size-5" />} text="10,000+ Gợi ý thành công" />
+            <TrustBadge icon={<GraduationCap className="size-5" />} text="Đối tác 50+ Trường Đại học" />
+            <TrustBadge icon={<Star className="size-5" />} text="Đánh giá 4.9/5 sao" />
+          </div>
 
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 border-t border-primary/10 pt-8 text-sm text-[#64748b]">
-          <Link to="#" className="hover:text-primary">
-            Điều khoản
-          </Link>
-          <Link to="#" className="hover:text-primary">
-            Bảo mật
-          </Link>
-          <Link to="#" className="hover:text-primary">
-            Liên hệ
-          </Link>
-          <span className="basis-full text-center">
-            © 2024 UniNest Vietnam. Thiết kế cho cộng đồng sinh viên.
-          </span>
-        </div>
+          <div className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 border-t border-primary/10 pt-8 text-sm text-[#64748b]">
+            <Link to="#" className="hover:text-primary">
+              Điều khoản
+            </Link>
+            <Link to="#" className="hover:text-primary">
+              Bảo mật
+            </Link>
+            <Link to="#" className="hover:text-primary">
+              Liên hệ
+            </Link>
+            <span className="basis-full text-center">
+              © 2024 UniNest Vietnam. Thiết kế cho cộng đồng sinh viên.
+            </span>
+          </div>
         </section>
       </main>
     </div>
   )
 }
 
-function SectionHeading({ icon, title }: { icon: ReactNode; title: string }) {
+function ChatBubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === 'user'
+
   return (
-    <div className="flex items-center gap-3">
-      <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-        {icon}
-      </span>
-      <h2 className="text-xl font-bold text-[#0f172a]">{title}</h2>
+    <div className={`flex items-start gap-3 ${isUser ? 'justify-end' : ''}`}>
+      {!isUser ? <Avatar role="assistant" /> : null}
+      <div className={`max-w-[min(100%,680px)] ${isUser ? 'order-1' : ''}`}>
+        <div
+          className={
+            isUser
+              ? 'rounded-2xl rounded-tr-sm bg-primary px-4 py-3 text-sm leading-6 text-white shadow-md shadow-primary/20'
+              : 'rounded-2xl rounded-tl-sm bg-primary/5 px-4 py-3 text-sm leading-6 text-[#334155]'
+          }
+        >
+          {message.content}
+        </div>
+        {message.result ? <AiSearchResult result={message.result} /> : null}
+      </div>
+      {isUser ? <Avatar role="user" /> : null}
     </div>
   )
 }
 
-function ChoiceGroup({
-  title,
-  options,
-  selected,
-  onToggle,
-}: {
-  title: string
-  options: readonly string[]
-  selected: Set<string>
-  onToggle: (value: string) => void
-}) {
+function Avatar({ role }: { role: ChatMessage['role'] }) {
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-semibold leading-5 text-[#334155]">{title}</h3>
-      <div className="flex flex-wrap gap-2">
-        {options.map((option) => {
-          const isSelected = selected.has(option)
-          return (
-            <button
-              key={option}
-              type="button"
-              onClick={() => onToggle(option)}
-              className={cn(
-                'rounded-full border px-4 py-2 text-xs font-medium transition-colors',
-                isSelected
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-[#e2e8f0] bg-white text-[#0f172a] hover:border-primary/40',
-              )}
-            >
-              {option}
-            </button>
-          )
-        })}
+    <span
+      className={
+        role === 'assistant'
+          ? 'flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-white'
+          : 'flex size-9 shrink-0 items-center justify-center rounded-full bg-[#e2e8f0] text-[#334155]'
+      }
+    >
+      {role === 'assistant' ? <Sparkles className="size-4" /> : <UserRound className="size-4" />}
+    </span>
+  )
+}
+
+function AiSearchResult({ result }: { result: AiRoomSearchResult }) {
+  const suggestions = mergeSuggestionsWithMatches(result.rooms, result.matches)
+
+  return (
+    <section className="mt-3 space-y-3">
+      {suggestions.length > 0 ? (
+        <div className="grid gap-3">
+          {suggestions.map((room) => (
+            <AiRoomResultCard key={room.roomId} room={room} />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-primary/10 bg-white p-4 text-sm text-[#64748b]">
+          AI chưa tìm thấy phòng phù hợp. Hãy nhập thêm khu vực, ngân sách hoặc tiện ích bắt buộc.
+        </div>
+      )}
+
+      {result.missingInfo.length > 0 ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          <p className="font-bold">Thông tin AI cần thêm</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            {result.missingInfo.map((info) => (
+              <li key={info}>{info}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+type DisplayRoomSuggestion = AiRoomSuggestion & {
+  address?: string
+  district?: string
+  city?: string
+  ward?: string
+  amenityIds?: AiRoomMatch['amenityIds']
+  amenities?: string[]
+  ratingAvg?: number
+  reviewCount?: number
+}
+
+function mergeSuggestionsWithMatches(
+  rooms: AiRoomSuggestion[],
+  matches: AiRoomMatch[],
+): DisplayRoomSuggestion[] {
+  const matchSuggestions = matches.map((room) => ({
+    roomId: room._id,
+    title: room.title,
+    pricePerMonth: room.pricePerMonth,
+    reasons: room.description ? [room.description] : ['Phù hợp với tiêu chí bạn đã nhập'],
+    address: room.address,
+    district: room.district,
+    city: room.city,
+    ward: room.ward,
+    amenityIds: room.amenityIds,
+    amenities: room.amenities,
+    ratingAvg: room.ratingAvg,
+    reviewCount: room.reviewCount,
+  }))
+
+  if (rooms.length > 0) {
+    const aiSuggestions = rooms.map((room) => {
+      const match = matches.find((item) => item._id === room.roomId)
+      return {
+        ...room,
+        address: match?.address,
+        district: match?.district,
+        city: match?.city,
+        ward: match?.ward,
+        amenityIds: match?.amenityIds,
+        amenities: match?.amenities,
+        ratingAvg: match?.ratingAvg,
+        reviewCount: match?.reviewCount,
+      }
+    })
+
+    const aiRoomIds = new Set(aiSuggestions.map((room) => room.roomId))
+    return [
+      ...aiSuggestions,
+      ...matchSuggestions.filter((room) => !aiRoomIds.has(room.roomId)),
+    ]
+  }
+
+  return matchSuggestions
+}
+
+function AiRoomResultCard({ room }: { room: DisplayRoomSuggestion }) {
+  const amenityNames = getRoomAmenityNames(room)
+
+  return (
+    <article className="rounded-xl border border-primary/10 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h3 className="text-base font-black text-[#0f172a]">{room.title}</h3>
+          <p className="mt-1 text-sm font-bold text-primary">
+            {formatRoomCurrency(room.pricePerMonth)}/tháng
+          </p>
+          {room.address ? (
+            <p className="mt-2 text-sm leading-5 text-[#64748b]">
+              {formatRoomFullLocation({
+                address: room.address,
+                ward: room.ward,
+                district: room.district,
+                city: room.city,
+              })}
+            </p>
+          ) : null}
+          {room.ratingAvg ? (
+            <p className="mt-2 text-xs font-semibold text-[#64748b]">
+              {room.ratingAvg.toFixed(1)}/5 sao
+              {room.reviewCount ? ` · ${room.reviewCount} đánh giá` : ''}
+            </p>
+          ) : null}
+          {amenityNames.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {amenityNames.slice(0, 4).map((amenity) => (
+                <span
+                  key={amenity}
+                  className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary"
+                >
+                  {amenity}
+                </span>
+              ))}
+              {amenityNames.length > 4 ? (
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-[#64748b]">
+                  +{amenityNames.length - 4}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        <Button asChild variant="outline" size="sm" className="shrink-0">
+          <Link to={`/phong/${room.roomId}`}>
+            Xem phòng
+            <ArrowRight className="size-4" />
+          </Link>
+        </Button>
       </div>
-    </div>
+
+      {room.reasons.length > 0 ? (
+        <ul className="mt-4 list-disc space-y-1 pl-5 text-sm leading-5 text-[#334155]">
+          {room.reasons.map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
+      ) : null}
+    </article>
   )
 }
 
