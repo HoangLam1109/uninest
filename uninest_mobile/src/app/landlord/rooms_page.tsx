@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
@@ -24,7 +25,7 @@ import { roomApi } from "@/api/room.api";
 import { LandlordBottomNavigation } from "@/components/landlord/bottom-navigation";
 import { ThemedText } from "@/components/themed-text";
 import { getApiErrorMessage } from "@/lib/api-error";
-import type { Room, RoomPayload, RoomStatus, RoomType } from "@/types/room";
+import type { Room, RoomImage, RoomPayload, RoomStatus, RoomType } from "@/types/room";
 import {
   formatPrice,
   formatRoomLocation,
@@ -43,15 +44,21 @@ const STATUS_FILTERS: { id: "ALL" | RoomStatus; label: string }[] = [
   { id: "MAINTENANCE", label: "Bảo trì" },
 ];
 
+const STATUS_OPTIONS: RoomStatus[] = ["AVAILABLE", "RENTED", "MAINTENANCE"];
+
 type FormState = {
   title: string;
   address: string;
   district: string;
+  ward: string;
   roomType: RoomType;
+  status: RoomStatus;
   pricePerMonth: string;
   depositAmount: string;
   maxOccupants: string;
   areaSqm: string;
+  electricityRate: string;
+  waterRate: string;
   description: string;
 };
 
@@ -59,11 +66,15 @@ const EMPTY_FORM: FormState = {
   title: "",
   address: "",
   district: "",
+  ward: "",
   roomType: "SINGLE",
+  status: "AVAILABLE",
   pricePerMonth: "",
   depositAmount: "",
   maxOccupants: "1",
   areaSqm: "",
+  electricityRate: "",
+  waterRate: "",
   description: "",
 };
 
@@ -97,12 +108,16 @@ function toPayload(form: FormState): RoomPayload {
     title: form.title.trim(),
     address: form.address.trim(),
     district: form.district.trim() || undefined,
+    ward: form.ward.trim() || undefined,
     city: "TP. Hồ Chí Minh",
     roomType: form.roomType,
+    status: form.status,
     pricePerMonth: parseNumber(form.pricePerMonth) ?? 0,
     depositAmount: parseNumber(form.depositAmount),
     maxOccupants: parseNumber(form.maxOccupants) ?? 1,
     areaSqm: parseNumber(form.areaSqm),
+    electricityRate: parseNumber(form.electricityRate),
+    waterRate: parseNumber(form.waterRate),
     description: form.description.trim() || undefined,
   };
 }
@@ -125,6 +140,8 @@ export default function LandlordRoomsPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionRoomId, setActionRoomId] = useState<string | null>(null);
+  const [roomImages, setRoomImages] = useState<RoomImage[]>([]);
+  const [imageBusy, setImageBusy] = useState(false);
 
   const loadRooms = useCallback(async () => {
     try {
@@ -170,9 +187,19 @@ export default function LandlordRoomsPage() {
     setRefreshing(false);
   };
 
+  const loadRoomImages = useCallback(async (roomId: string) => {
+    try {
+      const res = await roomApi.listImages(roomId);
+      setRoomImages(res.data ?? []);
+    } catch {
+      setRoomImages([]);
+    }
+  }, []);
+
   const openCreateForm = () => {
     setEditingRoom(null);
     setForm(EMPTY_FORM);
+    setRoomImages([]);
     setFormOpen(true);
   };
 
@@ -182,20 +209,27 @@ export default function LandlordRoomsPage() {
       title: room.title,
       address: room.address,
       district: room.district ?? "",
+      ward: room.ward ?? "",
       roomType: (room.roomType as RoomType) ?? "SINGLE",
+      status: (room.status as RoomStatus) ?? "AVAILABLE",
       pricePerMonth: String(room.pricePerMonth ?? ""),
       depositAmount: room.depositAmount ? String(room.depositAmount) : "",
       maxOccupants: String(room.maxOccupants ?? 1),
       areaSqm: room.areaSqm ? String(room.areaSqm) : "",
+      electricityRate: room.electricityRate ? String(room.electricityRate) : "",
+      waterRate: room.waterRate ? String(room.waterRate) : "",
       description: room.description ?? "",
     });
+    setRoomImages([]);
     setFormOpen(true);
+    void loadRoomImages(room._id);
   };
 
   const closeForm = () => {
     setFormOpen(false);
     setEditingRoom(null);
     setForm(EMPTY_FORM);
+    setRoomImages([]);
   };
 
   const handleSubmit = async () => {
@@ -210,15 +244,23 @@ export default function LandlordRoomsPage() {
       const payload = toPayload(form);
       if (editingRoom) {
         await roomApi.update(editingRoom._id, payload);
+        closeForm();
+        await loadRooms();
+        Alert.alert("Thành công", "Đã cập nhật phòng.");
       } else {
-        await roomApi.create(payload);
+        const res = await roomApi.create(payload);
+        const created = res.data;
+        setEditingRoom(created);
+        setRoomImages([]);
+        await loadRooms();
+        if (created?._id) {
+          await loadRoomImages(created._id);
+        }
+        Alert.alert(
+          "Thành công",
+          "Đã tạo phòng. Bạn có thể thêm ảnh bên dưới trước khi đóng.",
+        );
       }
-      closeForm();
-      await loadRooms();
-      Alert.alert(
-        "Thành công",
-        editingRoom ? "Đã cập nhật phòng." : "Đã tạo phòng mới.",
-      );
     } catch (err) {
       Alert.alert(
         "Lưu thất bại",
@@ -227,6 +269,145 @@ export default function LandlordRoomsPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const uploadPickedAssets = async (
+    assets: ImagePicker.ImagePickerAsset[],
+  ) => {
+    if (!editingRoom?._id || assets.length === 0) return;
+
+    setImageBusy(true);
+    try {
+      const hasPrimary = roomImages.some((img) => img.isPrimary);
+      for (let i = 0; i < assets.length; i++) {
+        const asset = assets[i];
+        const ext = asset.mimeType?.includes("png") ? "png" : "jpg";
+        await roomApi.uploadImage(editingRoom._id, {
+          uri: asset.uri,
+          fileName: asset.fileName ?? `room-${Date.now()}-${i}.${ext}`,
+          mimeType: asset.mimeType ?? "image/jpeg",
+          isPrimary: !hasPrimary && i === 0,
+          order: roomImages.length + i,
+        });
+      }
+      await loadRoomImages(editingRoom._id);
+      await loadRooms();
+      Alert.alert("Thành công", `Đã thêm ${assets.length} ảnh.`);
+    } catch (err) {
+      Alert.alert(
+        "Upload thất bại",
+        getApiErrorMessage(err, "Không thể tải ảnh lên."),
+      );
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
+  const pickImagesFromLibrary = async () => {
+    if (!editingRoom?._id) {
+      Alert.alert("Lưu phòng trước", "Hãy tạo phòng trước khi thêm ảnh.");
+      return;
+    }
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        "Cần quyền truy cập",
+        "Vui lòng cho phép truy cập thư viện ảnh trong Cài đặt.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      quality: 0.8,
+      selectionLimit: 10,
+    });
+
+    if (result.canceled || result.assets.length === 0) return;
+    await uploadPickedAssets(result.assets);
+  };
+
+  const pickImageFromCamera = async () => {
+    if (!editingRoom?._id) {
+      Alert.alert("Lưu phòng trước", "Hãy tạo phòng trước khi thêm ảnh.");
+      return;
+    }
+
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        "Cần quyền camera",
+        "Vui lòng cho phép truy cập camera trong Cài đặt.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
+      quality: 0.8,
+    });
+
+    if (result.canceled || result.assets.length === 0) return;
+    await uploadPickedAssets(result.assets);
+  };
+
+  const handlePickAndUploadImages = () => {
+    if (!editingRoom?._id) {
+      Alert.alert("Lưu phòng trước", "Hãy tạo phòng trước khi thêm ảnh.");
+      return;
+    }
+
+    Alert.alert("Thêm ảnh phòng", "Chọn cách thêm ảnh", [
+      { text: "Thư viện ảnh", onPress: () => void pickImagesFromLibrary() },
+      { text: "Chụp ảnh", onPress: () => void pickImageFromCamera() },
+      { text: "Hủy", style: "cancel" },
+    ]);
+  };
+
+  const handleSetPrimaryImage = async (imageId: string) => {
+    if (!editingRoom?._id) return;
+    setImageBusy(true);
+    try {
+      await roomApi.setPrimaryImage(editingRoom._id, imageId);
+      await loadRoomImages(editingRoom._id);
+      await loadRooms();
+    } catch (err) {
+      Alert.alert(
+        "Thao tác thất bại",
+        getApiErrorMessage(err, "Không thể đặt ảnh chính."),
+      );
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
+  const handleDeleteImage = (imageId: string) => {
+    if (!editingRoom?._id) return;
+    Alert.alert("Xóa ảnh", "Bạn có chắc muốn xóa ảnh này?", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Xóa",
+        style: "destructive",
+        onPress: () => {
+          setImageBusy(true);
+          void roomApi
+            .deleteImage(editingRoom._id, imageId)
+            .then(async () => {
+              await loadRoomImages(editingRoom._id);
+              await loadRooms();
+            })
+            .catch((err) =>
+              Alert.alert(
+                "Xóa thất bại",
+                getApiErrorMessage(err, "Không thể xóa ảnh."),
+              ),
+            )
+            .finally(() => setImageBusy(false));
+        },
+      },
+    ]);
   };
 
   const handleTogglePublish = async (room: Room) => {
@@ -386,11 +567,17 @@ export default function LandlordRoomsPage() {
         <RoomFormModal
           visible={formOpen}
           editing={Boolean(editingRoom)}
+          roomId={editingRoom?._id}
           form={form}
+          images={roomImages}
           isSubmitting={isSubmitting}
+          imageBusy={imageBusy}
           onChange={setForm}
           onClose={closeForm}
           onSubmit={() => void handleSubmit()}
+          onPickImages={() => void handlePickAndUploadImages()}
+          onSetPrimaryImage={(imageId) => void handleSetPrimaryImage(imageId)}
+          onDeleteImage={handleDeleteImage}
         />
 
         <LandlordBottomNavigation activeTab="rooms" />
@@ -557,19 +744,31 @@ function RoomCard({
 function RoomFormModal({
   visible,
   editing,
+  roomId,
   form,
+  images,
   isSubmitting,
+  imageBusy,
   onChange,
   onClose,
   onSubmit,
+  onPickImages,
+  onSetPrimaryImage,
+  onDeleteImage,
 }: {
   visible: boolean;
   editing: boolean;
+  roomId?: string;
   form: FormState;
+  images: RoomImage[];
   isSubmitting: boolean;
+  imageBusy: boolean;
   onChange: (next: FormState) => void;
   onClose: () => void;
   onSubmit: () => void;
+  onPickImages: () => void;
+  onSetPrimaryImage: (imageId: string) => void;
+  onDeleteImage: (imageId: string) => void;
 }) {
   const insets = useSafeAreaInsets();
 
@@ -631,6 +830,41 @@ function RoomFormModal({
                   placeholderTextColor="#9AA3B2"
                   style={styles.input}
                 />
+              </Field>
+
+              <Field label="Phường / Xã">
+                <TextInput
+                  value={form.ward}
+                  onChangeText={(v) => setField("ward", v)}
+                  placeholder="VD: Phường Tân Phú"
+                  placeholderTextColor="#9AA3B2"
+                  style={styles.input}
+                />
+              </Field>
+
+              <Field label="Trạng thái phòng">
+                <View style={styles.typeRow}>
+                  {STATUS_OPTIONS.map((status) => {
+                    const active = form.status === status;
+                    return (
+                      <Pressable
+                        key={status}
+                        onPress={() => setField("status", status)}
+                        style={[styles.typeChip, active && styles.typeChipActive]}
+                      >
+                        <ThemedText
+                          type="small"
+                          style={[
+                            styles.typeChipText,
+                            active && styles.typeChipTextActive,
+                          ]}
+                        >
+                          {roomStatusLabel(status)}
+                        </ThemedText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </Field>
 
               <Field label="Loại phòng">
@@ -712,6 +946,33 @@ function RoomFormModal({
                 </View>
               </View>
 
+              <View style={styles.formRow}>
+                <View style={styles.formCol}>
+                  <Field label="Giá điện (đ/kWh)">
+                    <TextInput
+                      value={form.electricityRate}
+                      onChangeText={(v) => setField("electricityRate", v)}
+                      placeholder="3500"
+                      placeholderTextColor="#9AA3B2"
+                      style={styles.input}
+                      keyboardType="number-pad"
+                    />
+                  </Field>
+                </View>
+                <View style={styles.formCol}>
+                  <Field label="Giá nước (đ/m³)">
+                    <TextInput
+                      value={form.waterRate}
+                      onChangeText={(v) => setField("waterRate", v)}
+                      placeholder="15000"
+                      placeholderTextColor="#9AA3B2"
+                      style={styles.input}
+                      keyboardType="number-pad"
+                    />
+                  </Field>
+                </View>
+              </View>
+
               <Field label="Mô tả">
                 <TextInput
                   value={form.description}
@@ -723,6 +984,96 @@ function RoomFormModal({
                   textAlignVertical="top"
                 />
               </Field>
+
+              {roomId ? (
+                <View style={styles.imageSection}>
+                  <View style={styles.imageSectionHeader}>
+                    <ThemedText type="smallBold" style={styles.fieldLabel}>
+                      Ảnh phòng
+                    </ThemedText>
+                    <Pressable
+                      style={[
+                        styles.addImageButton,
+                        imageBusy && styles.addImageButtonDisabled,
+                      ]}
+                      onPress={onPickImages}
+                      disabled={imageBusy}
+                    >
+                      {imageBusy ? (
+                        <ActivityIndicator size="small" color="#E68A2E" />
+                      ) : (
+                        <ThemedText type="smallBold" style={styles.addImageButtonText}>
+                          + Thêm ảnh
+                        </ThemedText>
+                      )}
+                    </Pressable>
+                  </View>
+
+                  {images.length === 0 ? (
+                    <Pressable
+                      style={styles.imageEmptyBox}
+                      onPress={onPickImages}
+                      disabled={imageBusy}
+                    >
+                      <Text style={styles.imageEmptyIcon}>📷</Text>
+                      <ThemedText type="smallBold" style={styles.imageEmptyTitle}>
+                        Chạm để thêm ảnh
+                      </ThemedText>
+                      <ThemedText type="small" style={styles.imageHint}>
+                        Thêm ít nhất một ảnh để tin đăng hấp dẫn hơn.
+                      </ThemedText>
+                    </Pressable>
+                  ) : (
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.imageRow}
+                    >
+                      {images.map((image) => (
+                        <View key={image._id} style={styles.imageCard}>
+                          <Image
+                            source={{ uri: image.url }}
+                            style={styles.imageThumb}
+                            contentFit="cover"
+                          />
+                          {image.isPrimary ? (
+                            <View style={styles.primaryBadge}>
+                              <ThemedText type="small" style={styles.primaryBadgeText}>
+                                Chính
+                              </ThemedText>
+                            </View>
+                          ) : null}
+                          <View style={styles.imageActions}>
+                            {!image.isPrimary ? (
+                              <Pressable
+                                style={styles.imageActionBtn}
+                                onPress={() => onSetPrimaryImage(image._id)}
+                                disabled={imageBusy}
+                              >
+                                <ThemedText type="small" style={styles.imageActionText}>
+                                  Đặt chính
+                                </ThemedText>
+                              </Pressable>
+                            ) : null}
+                            <Pressable
+                              style={[styles.imageActionBtn, styles.imageDeleteBtn]}
+                              onPress={() => onDeleteImage(image._id)}
+                              disabled={imageBusy}
+                            >
+                              <ThemedText
+                                type="small"
+                                style={styles.imageDeleteText}
+                              >
+                                Xóa
+                              </ThemedText>
+                            </Pressable>
+                          </View>
+                        </View>
+                      ))}
+                    </ScrollView>
+                  )}
+                </View>
+              ) : null}
 
               <Pressable
                 style={[
@@ -1123,5 +1474,109 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
+  },
+  imageSection: {
+    marginBottom: 12,
+  },
+  imageSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  addImageButton: {
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#FFF0DF",
+    borderWidth: 1,
+    borderColor: "#E68A2E",
+  },
+  addImageButtonDisabled: {
+    opacity: 0.6,
+  },
+  addImageButtonText: {
+    color: "#C47A10",
+  },
+  imageHint: {
+    color: "#9AA3B2",
+    lineHeight: 18,
+    textAlign: "center",
+  },
+  imageEmptyBox: {
+    borderWidth: 1,
+    borderColor: "#ECE7DF",
+    borderStyle: "dashed",
+    borderRadius: 12,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    backgroundColor: "#FAFAF8",
+    marginBottom: 8,
+  },
+  imageEmptyIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  imageEmptyTitle: {
+    color: "#C47A10",
+    marginBottom: 4,
+  },
+  imageRow: {
+    gap: 10,
+    paddingBottom: 4,
+  },
+  imageCard: {
+    width: 120,
+    borderRadius: 10,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#ECE7DF",
+    backgroundColor: "#FAFAF8",
+  },
+  imageThumb: {
+    width: "100%",
+    height: 90,
+    backgroundColor: "#EDE6DC",
+  },
+  primaryBadge: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    backgroundColor: "rgba(230, 138, 46, 0.92)",
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  primaryBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  imageActions: {
+    flexDirection: "row",
+    gap: 4,
+    padding: 6,
+  },
+  imageActionBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 6,
+    paddingVertical: 4,
+    backgroundColor: "#F0EBE4",
+  },
+  imageActionText: {
+    color: "#4B5568",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  imageDeleteBtn: {
+    backgroundColor: "#FFF0F0",
+  },
+  imageDeleteText: {
+    color: "#D14343",
+    fontSize: 10,
+    fontWeight: "700",
   },
 });

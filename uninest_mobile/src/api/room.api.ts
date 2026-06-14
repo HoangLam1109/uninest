@@ -1,12 +1,23 @@
 import { api } from "@/lib/api-client";
+import { appendImageToFormData } from "@/utils/upload-image";
 import type { LandlordTenantListResponse } from "@/types/tenant";
 import type {
   RoomImageListResponse,
+  RoomImageResponse,
   RoomListResponse,
   RoomPayload,
   RoomResponse,
   RoomStatus,
 } from "@/types/room";
+
+export type RoomImageUploadInput = {
+  uri: string;
+  fileName?: string;
+  mimeType?: string;
+  isPrimary?: boolean;
+  caption?: string;
+  order?: number;
+};
 
 export type RoomListParams = {
   page?: number;
@@ -57,6 +68,30 @@ export const roomApi = {
 
   listImages: (roomId: string) =>
     api.get<RoomImageListResponse>(`/rooms/${roomId}/images`),
+
+  uploadImage: async (roomId: string, input: RoomImageUploadInput) => {
+    const formData = new FormData();
+
+    await appendImageToFormData(formData, "image", {
+      uri: input.uri,
+      fileName: input.fileName ?? `room-${Date.now()}.jpg`,
+      mimeType: input.mimeType ?? "image/jpeg",
+    });
+
+    if (input.caption) formData.append("caption", input.caption);
+    if (input.order != null) formData.append("order", String(input.order));
+    if (input.isPrimary) formData.append("isPrimary", "true");
+
+    return api.postForm<RoomImageResponse>(`/rooms/${roomId}/images`, formData);
+  },
+
+  setPrimaryImage: (roomId: string, imageId: string) =>
+    api.patch<RoomImageResponse>(`/rooms/${roomId}/images/${imageId}/primary`),
+
+  deleteImage: (roomId: string, imageId: string) =>
+    api.delete<{ success: boolean; message?: string }>(
+      `/rooms/${roomId}/images/${imageId}`,
+    ),
 
   /** GET /api/rooms/tenants */
   listTenants: () => api.get<LandlordTenantListResponse>("/rooms/tenants"),

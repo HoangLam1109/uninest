@@ -25,7 +25,7 @@ import { LandlordBottomNavigation } from "@/components/landlord/bottom-navigatio
 import { ThemedText } from "@/components/themed-text";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { Booking } from "@/types/booking";
-import type { Invoice, InvoiceStatus } from "@/types/invoice";
+import type { Invoice, InvoiceDetail, InvoiceStatus } from "@/types/invoice";
 import {
   getBookingRoom,
   getBookingTenant,
@@ -52,9 +52,24 @@ const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
   { id: "OVERDUE", label: "Quá hạn" },
 ];
 
+type CreateMode = "manual" | "utility";
+
 type CreateForm = {
   bookingId: string;
   billingMonth: string;
+  dueDate: string;
+  rentAmount: string;
+  electricityAmount: string;
+  waterAmount: string;
+  electricityNewIndex: string;
+  waterNewIndex: string;
+  electricityRate: string;
+  waterRate: string;
+  additionalFees: string;
+  notes: string;
+};
+
+type EditForm = {
   dueDate: string;
   rentAmount: string;
   electricityAmount: string;
@@ -98,9 +113,42 @@ function emptyCreateForm(): CreateForm {
     rentAmount: "",
     electricityAmount: "",
     waterAmount: "",
+    electricityNewIndex: "",
+    waterNewIndex: "",
+    electricityRate: "",
+    waterRate: "",
     additionalFees: "",
     notes: "",
   };
+}
+
+function toDateInputValue(value?: string | null): string {
+  if (!value) return defaultDueDate();
+  return value.slice(0, 10);
+}
+
+function invoiceToEditForm(invoice: Invoice): EditForm {
+  return {
+    dueDate: toDateInputValue(invoice.dueDate),
+    rentAmount: String(invoice.rentAmount ?? ""),
+    electricityAmount: invoice.electricityAmount
+      ? String(invoice.electricityAmount)
+      : "",
+    waterAmount: invoice.waterAmount ? String(invoice.waterAmount) : "",
+    additionalFees: invoice.additionalFees ? String(invoice.additionalFees) : "",
+    notes: invoice.notes ?? "",
+  };
+}
+
+function validateUtilityForm(form: CreateForm): string | null {
+  const base = validateCreateForm(form);
+  if (base) return base;
+  const elec = parseAmount(form.electricityNewIndex);
+  const water = parseAmount(form.waterNewIndex);
+  if (elec == null && water == null) {
+    return "Nhập ít nhất một chỉ số điện hoặc nước mới.";
+  }
+  return null;
 }
 
 function validateCreateForm(form: CreateForm): string | null {
@@ -122,8 +170,11 @@ export default function LandlordInvoicesPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [actionInvoiceId, setActionInvoiceId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [createMode, setCreateMode] = useState<CreateMode>("manual");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState<CreateForm>(emptyCreateForm);
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [approvedBookings, setApprovedBookings] = useState<Booking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
 
@@ -172,6 +223,7 @@ export default function LandlordInvoicesPage() {
   };
 
   const openCreateForm = async () => {
+    setCreateMode("manual");
     setForm(emptyCreateForm());
     setFormOpen(true);
     setLoadingBookings(true);
@@ -192,10 +244,28 @@ export default function LandlordInvoicesPage() {
   const closeCreateForm = () => {
     setFormOpen(false);
     setForm(emptyCreateForm());
+    setCreateMode("manual");
+  };
+
+  const closeEditForm = () => {
+    setEditingInvoice(null);
+    setEditForm(null);
+  };
+
+  const selectBooking = (booking: Booking) => {
+    const room = getBookingRoom(booking);
+    setForm((prev) => ({
+      ...prev,
+      bookingId: booking._id,
+      rentAmount: room?.pricePerMonth ? String(room.pricePerMonth) : prev.rentAmount,
+    }));
   };
 
   const handleCreate = async () => {
-    const error = validateCreateForm(form);
+    const error =
+      createMode === "utility"
+        ? validateUtilityForm(form)
+        : validateCreateForm(form);
     if (error) {
       Alert.alert("Không thể tạo hóa đơn", error);
       return;
@@ -203,23 +273,83 @@ export default function LandlordInvoicesPage() {
 
     setIsSubmitting(true);
     try {
-      await invoiceApi.create({
-        bookingId: form.bookingId,
-        billingMonth: form.billingMonth.trim(),
-        dueDate: new Date(form.dueDate).toISOString(),
-        rentAmount: parseAmount(form.rentAmount) ?? 0,
-        electricityAmount: parseAmount(form.electricityAmount),
-        waterAmount: parseAmount(form.waterAmount),
-        additionalFees: parseAmount(form.additionalFees),
-        notes: form.notes.trim() || undefined,
-      });
+      if (createMode === "utility") {
+        await invoiceApi.createUtility({
+          bookingId: form.bookingId,
+          billingMonth: form.billingMonth.trim(),
+          dueDate: new Date(form.dueDate).toISOString(),
+          rentAmount: parseAmount(form.rentAmount) ?? 0,
+          electricityNewIndex: parseAmount(form.electricityNewIndex),
+          waterNewIndex: parseAmount(form.waterNewIndex),
+          electricityRate: parseAmount(form.electricityRate),
+          waterRate: parseAmount(form.waterRate),
+          additionalFees: parseAmount(form.additionalFees),
+          notes: form.notes.trim() || undefined,
+        });
+      } else {
+        await invoiceApi.create({
+          bookingId: form.bookingId,
+          billingMonth: form.billingMonth.trim(),
+          dueDate: new Date(form.dueDate).toISOString(),
+          rentAmount: parseAmount(form.rentAmount) ?? 0,
+          electricityAmount: parseAmount(form.electricityAmount),
+          waterAmount: parseAmount(form.waterAmount),
+          additionalFees: parseAmount(form.additionalFees),
+          notes: form.notes.trim() || undefined,
+        });
+      }
       closeCreateForm();
       await loadInvoices();
-      Alert.alert("Thành công", "Đã tạo hóa đơn nháp.");
+      Alert.alert(
+        "Thành công",
+        createMode === "utility"
+          ? "Đã tạo hóa đơn với điện/nước tự tính."
+          : "Đã tạo hóa đơn nháp.",
+      );
     } catch (err) {
       Alert.alert(
         "Tạo hóa đơn thất bại",
         getApiErrorMessage(err, "Không thể tạo hóa đơn."),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openEditForm = (invoice: Invoice) => {
+    setEditingInvoice(invoice);
+    setEditForm(invoiceToEditForm(invoice));
+  };
+
+  const handleUpdate = async () => {
+    if (!editingInvoice || !editForm) return;
+    const rent = parseAmount(editForm.rentAmount);
+    if (rent == null || rent <= 0) {
+      Alert.alert("Không thể lưu", "Tiền thuê phải lớn hơn 0.");
+      return;
+    }
+    if (!editForm.dueDate.trim()) {
+      Alert.alert("Không thể lưu", "Vui lòng nhập hạn thanh toán.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await invoiceApi.update(editingInvoice._id, {
+        rentAmount: rent,
+        electricityAmount: parseAmount(editForm.electricityAmount),
+        waterAmount: parseAmount(editForm.waterAmount),
+        additionalFees: parseAmount(editForm.additionalFees),
+        notes: editForm.notes.trim() || undefined,
+        dueDate: new Date(editForm.dueDate).toISOString(),
+      });
+      closeEditForm();
+      await loadInvoices();
+      Alert.alert("Thành công", "Đã cập nhật hóa đơn nháp.");
+    } catch (err) {
+      Alert.alert(
+        "Cập nhật thất bại",
+        getApiErrorMessage(err, "Không thể cập nhật hóa đơn."),
       );
     } finally {
       setIsSubmitting(false);
@@ -408,6 +538,7 @@ export default function LandlordInvoicesPage() {
                 onSend={() => handleSend(invoice)}
                 onMarkPaid={() => handleMarkPaid(invoice)}
                 onDelete={() => handleDelete(invoice)}
+                onEdit={() => openEditForm(invoice)}
               />
             ))
           )}
@@ -415,13 +546,32 @@ export default function LandlordInvoicesPage() {
 
         <CreateInvoiceModal
           visible={formOpen}
+          mode={createMode}
           form={form}
           bookings={approvedBookings}
           loadingBookings={loadingBookings}
           isSubmitting={isSubmitting}
           onChange={setForm}
+          onModeChange={setCreateMode}
+          onSelectBooking={selectBooking}
           onClose={closeCreateForm}
           onSubmit={() => void handleCreate()}
+        />
+
+        <EditInvoiceModal
+          visible={editForm != null}
+          form={editForm ?? {
+            dueDate: "",
+            rentAmount: "",
+            electricityAmount: "",
+            waterAmount: "",
+            additionalFees: "",
+            notes: "",
+          }}
+          isSubmitting={isSubmitting}
+          onChange={(next) => setEditForm(next)}
+          onClose={closeEditForm}
+          onSubmit={() => void handleUpdate()}
         />
 
         <LandlordBottomNavigation activeTab="reports" />
@@ -467,15 +617,31 @@ function InvoiceCard({
   onSend,
   onMarkPaid,
   onDelete,
+  onEdit,
 }: {
   invoice: Invoice;
   busy: boolean;
   onSend: () => void;
   onMarkPaid: () => void;
   onDelete: () => void;
+  onEdit: () => void;
 }) {
+  const [detail, setDetail] = useState<InvoiceDetail | null>(null);
   const statusStyle = invoiceStatusStyle(invoice.status);
   const roomTitle = getRoomTitleFromInvoice(invoice);
+
+  useEffect(() => {
+    let cancelled = false;
+    void invoiceApi
+      .getDetail(invoice._id)
+      .then((res) => {
+        if (!cancelled) setDetail(res.data ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [invoice._id]);
 
   return (
     <View style={styles.card}>
@@ -497,7 +663,7 @@ function InvoiceCard({
       </View>
 
       <View style={styles.amountBox}>
-        <AmountRow label="Tiền thuê" value={formatPrice(invoice.rentAmount)} />
+        <AmountRow label="Tiền thuê" value={formatPrice(invoice.rentAmount ?? 0)} />
         {invoice.electricityAmount ? (
           <AmountRow
             label="Điện"
@@ -506,6 +672,18 @@ function InvoiceCard({
         ) : null}
         {invoice.waterAmount ? (
           <AmountRow label="Nước" value={formatPrice(invoice.waterAmount)} />
+        ) : null}
+        {detail?.electricityUsage != null ? (
+          <AmountRow
+            label="Điện (kWh)"
+            value={`${detail.electricityUsage} (${detail.electricityOldIndex ?? "?"} → ${detail.electricityNewIndex ?? "?"})`}
+          />
+        ) : null}
+        {detail?.waterUsage != null ? (
+          <AmountRow
+            label="Nước (m³)"
+            value={`${detail.waterUsage} (${detail.waterOldIndex ?? "?"} → ${detail.waterNewIndex ?? "?"})`}
+          />
         ) : null}
         {invoice.additionalFees ? (
           <AmountRow
@@ -518,13 +696,18 @@ function InvoiceCard({
             Tổng cộng
           </ThemedText>
           <ThemedText type="smallBold" style={styles.totalValue}>
-            {formatPrice(invoice.totalAmount)}
+            {formatPrice(invoice.totalAmount ?? 0)}
           </ThemedText>
         </View>
       </View>
 
       <View style={styles.metaRow}>
-        <MetaItem label="Hạn TT" value={formatInvoiceDate(invoice.dueDate)} />
+        <MetaItem
+          label="Hạn TT"
+          value={
+            invoice.dueDate ? formatInvoiceDate(invoice.dueDate) : "—"
+          }
+        />
         {invoice.paidAt ? (
           <MetaItem label="Đã TT" value={formatInvoiceDate(invoice.paidAt)} />
         ) : null}
@@ -538,6 +721,15 @@ function InvoiceCard({
 
       {invoice.status === "DRAFT" ? (
         <View style={styles.actionRow}>
+          <Pressable
+            style={[styles.actionBtn, styles.actionBtnMuted]}
+            onPress={onEdit}
+            disabled={busy}
+          >
+            <ThemedText type="smallBold" style={styles.actionBtnMutedText}>
+              Sửa
+            </ThemedText>
+          </Pressable>
           <Pressable
             style={[styles.actionBtn, styles.actionBtnDanger]}
             onPress={onDelete}
@@ -610,20 +802,26 @@ function MetaItem({ label, value }: { label: string; value: string }) {
 
 function CreateInvoiceModal({
   visible,
+  mode,
   form,
   bookings,
   loadingBookings,
   isSubmitting,
   onChange,
+  onModeChange,
+  onSelectBooking,
   onClose,
   onSubmit,
 }: {
   visible: boolean;
+  mode: CreateMode;
   form: CreateForm;
   bookings: Booking[];
   loadingBookings: boolean;
   isSubmitting: boolean;
   onChange: (next: CreateForm) => void;
+  onModeChange: (mode: CreateMode) => void;
+  onSelectBooking: (booking: Booking) => void;
   onClose: () => void;
   onSubmit: () => void;
 }) {
@@ -659,6 +857,43 @@ function CreateInvoiceModal({
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
+              <View style={styles.modeTabs}>
+                <Pressable
+                  style={[
+                    styles.modeTab,
+                    mode === "manual" && styles.modeTabActive,
+                  ]}
+                  onPress={() => onModeChange("manual")}
+                >
+                  <ThemedText
+                    type="smallBold"
+                    style={[
+                      styles.modeTabText,
+                      mode === "manual" && styles.modeTabTextActive,
+                    ]}
+                  >
+                    Nhập thủ công
+                  </ThemedText>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.modeTab,
+                    mode === "utility" && styles.modeTabActive,
+                  ]}
+                  onPress={() => onModeChange("utility")}
+                >
+                  <ThemedText
+                    type="smallBold"
+                    style={[
+                      styles.modeTabText,
+                      mode === "utility" && styles.modeTabTextActive,
+                    ]}
+                  >
+                    Tự tính điện/nước
+                  </ThemedText>
+                </Pressable>
+              </View>
+
               <Field label="Đơn đặt phòng" required>
                 {loadingBookings ? (
                   <ActivityIndicator color="#E68A2E" style={{ marginVertical: 12 }} />
@@ -675,7 +910,7 @@ function CreateInvoiceModal({
                       return (
                         <Pressable
                           key={booking._id}
-                          onPress={() => setField("bookingId", booking._id)}
+                          onPress={() => onSelectBooking(booking)}
                           style={[
                             styles.bookingItem,
                             active && styles.bookingItemActive,
@@ -707,6 +942,210 @@ function CreateInvoiceModal({
                 />
               </Field>
 
+              <Field label="Hạn thanh toán" required>
+                <TextInput
+                  value={form.dueDate}
+                  onChangeText={(v) => setField("dueDate", v)}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor="#9AA3B2"
+                  style={styles.input}
+                />
+              </Field>
+
+              <Field label="Tiền thuê" required>
+                <TextInput
+                  value={form.rentAmount}
+                  onChangeText={(v) => setField("rentAmount", v)}
+                  placeholder="3500000"
+                  placeholderTextColor="#9AA3B2"
+                  style={styles.input}
+                  keyboardType="number-pad"
+                />
+              </Field>
+
+              {mode === "utility" ? (
+                <>
+                  <View style={styles.formRow}>
+                    <View style={styles.formCol}>
+                      <Field label="Chỉ số điện mới">
+                        <TextInput
+                          value={form.electricityNewIndex}
+                          onChangeText={(v) =>
+                            setField("electricityNewIndex", v)
+                          }
+                          placeholder="1250"
+                          placeholderTextColor="#9AA3B2"
+                          style={styles.input}
+                          keyboardType="number-pad"
+                        />
+                      </Field>
+                    </View>
+                    <View style={styles.formCol}>
+                      <Field label="Chỉ số nước mới">
+                        <TextInput
+                          value={form.waterNewIndex}
+                          onChangeText={(v) => setField("waterNewIndex", v)}
+                          placeholder="85"
+                          placeholderTextColor="#9AA3B2"
+                          style={styles.input}
+                          keyboardType="number-pad"
+                        />
+                      </Field>
+                    </View>
+                  </View>
+                  <View style={styles.formRow}>
+                    <View style={styles.formCol}>
+                      <Field label="Giá điện (đ/kWh)">
+                        <TextInput
+                          value={form.electricityRate}
+                          onChangeText={(v) => setField("electricityRate", v)}
+                          placeholder="Lấy từ phòng"
+                          placeholderTextColor="#9AA3B2"
+                          style={styles.input}
+                          keyboardType="number-pad"
+                        />
+                      </Field>
+                    </View>
+                    <View style={styles.formCol}>
+                      <Field label="Giá nước (đ/m³)">
+                        <TextInput
+                          value={form.waterRate}
+                          onChangeText={(v) => setField("waterRate", v)}
+                          placeholder="Lấy từ phòng"
+                          placeholderTextColor="#9AA3B2"
+                          style={styles.input}
+                          keyboardType="number-pad"
+                        />
+                      </Field>
+                    </View>
+                  </View>
+                  <ThemedText type="small" style={styles.hintText}>
+                    Cần hợp đồng active và chỉ số công tơ ban đầu. Hệ thống tự
+                    tính tiền điện/nước từ chỉ số cũ → mới.
+                  </ThemedText>
+                </>
+              ) : (
+                <View style={styles.formRow}>
+                  <View style={styles.formCol}>
+                    <Field label="Tiền điện">
+                      <TextInput
+                        value={form.electricityAmount}
+                        onChangeText={(v) => setField("electricityAmount", v)}
+                        placeholder="0"
+                        placeholderTextColor="#9AA3B2"
+                        style={styles.input}
+                        keyboardType="number-pad"
+                      />
+                    </Field>
+                  </View>
+                  <View style={styles.formCol}>
+                    <Field label="Tiền nước">
+                      <TextInput
+                        value={form.waterAmount}
+                        onChangeText={(v) => setField("waterAmount", v)}
+                        placeholder="0"
+                        placeholderTextColor="#9AA3B2"
+                        style={styles.input}
+                        keyboardType="number-pad"
+                      />
+                    </Field>
+                  </View>
+                </View>
+              )}
+
+              <Field label="Phí khác">
+                <TextInput
+                  value={form.additionalFees}
+                  onChangeText={(v) => setField("additionalFees", v)}
+                  placeholder="0"
+                  placeholderTextColor="#9AA3B2"
+                  style={styles.input}
+                  keyboardType="number-pad"
+                />
+              </Field>
+
+              <Field label="Ghi chú">
+                <TextInput
+                  value={form.notes}
+                  onChangeText={(v) => setField("notes", v)}
+                  placeholder="Ghi chú cho người thuê..."
+                  placeholderTextColor="#9AA3B2"
+                  style={[styles.input, styles.textArea]}
+                  multiline
+                  textAlignVertical="top"
+                />
+              </Field>
+
+              <Pressable
+                style={[
+                  styles.submitButton,
+                  isSubmitting && styles.submitButtonDisabled,
+                ]}
+                onPress={onSubmit}
+                disabled={isSubmitting || bookings.length === 0}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <ThemedText type="smallBold" style={styles.submitButtonText}>
+                    {mode === "utility"
+                      ? "Tạo hóa đơn điện nước"
+                      : "Tạo hóa đơn nháp"}
+                  </ThemedText>
+                )}
+              </Pressable>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+}
+
+function EditInvoiceModal({
+  visible,
+  form,
+  isSubmitting,
+  onChange,
+  onClose,
+  onSubmit,
+}: {
+  visible: boolean;
+  form: EditForm;
+  isSubmitting: boolean;
+  onChange: (next: EditForm) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+
+  const setField = <K extends keyof EditForm>(key: K, value: EditForm[K]) => {
+    onChange({ ...form, [key]: value });
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <KeyboardAvoidingView
+          behavior={Platform.select({ ios: "padding", android: undefined })}
+          style={styles.modalKeyboard}
+        >
+          <View
+            style={[
+              styles.modalSheet,
+              { paddingBottom: Math.max(insets.bottom, 16) },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <ThemedText type="smallBold" style={styles.modalTitle}>
+                Sửa hóa đơn nháp
+              </ThemedText>
+              <Pressable onPress={onClose} hitSlop={10}>
+                <Text style={styles.modalClose}>✕</Text>
+              </Pressable>
+            </View>
+
+            <ScrollView keyboardShouldPersistTaps="handled">
               <Field label="Hạn thanh toán" required>
                 <TextInput
                   value={form.dueDate}
@@ -770,7 +1209,7 @@ function CreateInvoiceModal({
                 <TextInput
                   value={form.notes}
                   onChangeText={(v) => setField("notes", v)}
-                  placeholder="Ghi chú cho người thuê..."
+                  placeholder="Ghi chú..."
                   placeholderTextColor="#9AA3B2"
                   style={[styles.input, styles.textArea]}
                   multiline
@@ -784,13 +1223,13 @@ function CreateInvoiceModal({
                   isSubmitting && styles.submitButtonDisabled,
                 ]}
                 onPress={onSubmit}
-                disabled={isSubmitting || bookings.length === 0}
+                disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
                   <ThemedText type="smallBold" style={styles.submitButtonText}>
-                    Tạo hóa đơn nháp
+                    Lưu thay đổi
                   </ThemedText>
                 )}
               </Pressable>
@@ -1066,6 +1505,38 @@ const styles = StyleSheet.create({
   },
   actionBtnDangerText: {
     color: "#D14343",
+  },
+  actionBtnMuted: {
+    backgroundColor: "#FAFAF8",
+    borderColor: "#ECE7DF",
+  },
+  actionBtnMutedText: {
+    color: "#4B5568",
+  },
+  modeTabs: {
+    flexDirection: "row",
+    backgroundColor: "#FAFAF8",
+    borderRadius: 10,
+    padding: 4,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#ECE7DF",
+  },
+  modeTab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 8,
+  },
+  modeTabActive: {
+    backgroundColor: "#FFF0DF",
+  },
+  modeTabText: {
+    color: "#7A869A",
+    fontSize: 12,
+  },
+  modeTabTextActive: {
+    color: "#C47A10",
   },
   modalBackdrop: {
     flex: 1,
