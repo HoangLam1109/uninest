@@ -23,7 +23,7 @@ export type Invoice = {
   landlordId: string | InvoiceUserRef;
   tenantId?: string | InvoiceUserRef;
   billingMonth: string;
-  dueDate: string;
+  dueDate?: string;
   rentAmount: number;
   electricityAmount?: number;
   waterAmount?: number;
@@ -83,6 +83,28 @@ export type CreateInvoicePayload = {
   waterAmount?: number;
   additionalFees?: number;
   notes?: string;
+};
+
+export type CreateUtilityInvoicePayload = {
+  bookingId: string;
+  billingMonth: string;
+  dueDate: string;
+  rentAmount: number;
+  electricityNewIndex?: number;
+  waterNewIndex?: number;
+  electricityRate?: number;
+  waterRate?: number;
+  additionalFees?: number;
+  notes?: string;
+};
+
+export type UtilityInvoiceMutationResponse = {
+  success: boolean;
+  message?: string;
+  data: {
+    invoice: Invoice;
+    detail: InvoiceDetail;
+  };
 };
 
 export type UpdateInvoicePayload = {

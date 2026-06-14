@@ -16,11 +16,13 @@ import {
 } from "react-native-safe-area-context";
 
 import { bookingApi } from "@/api/booking.api";
+import { contractApi } from "@/api/contract.api";
 import { roomApi } from "@/api/room.api";
 import { LandlordBottomNavigation } from "@/components/landlord/bottom-navigation";
 import { ThemedText } from "@/components/themed-text";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { Booking, BookingStatus } from "@/types/booking";
+import type { Contract } from "@/types/contract";
 import type { LandlordTenant } from "@/types/tenant";
 import {
   bookingStatusLabel,
@@ -29,6 +31,10 @@ import {
   getBookingRoom,
   getBookingTenant,
 } from "@/utils/booking-display";
+import {
+  contractStatusLabel,
+  getContractBookingId,
+} from "@/utils/contract-display";
 import { formatPrice } from "@/utils/room-display";
 
 type PageSection = "requests" | "active";
@@ -48,30 +54,40 @@ function bookingBadgeStyle(status: BookingStatus) {
   return styles.badgeCancelled;
 }
 
+function contractBadgeStyle(status?: string) {
+  if (status === "DRAFT") return styles.badgeDraft;
+  if (status === "PENDING_TENANT_SIGNATURE") return styles.badgePendingSign;
+  if (status === "ACTIVE") return styles.badgeContractActive;
+  return styles.badgeCancelled;
+}
+
 export default function LandlordTenantsPage() {
   const insets = useSafeAreaInsets();
   const [section, setSection] = useState<PageSection>("requests");
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
   const [tenants, setTenants] = useState<LandlordTenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [bookingFilter, setBookingFilter] = useState<"ALL" | BookingStatus>(
     "PENDING",
   );
-  const [actionBookingId, setActionBookingId] = useState<string | null>(null);
+  const [actionTargetId, setActionTargetId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
-      const [bookingsRes, tenantsRes] = await Promise.all([
+      const [bookingsRes, tenantsRes, contractsRes] = await Promise.all([
         bookingApi.listLandlord({
           page: 1,
           limit: 100,
           status: bookingFilter === "ALL" ? undefined : bookingFilter,
         }),
         roomApi.listTenants(),
+        contractApi.listLandlord({ page: 1, limit: 100 }),
       ]);
       setBookings(bookingsRes.data ?? []);
       setTenants(tenantsRes.data ?? []);
+      setContracts(contractsRes.data ?? []);
     } catch (err) {
       Alert.alert(
         "Không tải được dữ liệu",
@@ -79,6 +95,7 @@ export default function LandlordTenantsPage() {
       );
       setBookings([]);
       setTenants([]);
+      setContracts([]);
     }
   }, [bookingFilter]);
 
@@ -107,6 +124,15 @@ export default function LandlordTenantsPage() {
     );
   }, [bookings]);
 
+  const contractByBookingId = useMemo(() => {
+    const map = new Map<string, Contract>();
+    for (const contract of contracts) {
+      const bookingId = getContractBookingId(contract);
+      if (bookingId) map.set(bookingId, contract);
+    }
+    return map;
+  }, [contracts]);
+
   const handleRefresh = async () => {
     setRefreshing(true);
     await loadData();
@@ -122,7 +148,7 @@ export default function LandlordTenantsPage() {
         {
           text: "Duyệt",
           onPress: () => {
-            setActionBookingId(booking._id);
+            setActionTargetId(booking._id);
             void bookingApi
               .approve(booking._id)
               .then(() => loadData())
@@ -135,7 +161,7 @@ export default function LandlordTenantsPage() {
                   getApiErrorMessage(err, "Không thể duyệt đơn."),
                 ),
               )
-              .finally(() => setActionBookingId(null));
+              .finally(() => setActionTargetId(null));
           },
         },
       ],
@@ -152,7 +178,7 @@ export default function LandlordTenantsPage() {
           text: "Từ chối",
           style: "destructive",
           onPress: () => {
-            setActionBookingId(booking._id);
+            setActionTargetId(booking._id);
             void bookingApi
               .reject(booking._id)
               .then(() => loadData())
@@ -165,11 +191,113 @@ export default function LandlordTenantsPage() {
                   getApiErrorMessage(err, "Không thể từ chối đơn."),
                 ),
               )
-              .finally(() => setActionBookingId(null));
+              .finally(() => setActionTargetId(null));
           },
         },
       ],
     );
+  };
+
+  const handleCreateContract = (booking: Booking) => {
+    const room = getBookingRoom(booking);
+    const tenant = getBookingTenant(booking);
+    const monthlyRent = room?.pricePerMonth ?? 0;
+
+    if (!monthlyRent) {
+      Alert.alert("Thiếu thông tin", "Không xác định được giá thuê của phòng.");
+      return;
+    }
+
+    Alert.alert(
+      "Tạo hợp đồng",
+      `Tạo hợp đồng cho ${tenant?.fullName ?? "người thuê"} với giá ${formatPrice(monthlyRent)}/tháng?`,
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Tạo",
+          onPress: () => {
+            setActionTargetId(booking._id);
+            void contractApi
+              .createFromBooking({
+                bookingId: booking._id,
+                monthlyRent,
+                depositAmount: monthlyRent,
+                startDate: booking.checkInDate,
+                endDate: booking.checkOutDate,
+              })
+              .then(() => loadData())
+              .then(() =>
+                Alert.alert(
+                  "Thành công",
+                  "Đã tạo hợp đồng nháp. Bạn có thể gửi cho người thuê ký.",
+                ),
+              )
+              .catch((err) =>
+                Alert.alert(
+                  "Tạo hợp đồng thất bại",
+                  getApiErrorMessage(err, "Không thể tạo hợp đồng."),
+                ),
+              )
+              .finally(() => setActionTargetId(null));
+          },
+        },
+      ],
+    );
+  };
+
+  const handleActivateContract = (contract: Contract) => {
+    Alert.alert(
+      "Gửi hợp đồng",
+      "Gửi hợp đồng cho người thuê ký xác nhận?",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Gửi",
+          onPress: () => {
+            setActionTargetId(contract._id);
+            void contractApi
+              .activate(contract._id)
+              .then(() => loadData())
+              .then(() =>
+                Alert.alert(
+                  "Đã gửi",
+                  "Hợp đồng đang chờ người thuê ký xác nhận.",
+                ),
+              )
+              .catch((err) =>
+                Alert.alert(
+                  "Gửi thất bại",
+                  getApiErrorMessage(err, "Không thể gửi hợp đồng."),
+                ),
+              )
+              .finally(() => setActionTargetId(null));
+          },
+        },
+      ],
+    );
+  };
+
+  const handleDeleteBooking = (booking: Booking) => {
+    Alert.alert("Xóa đơn", "Bạn có chắc muốn xóa đơn đặt phòng này?", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Xóa",
+        style: "destructive",
+        onPress: () => {
+          setActionTargetId(booking._id);
+          void bookingApi
+            .delete(booking._id)
+            .then(() => loadData())
+            .catch((err) =>
+              Alert.alert(
+                "Xóa thất bại",
+                getApiErrorMessage(err, "Không thể xóa đơn."),
+              ),
+            )
+            .finally(() => setActionTargetId(null));
+        },
+      },
+    ]);
   };
 
   return (
@@ -298,9 +426,16 @@ export default function LandlordTenantsPage() {
                   <BookingCard
                     key={booking._id}
                     booking={booking}
-                    busy={actionBookingId === booking._id}
+                    contract={contractByBookingId.get(booking._id)}
+                    busy={
+                      actionTargetId === booking._id ||
+                      actionTargetId === contractByBookingId.get(booking._id)?._id
+                    }
                     onApprove={() => handleApprove(booking)}
                     onReject={() => handleReject(booking)}
+                    onCreateContract={() => handleCreateContract(booking)}
+                    onActivateContract={handleActivateContract}
+                    onDelete={() => handleDeleteBooking(booking)}
                   />
                 ))
               )}
@@ -373,14 +508,22 @@ function EmptyCard({
 
 function BookingCard({
   booking,
+  contract,
   busy,
   onApprove,
   onReject,
+  onCreateContract,
+  onActivateContract,
+  onDelete,
 }: {
   booking: Booking;
+  contract?: Contract;
   busy: boolean;
   onApprove: () => void;
   onReject: () => void;
+  onCreateContract: () => void;
+  onActivateContract: (contract: Contract) => void;
+  onDelete: () => void;
 }) {
   const tenant = getBookingTenant(booking);
   const room = getBookingRoom(booking);
@@ -433,6 +576,18 @@ function BookingCard({
         {booking.notes ? (
           <InfoRow label="Ghi chú" value={booking.notes} />
         ) : null}
+        {contract ? (
+          <View style={styles.contractRow}>
+            <ThemedText type="small" style={styles.infoLabel}>
+              Hợp đồng
+            </ThemedText>
+            <View style={[styles.badge, contractBadgeStyle(contract.status)]}>
+              <ThemedText type="small" style={styles.badgeText}>
+                {contractStatusLabel(contract.status)}
+              </ThemedText>
+            </View>
+          </View>
+        ) : null}
       </View>
 
       {booking.status === "PENDING" ? (
@@ -462,6 +617,56 @@ function BookingCard({
                 Duyệt đơn
               </ThemedText>
             )}
+          </Pressable>
+        </View>
+      ) : null}
+
+      {booking.status === "APPROVED" && !contract ? (
+        <View style={styles.actionRow}>
+          <Pressable
+            style={[styles.actionBtn, styles.actionBtnApprove]}
+            onPress={onCreateContract}
+            disabled={busy}
+          >
+            {busy ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <ThemedText type="smallBold" style={styles.actionBtnApproveText}>
+                Tạo hợp đồng
+              </ThemedText>
+            )}
+          </Pressable>
+        </View>
+      ) : null}
+
+      {contract?.status === "DRAFT" ? (
+        <View style={styles.actionRow}>
+          <Pressable
+            style={[styles.actionBtn, styles.actionBtnApprove]}
+            onPress={() => onActivateContract(contract)}
+            disabled={busy}
+          >
+            {busy ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <ThemedText type="smallBold" style={styles.actionBtnApproveText}>
+                Gửi ký
+              </ThemedText>
+            )}
+          </Pressable>
+        </View>
+      ) : null}
+
+      {booking.status === "REJECTED" || booking.status === "CANCELLED" ? (
+        <View style={styles.actionRow}>
+          <Pressable
+            style={[styles.actionBtn, styles.actionBtnReject]}
+            onPress={onDelete}
+            disabled={busy}
+          >
+            <ThemedText type="smallBold" style={styles.actionBtnRejectText}>
+              Xóa đơn
+            </ThemedText>
           </Pressable>
         </View>
       ) : null}
@@ -497,6 +702,15 @@ function TenantCard({ tenant }: { tenant: LandlordTenant }) {
       <View style={styles.infoBox}>
         <InfoRow label="Phòng" value={tenant.roomTitle} />
         <InfoRow label="Địa chỉ" value={tenant.address} />
+        {tenant.cccdNumber ? (
+          <InfoRow label="CCCD" value={tenant.cccdNumber} />
+        ) : null}
+        {tenant.dateOfBirth ? (
+          <InfoRow
+            label="Ngày sinh"
+            value={formatBookingDate(tenant.dateOfBirth)}
+          />
+        ) : null}
       </View>
     </View>
   );
@@ -689,6 +903,21 @@ const styles = StyleSheet.create({
   },
   badgeCancelled: {
     backgroundColor: "#F0EBE4",
+  },
+  badgeDraft: {
+    backgroundColor: "#F0EBE4",
+  },
+  badgePendingSign: {
+    backgroundColor: "#FFF4D6",
+  },
+  badgeContractActive: {
+    backgroundColor: "#E2F5E8",
+  },
+  contractRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
   },
   badgePrimary: {
     backgroundColor: "#E8F0FF",

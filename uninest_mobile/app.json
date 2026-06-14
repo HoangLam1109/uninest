@@ -8,7 +8,11 @@
     "scheme": "uninestmobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "UniNest cần truy cập thư viện ảnh để bạn upload hình phòng trọ.",
+        "NSCameraUsageDescription": "UniNest cần truy cập camera để bạn chụp ảnh phòng trọ."
+      }
     },
     "android": {
       "usesCleartextTraffic": true,
@@ -27,6 +31,13 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "UniNest cần truy cập thư viện ảnh để bạn upload hình phòng trọ.",
+          "cameraPermission": "UniNest cần truy cập camera để bạn chụp ảnh phòng trọ."
+        }
+      ],
       [
         "expo-splash-screen",
         {

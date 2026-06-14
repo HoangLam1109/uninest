@@ -1,11 +1,13 @@
 import { api } from "@/lib/api-client";
 import type {
   CreateInvoicePayload,
+  CreateUtilityInvoicePayload,
   InvoiceDetailResponse,
   InvoiceListResponse,
   InvoiceMutationResponse,
   InvoiceResponse,
   UpdateInvoicePayload,
+  UtilityInvoiceMutationResponse,
 } from "@/types/invoice";
 
 function buildListQuery(params?: { page?: number; limit?: number }) {
@@ -31,6 +33,10 @@ export const invoiceApi = {
   /** POST /api/invoices/ */
   create: (payload: CreateInvoicePayload) =>
     api.post<InvoiceMutationResponse>("/invoices/", payload),
+
+  /** POST /api/invoices/utility — tự tính điện/nước từ chỉ số công tơ */
+  createUtility: (payload: CreateUtilityInvoicePayload) =>
+    api.post<UtilityInvoiceMutationResponse>("/invoices/utility", payload),
 
   /** GET /api/invoices/:id */
   getById: (id: string) => api.get<InvoiceResponse>(`/invoices/${id}`),
