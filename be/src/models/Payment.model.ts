@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types, type JSONSerialized } from "mongoose";
+import { Schema, model, Document, Types } from "mongoose";
 
 export enum PAYMENT_STATUS {
   PENDING = "PENDING",
@@ -11,9 +11,7 @@ export enum PAYMENT_METHOD {
   BANK_TRANSFER = "BANK_TRANSFER",
   CASH = "CASH",
   WALLET = "WALLET",
-  VNPAY = "VNPAY",
-  MOMO = "MOMO",
-  OTHER = "OTHER",
+  PAYOS = "PAYOS",
 }
 
 export enum PAYMENT_TYPE {
@@ -36,9 +34,9 @@ export interface IPayment extends Document {
   method?: PAYMENT_METHOD;
   status?: PAYMENT_STATUS;
   transactionRef?: String;
-  gatewayResponse?: JSON;
+  gatewayResponse?: Record<string, any>;
   note?: String;
-  paidAt: Date;
+  paidAt?: Date;
   createdAt: Date;
 }
 
@@ -47,6 +45,7 @@ const PaymentSchema = new Schema<IPayment>(
     bookingId: {
       type: Schema.Types.ObjectId,
       ref: "Booking",
+      default: null,
       index: true,
     },
     paperId: {
@@ -119,16 +118,10 @@ const PaymentSchema = new Schema<IPayment>(
   {
     timestamps: true,
     collection: "payments",
-  },
+  }
 );
 
-// Compound index for booking and billing month (prevent duplicate invoices)
-PaymentSchema.index(
-  { bookingId: 1, paperId: 1 },
-  { unique: true, sparse: true },
-);
-
-// Indexes for filtering
+PaymentSchema.index({ bookingId: 1, paperId: 1 }, { unique: true, sparse: true });
 PaymentSchema.index({ receiverId: 1, status: 1 });
 PaymentSchema.index({ bookingId: 1, status: 1 });
 PaymentSchema.index({ paidAt: 1 });

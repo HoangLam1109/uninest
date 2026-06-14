@@ -11,7 +11,7 @@ export const payInvoice = async (req: Request, res: Response) => {
     }
 
     const invoiceId = req.params.invoiceId as string;
-    const { method, gatewayData } = req.body;
+    const { method } = req.body;
 
     if (!invoiceId || !mongoose.Types.ObjectId.isValid(invoiceId)) {
       return res
@@ -32,7 +32,6 @@ export const payInvoice = async (req: Request, res: Response) => {
       invoiceId,
       userId,
       method,
-      gatewayData
     );
 
     return res.json({

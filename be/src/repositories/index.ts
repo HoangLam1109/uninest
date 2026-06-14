@@ -37,4 +37,4 @@ export class RepositoryFactory {
 export const userRepository = RepositoryFactory.getUserRepository();
 
 // Export other repositories
-export { PropertyRepository, RoomImageRepository, FavoriteRepository, BookingRepository, ContractRepository, InvoiceRepository, InvoiceDetailRepository, MeterReadingRepository, ReviewRepository, PaymentRepository, WalletRepository, WalletTransactionRepository, ServicePackageRepository, ServiceSubscriptionRepository };
+export { PropertyRepository, RoomImageRepository, FavoriteRepository, BookingRepository, ContractRepository, InvoiceRepository, InvoiceDetailRepository, MeterReadingRepository, ReviewRepository, IdentityRepository, PaymentRepository, WalletRepository, WalletTransactionRepository, ServicePackageRepository, ServiceSubscriptionRepository };

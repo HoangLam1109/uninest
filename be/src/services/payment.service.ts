@@ -1,7 +1,11 @@
 import { PaymentRepository } from "../repositories/payment.repo.js";
 import { InvoiceRepository } from "../repositories/invoice.repo.js";
 import { BookingRepository } from "../repositories/booking.repo.js";
+import { ServicePackageRepository } from "../repositories/service-package.repo.js";
+import { ServiceSubscriptionRepository } from "../repositories/service-subscription.repo.js";
+import { SUBSCRIPTION_STATUS } from "../models/ServiceSubscription.model.js";
 import { WalletService } from "./wallet.service.js";
+import { PayOSService } from "./payos.service.js";
 import {
   PAYMENT_STATUS,
   PAYMENT_METHOD,
@@ -10,11 +14,116 @@ import {
 import { INVOICE_STATUS } from "../models/Invoice.model.js";
 
 export class PaymentService {
+  static async processPayment(params: {
+    payerId: string;
+    receiverId: string;
+    amount: number;
+    type: PAYMENT_TYPE;
+    description: string;
+    method: PAYMENT_METHOD;
+    invoiceId?: string;
+    bookingId?: string;
+    subscriptionPackageId?: string;
+  }) {
+    const paymentData: any = {
+      bookingId: params.bookingId || null,
+      paperId: params.payerId,
+      receiverId: params.receiverId,
+      amount: params.amount,
+      currency: "VND",
+      type: params.type,
+      method: params.method,
+      status: PAYMENT_STATUS.PENDING,
+      invoiceId: params.invoiceId || null,
+      note: params.description,
+    };
+
+    const payment: any = await PaymentRepository.create(paymentData);
+    if (!payment) {
+      throw new Error("Failed to create payment record");
+    }
+
+    try {
+      if (params.method === PAYMENT_METHOD.WALLET) {
+        const result = await WalletService.payWithWallet(
+          params.payerId,
+          params.receiverId,
+          params.amount,
+          payment._id.toString(),
+          params.description,
+        );
+
+        const updated = await PaymentRepository.update(payment._id.toString(), {
+          walletTxId: result.payerTransaction._id,
+          status: PAYMENT_STATUS.COMPLETED,
+          paidAt: new Date(),
+        });
+
+        if (params.invoiceId) {
+          await InvoiceRepository.update(params.invoiceId, {
+            status: INVOICE_STATUS.PAID,
+            paidAt: new Date(),
+          });
+        }
+
+        if (params.subscriptionPackageId) {
+          await this.createSubscriptionForPayment(
+            payment,
+            params.subscriptionPackageId,
+          );
+        }
+
+        return { payment: updated || payment, status: "COMPLETED" as const };
+      } else if (params.method === PAYMENT_METHOD.PAYOS) {
+        const payosResult = await PayOSService.createPaymentLink({
+          paymentId: payment._id.toString(),
+          amount: params.amount,
+          description: params.description,
+        });
+
+        return {
+          payment,
+          checkoutUrl: payosResult.checkoutUrl,
+          orderCode: payosResult.orderCode,
+          status: "PENDING" as const,
+        };
+      } else {
+        throw new Error(`Unsupported payment method: ${params.method}`);
+      }
+    } catch (err: any) {
+      await PaymentRepository.update(payment._id.toString(), {
+        status: PAYMENT_STATUS.FAILED,
+      });
+      throw new Error(`Payment failed: ${err.message}`);
+    }
+  }
+
+  private static async createSubscriptionForPayment(
+    payment: any,
+    packageId: string,
+  ) {
+    const pkg = await ServicePackageRepository.findById(packageId);
+    if (!pkg) return;
+
+    const startDate = new Date();
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + pkg.durationDays);
+
+    await ServiceSubscriptionRepository.create({
+      userId: payment.paperId,
+      packageId,
+      paymentId: payment._id,
+      startDate,
+      endDate,
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      autoRenew: false,
+    });
+  }
+
   static async payInvoice(
     invoiceId: string,
     payerId: string,
     method: PAYMENT_METHOD,
-    gatewayData?: any
   ) {
     const invoice = await InvoiceRepository.findById(invoiceId);
     if (!invoice) {
@@ -30,100 +139,39 @@ export class PaymentService {
       invoice.status !== INVOICE_STATUS.OVERDUE
     ) {
       throw new Error(
-        `Cannot pay invoice with status: ${invoice.status}. Only SENT or OVERDUE invoices can be paid.`
+        `Cannot pay invoice with status: ${invoice.status}. Only SENT or OVERDUE invoices can be paid.`,
       );
     }
 
     const existingPayments = await PaymentRepository.findByInvoice(invoiceId);
     const completedPayment = existingPayments.find(
-      (p: any) => p.status === PAYMENT_STATUS.COMPLETED
+      (p: any) => p.status === PAYMENT_STATUS.COMPLETED,
     );
     if (completedPayment) {
       throw new Error("This invoice has already been paid");
     }
 
-    const bookingId = invoice.bookingId._id
-      ? invoice.bookingId._id.toString()
-      : invoice.bookingId.toString();
-    const landlordId = invoice.landlordId._id
-      ? invoice.landlordId._id.toString()
-      : invoice.landlordId.toString();
-    const amount = invoice.totalAmount;
+    const bookingId =
+      invoice.bookingId?._id?.toString() || invoice.bookingId?.toString() || "";
+    const landlordId =
+      invoice.landlordId?._id?.toString() || invoice.landlordId.toString();
 
-    const paymentData: any = {
-      bookingId,
-      paperId: payerId,
+    return this.processPayment({
+      payerId,
       receiverId: landlordId,
-      invoiceId,
-      amount,
-      currency: "VND",
+      amount: invoice.totalAmount,
       type: PAYMENT_TYPE.RENT,
+      description: `Invoice payment for ${invoice.billingMonth}`,
       method,
-      status: PAYMENT_STATUS.PENDING,
-      note: `Payment for invoice ${invoiceId} (${invoice.billingMonth})`,
-    };
-
-    let payment: any = await PaymentRepository.create(paymentData);
-    if (!payment) {
-      throw new Error("Failed to create payment record");
-    }
-
-    try {
-      if (method === PAYMENT_METHOD.WALLET) {
-        const result = await WalletService.payWithWallet(
-          payerId,
-          landlordId,
-          amount,
-          payment._id.toString(),
-          `Rent payment for ${invoice.billingMonth}`
-        );
-
-        const updated = await PaymentRepository.update(payment._id.toString(), {
-          walletTxId: result.payerTransaction._id,
-          status: PAYMENT_STATUS.COMPLETED,
-          paidAt: new Date(),
-        });
-        if (updated) payment = updated;
-      } else if (
-        method === PAYMENT_METHOD.BANK_TRANSFER ||
-        method === PAYMENT_METHOD.CASH
-      ) {
-        const updated = await PaymentRepository.update(payment._id.toString(), {
-          status: PAYMENT_STATUS.COMPLETED,
-          paidAt: new Date(),
-          gatewayResponse: gatewayData || null,
-        });
-        if (updated) payment = updated;
-      } else if (
-        method === PAYMENT_METHOD.VNPAY ||
-        method === PAYMENT_METHOD.MOMO
-      ) {
-        const txRef = `${method}_${invoiceId}_${Date.now()}`;
-        const updated = await PaymentRepository.update(payment._id.toString(), {
-          transactionRef: txRef,
-          gatewayResponse: gatewayData || null,
-        });
-        if (updated) payment = updated;
-      }
-
-      await InvoiceRepository.update(invoiceId, {
-        status: INVOICE_STATUS.PAID,
-        paidAt: new Date(),
-      });
-
-      return payment;
-    } catch (err: any) {
-      await PaymentRepository.update(payment._id.toString(), {
-        status: PAYMENT_STATUS.FAILED,
-      });
-      throw new Error(`Payment failed: ${err.message}`);
-    }
+      invoiceId,
+      bookingId,
+    });
   }
 
   static async payDeposit(
     bookingId: string,
     tenantId: string,
-    method: PAYMENT_METHOD
+    method: PAYMENT_METHOD,
   ) {
     const booking = await BookingRepository.findById(bookingId);
     if (!booking) {
@@ -136,7 +184,7 @@ export class PaymentService {
 
     const existingDeposit = await PaymentRepository.findByTypeAndBooking(
       bookingId,
-      PAYMENT_TYPE.DEPOSIT
+      PAYMENT_TYPE.DEPOSIT,
     );
     if (
       existingDeposit &&
@@ -149,54 +197,15 @@ export class PaymentService {
     const depositAmount = room.depositAmount || room.pricePerMonth;
     const landlordId = room.landlordId.toString();
 
-    const paymentData: any = {
-      bookingId,
-      paperId: tenantId,
+    return this.processPayment({
+      payerId: tenantId,
       receiverId: landlordId,
       amount: depositAmount,
-      currency: "VND",
       type: PAYMENT_TYPE.DEPOSIT,
+      description: `Deposit for room: ${room.title}`,
       method,
-      status: PAYMENT_STATUS.PENDING,
-      note: `Deposit for room: ${room.title}`,
-    };
-
-    let payment: any = await PaymentRepository.create(paymentData);
-    if (!payment) {
-      throw new Error("Failed to create deposit payment record");
-    }
-
-    try {
-      if (method === PAYMENT_METHOD.WALLET) {
-        const result = await WalletService.payWithWallet(
-          tenantId,
-          landlordId,
-          depositAmount,
-          payment._id.toString(),
-          `Deposit for booking ${bookingId}`
-        );
-
-        const updated = await PaymentRepository.update(payment._id.toString(), {
-          walletTxId: result.payerTransaction._id,
-          status: PAYMENT_STATUS.COMPLETED,
-          paidAt: new Date(),
-        });
-        if (updated) payment = updated;
-      } else {
-        const updated = await PaymentRepository.update(payment._id.toString(), {
-          status: PAYMENT_STATUS.COMPLETED,
-          paidAt: new Date(),
-        });
-        if (updated) payment = updated;
-      }
-
-      return payment;
-    } catch (err: any) {
-      await PaymentRepository.update(payment._id.toString(), {
-        status: PAYMENT_STATUS.FAILED,
-      });
-      throw new Error(`Deposit payment failed: ${err.message}`);
-    }
+      bookingId,
+    });
   }
 
   static async getPaymentById(paymentId: string, userId: string) {
@@ -220,16 +229,18 @@ export class PaymentService {
       PaymentRepository.findByPayerId(userId, skip, limit),
       PaymentRepository.countByPayerId(userId),
     ]);
-
     return { payments, total };
   }
 
-  static async getReceivedPayments(userId: string, skip: number, limit: number) {
+  static async getReceivedPayments(
+    userId: string,
+    skip: number,
+    limit: number,
+  ) {
     const [payments, total] = await Promise.all([
       PaymentRepository.findByReceiverId(userId, skip, limit),
       PaymentRepository.countByReceiverId(userId),
     ]);
-
     return { payments, total };
   }
 
@@ -239,10 +250,8 @@ export class PaymentService {
       throw new Error("Invoice not found");
     }
 
-    const invLandlordId = invoice.landlordId._id
-      ? invoice.landlordId._id.toString()
-      : invoice.landlordId.toString();
-
+    const invLandlordId =
+      invoice.landlordId?._id?.toString() || invoice.landlordId.toString();
     if (invLandlordId !== landlordId) {
       throw new Error("You do not own this invoice");
     }
@@ -254,7 +263,11 @@ export class PaymentService {
     return await PaymentRepository.findByBooking(bookingId);
   }
 
-  static async requestRefund(paymentId: string, userId: string, reason: string) {
+  static async requestRefund(
+    paymentId: string,
+    userId: string,
+    reason: string,
+  ) {
     const payment = await PaymentRepository.findById(paymentId);
     if (!payment) {
       throw new Error("Payment not found");
@@ -268,12 +281,10 @@ export class PaymentService {
       throw new Error("Can only request refund for completed payments");
     }
 
-    const updated = await PaymentRepository.update(paymentId, {
+    return await PaymentRepository.update(paymentId, {
       status: PAYMENT_STATUS.REFUNDED,
       note: `REFUND REQUESTED: ${reason}. ${payment.note || ""}`,
     });
-
-    return updated;
   }
 
   static async processRefund(paymentId: string, reviewerId: string) {
@@ -284,7 +295,7 @@ export class PaymentService {
 
     if (payment.status !== PAYMENT_STATUS.REFUNDED) {
       throw new Error(
-        `Cannot process refund for payment with status: ${payment.status}`
+        `Cannot process refund for payment with status: ${payment.status}`,
       );
     }
 
@@ -293,15 +304,13 @@ export class PaymentService {
       payment.paperId.toString(),
       payment.amount,
       paymentId,
-      `Refund for payment ${paymentId}`
+      `Refund for payment ${paymentId}`,
     );
 
-    const updated = await PaymentRepository.update(paymentId, {
+    return await PaymentRepository.update(paymentId, {
       status: PAYMENT_STATUS.REFUNDED,
       note: `REFUND PROCESSED by ${reviewerId}. ${payment.note || ""}`,
     });
-
-    return updated;
   }
 
   static async updatePaymentStatus(paymentId: string, status: PAYMENT_STATUS) {
@@ -316,58 +325,6 @@ export class PaymentService {
     }
 
     return await PaymentRepository.update(paymentId, updateData);
-  }
-
-  static async handleGatewayReturn(gateway: string, queryParams: Record<string, string>) {
-    const txRef =
-      queryParams.transactionRef ||
-      queryParams.txnRef ||
-      queryParams.orderId;
-
-    if (!txRef) {
-      throw new Error("Invalid gateway response: missing transactionRef");
-    }
-
-    const payment = await PaymentRepository.findByTransactionRef(txRef);
-    if (!payment) {
-      throw new Error("Payment not found for this transaction");
-    }
-
-    if (
-      (gateway === "VNPAY" && payment.method !== PAYMENT_METHOD.VNPAY) ||
-      (gateway === "MOMO" && payment.method !== PAYMENT_METHOD.MOMO)
-    ) {
-      throw new Error("Gateway mismatch");
-    }
-
-    const isSuccess =
-      queryParams.resultCode === "0" ||
-      queryParams.vnp_ResponseCode === "00" ||
-      queryParams.transactionStatus === "00";
-
-    if (isSuccess) {
-      const updated = await PaymentRepository.update(payment._id.toString(), {
-        status: PAYMENT_STATUS.COMPLETED,
-        paidAt: new Date(),
-        gatewayResponse: queryParams,
-      });
-
-      if (payment.invoiceId) {
-        await InvoiceRepository.update(payment.invoiceId.toString(), {
-          status: INVOICE_STATUS.PAID,
-          paidAt: new Date(),
-        });
-      }
-
-      return updated;
-    } else {
-      await PaymentRepository.update(payment._id.toString(), {
-        status: PAYMENT_STATUS.FAILED,
-        gatewayResponse: queryParams,
-      });
-
-      throw new Error("Payment was not successful");
-    }
   }
 
   static async getPaymentStats(userId: string, role: string) {
@@ -394,11 +351,6 @@ export class PaymentService {
       }
     }
 
-    return {
-      totalPayments,
-      totalAmount,
-      pendingAmount,
-      completedAmount,
-    };
+    return { totalPayments, totalAmount, pendingAmount, completedAmount };
   }
 }

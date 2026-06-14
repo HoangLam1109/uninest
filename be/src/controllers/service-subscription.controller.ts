@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import { ServiceSubscriptionService } from "../services/service-subscription.service.js";
+import { PAYMENT_METHOD } from "../models/Payment.model.js";
 
 export const subscribe = async (req: Request, res: Response) => {
   try {
@@ -10,13 +11,20 @@ export const subscribe = async (req: Request, res: Response) => {
     }
 
     const packageId = req.params.packageId as string;
-    const { autoRenew } = req.body;
+    const { autoRenew, method } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(packageId)) {
       return res.status(400).json({ success: false, message: "Invalid package ID" });
     }
 
-    const subscription = await ServiceSubscriptionService.subscribe(userId, packageId, autoRenew);
+    if (!method || !Object.values(PAYMENT_METHOD).includes(method)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid payment method. Must be one of: ${Object.values(PAYMENT_METHOD).join(", ")}`,
+      });
+    }
+
+    const subscription = await ServiceSubscriptionService.subscribe(userId, packageId, method, autoRenew);
 
     return res.status(201).json({
       success: true,
