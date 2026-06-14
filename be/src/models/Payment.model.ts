@@ -25,7 +25,7 @@ export enum PAYMENT_TYPE {
 }
 
 export interface IPayment extends Document {
-  bookingId: Types.ObjectId;
+  bookingId?: Types.ObjectId;
   paperId: Types.ObjectId;
   receiverId: Types.ObjectId;
   walletTxId?: Types.ObjectId;
@@ -47,7 +47,6 @@ const PaymentSchema = new Schema<IPayment>(
     bookingId: {
       type: Schema.Types.ObjectId,
       ref: "Booking",
-      required: [true, "Booking ID is required"],
       index: true,
     },
     paperId: {

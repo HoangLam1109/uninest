@@ -1,6 +1,6 @@
 import express from "express";
 import authenticateMiddleware from "../middlewares/authenticate.middleware.js";
-import { authorizeAdmin } from "../middlewares/authorize.middleware.js";
+import { authorizeRoles } from "../middlewares/authorize.middleware.js";
 import {
   getWallet,
   getWalletTransactions,
@@ -14,7 +14,7 @@ router.use(authenticateMiddleware.authenticateUser);
 
 router.get("/", getWallet);
 router.get("/transactions", getWalletTransactions);
-router.post("/topup", authorizeAdmin, topUpWallet);
-router.post("/withdraw", authorizeAdmin, withdrawFromWallet);
+router.post("/topup", authorizeRoles("ADMIN"), topUpWallet);
+router.post("/withdraw", authorizeRoles("ADMIN"), withdrawFromWallet);
 
 export default router;

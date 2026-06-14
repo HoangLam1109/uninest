@@ -18,6 +18,8 @@ import aiRouter from "./routes/ai.route.js";
 import amenityRouter from "./routes/amenity.route.js";
 import paymentRouter from "./routes/payment.route.js";
 import walletRouter from "./routes/wallet.route.js";
+import servicePackageRouter from "./routes/service-package.route.js";
+import serviceSubscriptionRouter from "./routes/service-subscription.route.js";
 import connectDB from "./config/database.config.js";
 import { setupSwagger } from "./swagger.js";
 import { initializeChatSocket } from "./socket.js";
@@ -56,6 +58,8 @@ app.use("/api/ai", aiRouter);
 app.use("/api/amenities", amenityRouter);
 app.use("/api/payments", paymentRouter);
 app.use("/api/wallet", walletRouter);
+app.use("/api/service-packages", servicePackageRouter);
+app.use("/api/service-subscriptions", serviceSubscriptionRouter);
 
 setupSwagger(app);
 
