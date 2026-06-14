@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -27,29 +27,72 @@ type RegisterForm = {
   phone: string;
   password: string;
   confirmPassword: string;
+  otp: string;
   terms: boolean;
 };
+
+const OTP_RESEND_COOLDOWN_SEC = 60;
+
+function normalizePhone(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
+
+function validateEmail(email: string): string | null {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) {
+    return "Vui lòng nhập email.";
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+    return "Email không hợp lệ.";
+  }
+  return null;
+}
 
 function validateRegister(form: RegisterForm): string | null {
   const fullName = form.fullName.trim();
   const email = form.email.trim().toLowerCase();
-  const phone = form.phone.trim();
+  const phone = normalizePhone(form.phone);
+  const otp = form.otp.trim();
 
-  if (fullName.length < 3) {
-    return "Họ và tên phải có ít nhất 3 ký tự.";
+  if (!fullName) {
+    return "Vui lòng nhập họ và tên.";
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return "Email không hợp lệ.";
+  if (fullName.length < 2) {
+    return "Họ và tên phải có ít nhất 2 ký tự.";
+  }
+
+  const emailError = validateEmail(email);
+  if (emailError) {
+    return emailError;
+  }
+
+  if (!phone) {
+    return "Vui lòng nhập số điện thoại.";
   }
   if (!/^0\d{9,10}$/.test(phone)) {
     return "Số điện thoại phải bắt đầu bằng 0 và có 10–11 chữ số.";
   }
+
+  if (!form.password) {
+    return "Vui lòng nhập mật khẩu.";
+  }
   if (form.password.length < 8) {
     return "Mật khẩu tối thiểu 8 ký tự.";
+  }
+  if (!form.confirmPassword) {
+    return "Vui lòng xác nhận mật khẩu.";
   }
   if (form.password !== form.confirmPassword) {
     return "Mật khẩu xác nhận không khớp.";
   }
+
+  if (!otp) {
+    return "Vui lòng nhập mã OTP.";
+  }
+  if (!/^\d{6}$/.test(otp)) {
+    return "Mã OTP phải gồm 6 chữ số.";
+  }
+
   if (!form.terms) {
     return "Bạn cần đồng ý điều khoản sử dụng.";
   }
@@ -64,10 +107,55 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [otp, setOtp] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+
+  useEffect(() => {
+    if (otpCooldown <= 0) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setOtpCooldown((current) => (current > 0 ? current - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [otpCooldown]);
+
+  const handleSendOtp = async () => {
+    const emailError = validateEmail(email);
+    if (emailError) {
+      Alert.alert("Không thể gửi OTP", emailError);
+      return;
+    }
+
+    setIsSendingOtp(true);
+    try {
+      const response = await authApi.sendRegisterOtp({
+        email: email.trim().toLowerCase(),
+      });
+      setOtpCooldown(OTP_RESEND_COOLDOWN_SEC);
+      Alert.alert(
+        "Đã gửi OTP",
+        response.message || "Vui lòng kiểm tra email của bạn.",
+      );
+    } catch (err) {
+      Alert.alert(
+        "Không thể gửi OTP",
+        getApiErrorMessage(
+          err,
+          "Vui lòng kiểm tra lại email hoặc thử lại sau.",
+        ),
+      );
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
 
   const handleRegister = async () => {
     const error = validateRegister({
@@ -76,6 +164,7 @@ export default function RegisterPage() {
       phone,
       password,
       confirmPassword,
+      otp,
       terms: termsAccepted,
     });
 
@@ -89,8 +178,9 @@ export default function RegisterPage() {
       const response = await authApi.register({
         fullName: fullName.trim(),
         email: email.trim().toLowerCase(),
-        phone: phone.trim(),
+        phone: normalizePhone(phone),
         password,
+        otp: otp.trim(),
       });
 
       Alert.alert(
@@ -248,6 +338,44 @@ export default function RegisterPage() {
                 </Pressable>
               </View>
 
+              <ThemedText type="smallBold" style={styles.fieldLabel}>
+                Mã OTP
+              </ThemedText>
+              <ThemedText type="small" style={styles.fieldHint}>
+                Nhập mã 6 số được gửi đến email
+              </ThemedText>
+              <View style={styles.otpRow}>
+                <View style={[styles.inputBox, styles.otpInputBox]}>
+                  <ThemedText style={styles.inputIcon}>🔐</ThemedText>
+                  <TextInput
+                    placeholder="123456"
+                    placeholderTextColor="#7E8694"
+                    value={otp}
+                    onChangeText={setOtp}
+                    style={styles.input}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    autoComplete="one-time-code"
+                  />
+                </View>
+                <Pressable
+                  style={[
+                    styles.otpButton,
+                    (isSendingOtp || otpCooldown > 0) && styles.otpButtonDisabled,
+                  ]}
+                  onPress={handleSendOtp}
+                  disabled={isSendingOtp || otpCooldown > 0}
+                >
+                  {isSendingOtp ? (
+                    <ActivityIndicator color="#F28C1B" size="small" />
+                  ) : (
+                    <ThemedText type="smallBold" style={styles.otpButtonText}>
+                      {otpCooldown > 0 ? `${otpCooldown}s` : "Gửi OTP"}
+                    </ThemedText>
+                  )}
+                </Pressable>
+              </View>
+
               <Pressable
                 style={styles.termsRow}
                 onPress={() => setTermsAccepted((current) => !current)}
@@ -277,10 +405,10 @@ export default function RegisterPage() {
               <Pressable
                 style={[
                   styles.primaryButton,
-                  isSubmitting && styles.primaryButtonDisabled,
+                  (isSubmitting || isSendingOtp) && styles.primaryButtonDisabled,
                 ]}
                 onPress={handleRegister}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isSendingOtp}
               >
                 {isSubmitting ? (
                   <ActivityIndicator color="#FFFFFF" />
@@ -289,7 +417,7 @@ export default function RegisterPage() {
                     type="smallBold"
                     style={styles.primaryButtonText}
                   >
-                    Tạo tài khoản
+                    Xác nhận đăng ký
                   </ThemedText>
                 )}
               </Pressable>
@@ -378,6 +506,38 @@ const styles = StyleSheet.create({
   fieldLabel: {
     color: "#263045",
     marginBottom: 8,
+  },
+  fieldHint: {
+    color: "#7E8694",
+    marginBottom: 8,
+    marginTop: -4,
+  },
+  otpRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
+  otpInputBox: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  otpButton: {
+    minWidth: 96,
+    minHeight: 52,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#F28C1B",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  otpButtonDisabled: {
+    opacity: 0.6,
+  },
+  otpButtonText: {
+    color: "#F28C1B",
   },
   inputBox: {
     flexDirection: "row",

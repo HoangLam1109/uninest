@@ -17,6 +17,7 @@ import {
 
 import { roomApi } from "@/api/room.api";
 import { BottomNavigation } from "@/components/bottom-navigation";
+import { ExploreRoomsMap } from "@/components/explore-rooms-map";
 import { FavoriteHeartButton } from "@/components/favorite-heart-button";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -26,6 +27,8 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import type { Room } from "@/types/room";
 
 const PLACEHOLDER_IMAGE = require("@/assets/images/tutorial-web.png");
+
+type ViewMode = "grid" | "map";
 
 function formatPrice(value: number) {
   return `${value.toLocaleString("vi-VN")}đ`;
@@ -68,6 +71,7 @@ export default function SearchPage() {
   const { refreshFavorites } = useFavorites();
   const [keyword, setKeyword] = useState("");
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -104,6 +108,16 @@ export default function SearchPage() {
     [rooms, keyword],
   );
 
+  const openRoomDetail = useCallback(
+    (room: Room) => {
+      router.push({
+        pathname: "/sv/detail_page",
+        params: { id: room._id },
+      } as any);
+    },
+    [router],
+  );
+
   return (
     <ThemedView style={styles.screen}>
       <SafeAreaView style={styles.safeArea}>
@@ -127,13 +141,14 @@ export default function SearchPage() {
           </View>
         </View>
 
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={{
-            paddingTop: insets.top + 86,
-            paddingBottom: 140 + insets.bottom,
-          }}
-          showsVerticalScrollIndicator={false}
+        <View
+          style={[
+            styles.body,
+            {
+              paddingTop: insets.top + 86,
+              paddingBottom: isAuthenticated ? 90 + insets.bottom : insets.bottom,
+            },
+          ]}
         >
           <View style={styles.searchBoxWrap}>
             <View style={styles.searchBox}>
@@ -159,71 +174,140 @@ export default function SearchPage() {
           </View>
 
           <View style={styles.modeRow}>
-            <View style={styles.modeActive}>
-              <Text style={styles.modeActiveIcon}>▦</Text>
-              <ThemedText type="smallBold" style={styles.modeActiveText}>
+            <Pressable
+              style={viewMode === "grid" ? styles.modeActive : styles.modeInactive}
+              onPress={() => setViewMode("grid")}
+            >
+              <Text
+                style={
+                  viewMode === "grid" ? styles.modeActiveIcon : styles.modeInactiveIcon
+                }
+              >
+                ▦
+              </Text>
+              <ThemedText
+                type="smallBold"
+                style={
+                  viewMode === "grid" ? styles.modeActiveText : styles.modeInactiveText
+                }
+              >
                 DẠNG LƯỚI
               </ThemedText>
-            </View>
-            <View style={styles.modeInactive}>
-              <Text style={styles.modeInactiveIcon}>🗺</Text>
-              <ThemedText type="smallBold" style={styles.modeInactiveText}>
+            </Pressable>
+            <Pressable
+              style={viewMode === "map" ? styles.modeActive : styles.modeInactive}
+              onPress={() => setViewMode("map")}
+            >
+              <Text
+                style={
+                  viewMode === "map" ? styles.modeActiveIcon : styles.modeInactiveIcon
+                }
+              >
+                🗺
+              </Text>
+              <ThemedText
+                type="smallBold"
+                style={
+                  viewMode === "map" ? styles.modeActiveText : styles.modeInactiveText
+                }
+              >
                 BẢN ĐỒ
               </ThemedText>
-            </View>
+            </Pressable>
           </View>
 
           <ThemedText type="small" style={styles.resultText}>
             Hiển thị {listings.length} phòng
           </ThemedText>
 
-          {isLoading ? (
-            <View style={styles.centerBox}>
-              <ActivityIndicator size="large" color="#F28C1B" />
-              <ThemedText type="small" style={styles.hintText}>
-                Đang tải danh sách phòng...
-              </ThemedText>
+          {viewMode === "map" ? (
+            <View style={styles.mapWrap}>
+              {isLoading ? (
+                <View style={styles.centerBox}>
+                  <ActivityIndicator size="large" color="#F28C1B" />
+                  <ThemedText type="small" style={styles.hintText}>
+                    Đang tải danh sách phòng...
+                  </ThemedText>
+                </View>
+              ) : error ? (
+                <View style={styles.centerBox}>
+                  <ThemedText type="small" style={styles.errorText}>
+                    {error}
+                  </ThemedText>
+                  <Pressable
+                    style={styles.retryButton}
+                    onPress={() => void loadRooms()}
+                  >
+                    <ThemedText type="smallBold" style={styles.retryText}>
+                      Thử lại
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              ) : listings.length === 0 ? (
+                <View style={styles.centerBox}>
+                  <ThemedText type="small" style={styles.hintText}>
+                    {rooms.length === 0
+                      ? "API chưa trả phòng nào."
+                      : "Không có phòng khớp từ khóa tìm kiếm."}
+                  </ThemedText>
+                </View>
+              ) : (
+                <ExploreRoomsMap rooms={listings} onRoomPress={openRoomDetail} />
+              )}
             </View>
-          ) : null}
+          ) : (
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {isLoading ? (
+                <View style={styles.centerBox}>
+                  <ActivityIndicator size="large" color="#F28C1B" />
+                  <ThemedText type="small" style={styles.hintText}>
+                    Đang tải danh sách phòng...
+                  </ThemedText>
+                </View>
+              ) : null}
 
-          {!isLoading && error ? (
-            <View style={styles.centerBox}>
-              <ThemedText type="small" style={styles.errorText}>
-                {error}
-              </ThemedText>
-              <Pressable style={styles.retryButton} onPress={() => void loadRooms()}>
-                <ThemedText type="smallBold" style={styles.retryText}>
-                  Thử lại
-                </ThemedText>
-              </Pressable>
-            </View>
-          ) : null}
+              {!isLoading && error ? (
+                <View style={styles.centerBox}>
+                  <ThemedText type="small" style={styles.errorText}>
+                    {error}
+                  </ThemedText>
+                  <Pressable
+                    style={styles.retryButton}
+                    onPress={() => void loadRooms()}
+                  >
+                    <ThemedText type="smallBold" style={styles.retryText}>
+                      Thử lại
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              ) : null}
 
-          {!isLoading && !error && listings.length === 0 ? (
-            <View style={styles.centerBox}>
-              <ThemedText type="small" style={styles.hintText}>
-                {rooms.length === 0
-                  ? "API chưa trả phòng nào."
-                  : "Không có phòng khớp từ khóa tìm kiếm."}
-              </ThemedText>
-            </View>
-          ) : null}
+              {!isLoading && !error && listings.length === 0 ? (
+                <View style={styles.centerBox}>
+                  <ThemedText type="small" style={styles.hintText}>
+                    {rooms.length === 0
+                      ? "API chưa trả phòng nào."
+                      : "Không có phòng khớp từ khóa tìm kiếm."}
+                  </ThemedText>
+                </View>
+              ) : null}
 
-          {!isLoading && !error
-            ? listings.map((room) => (
-                <RoomCard
-                  key={room._id}
-                  room={room}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/sv/detail_page",
-                      params: { id: room._id },
-                    } as any)
-                  }
-                />
-              ))
-            : null}
-        </ScrollView>
+              {!isLoading && !error
+                ? listings.map((room) => (
+                    <RoomCard
+                      key={room._id}
+                      room={room}
+                      onPress={() => openRoomDetail(room)}
+                    />
+                  ))
+                : null}
+            </ScrollView>
+          )}
+        </View>
 
         {isAuthenticated ? <BottomNavigation activeTab="explore" /> : null}
       </SafeAreaView>
@@ -396,6 +480,16 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+  },
+  body: {
+    flex: 1,
+  },
+  mapWrap: {
+    flex: 1,
+    minHeight: 420,
+  },
+  scrollContent: {
+    paddingBottom: 24,
   },
   headerContainer: {
     position: "absolute",

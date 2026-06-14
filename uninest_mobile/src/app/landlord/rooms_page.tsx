@@ -1,10 +1,11 @@
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -15,6 +16,7 @@ import {
   Text,
   TextInput,
   View,
+  type TextInputProps,
 } from "react-native";
 import {
   SafeAreaView,
@@ -26,6 +28,7 @@ import { LandlordBottomNavigation } from "@/components/landlord/bottom-navigatio
 import { ThemedText } from "@/components/themed-text";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { Room, RoomImage, RoomPayload, RoomStatus, RoomType } from "@/types/room";
+import { resolveRoomCoordinates } from "@/utils/geocode";
 import {
   formatPrice,
   formatRoomLocation,
@@ -45,6 +48,24 @@ const STATUS_FILTERS: { id: "ALL" | RoomStatus; label: string }[] = [
 ];
 
 const STATUS_OPTIONS: RoomStatus[] = ["AVAILABLE", "RENTED", "MAINTENANCE"];
+
+const HCMC_DISTRICTS = [
+  "Quận 1",
+  "Quận 3",
+  "Quận 4",
+  "Quận 5",
+  "Quận 6",
+  "Quận 7",
+  "Quận 8",
+  "Quận 10",
+  "Quận 11",
+  "Quận 12",
+  "Thủ Đức",
+  "Bình Thạnh",
+  "Tân Bình",
+  "Gò Vấp",
+  "Phú Nhuận",
+];
 
 type FormState = {
   title: string;
@@ -122,6 +143,24 @@ function toPayload(form: FormState): RoomPayload {
   };
 }
 
+function roomToForm(room: Room): FormState {
+  return {
+    title: room.title,
+    address: room.address,
+    district: room.district ?? "",
+    ward: room.ward ?? "",
+    roomType: (room.roomType as RoomType) ?? "SINGLE",
+    status: (room.status as RoomStatus) ?? "AVAILABLE",
+    pricePerMonth: String(room.pricePerMonth ?? ""),
+    depositAmount: room.depositAmount ? String(room.depositAmount) : "",
+    maxOccupants: String(room.maxOccupants ?? 1),
+    areaSqm: room.areaSqm ? String(room.areaSqm) : "",
+    electricityRate: room.electricityRate ? String(room.electricityRate) : "",
+    waterRate: room.waterRate ? String(room.waterRate) : "",
+    description: room.description ?? "",
+  };
+}
+
 function statusStyle(status?: string) {
   if (status === "AVAILABLE") return styles.badgeAvailable;
   if (status === "RENTED") return styles.badgeRented;
@@ -137,7 +176,8 @@ export default function LandlordRoomsPage() {
   const [statusFilter, setStatusFilter] = useState<"ALL" | RoomStatus>("ALL");
   const [formOpen, setFormOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [formSeed, setFormSeed] = useState("closed");
+  const [formInitial, setFormInitial] = useState<FormState>(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionRoomId, setActionRoomId] = useState<string | null>(null);
   const [roomImages, setRoomImages] = useState<RoomImage[]>([]);
@@ -198,28 +238,16 @@ export default function LandlordRoomsPage() {
 
   const openCreateForm = () => {
     setEditingRoom(null);
-    setForm(EMPTY_FORM);
+    setFormInitial(EMPTY_FORM);
+    setFormSeed(`create-${Date.now()}`);
     setRoomImages([]);
     setFormOpen(true);
   };
 
   const openEditForm = (room: Room) => {
     setEditingRoom(room);
-    setForm({
-      title: room.title,
-      address: room.address,
-      district: room.district ?? "",
-      ward: room.ward ?? "",
-      roomType: (room.roomType as RoomType) ?? "SINGLE",
-      status: (room.status as RoomStatus) ?? "AVAILABLE",
-      pricePerMonth: String(room.pricePerMonth ?? ""),
-      depositAmount: room.depositAmount ? String(room.depositAmount) : "",
-      maxOccupants: String(room.maxOccupants ?? 1),
-      areaSqm: room.areaSqm ? String(room.areaSqm) : "",
-      electricityRate: room.electricityRate ? String(room.electricityRate) : "",
-      waterRate: room.waterRate ? String(room.waterRate) : "",
-      description: room.description ?? "",
-    });
+    setFormInitial(roomToForm(room));
+    setFormSeed(room._id);
     setRoomImages([]);
     setFormOpen(true);
     void loadRoomImages(room._id);
@@ -228,11 +256,12 @@ export default function LandlordRoomsPage() {
   const closeForm = () => {
     setFormOpen(false);
     setEditingRoom(null);
-    setForm(EMPTY_FORM);
+    setFormInitial(EMPTY_FORM);
+    setFormSeed("closed");
     setRoomImages([]);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (form: FormState) => {
     const error = validateForm(form);
     if (error) {
       Alert.alert("Không thể lưu", error);
@@ -241,12 +270,34 @@ export default function LandlordRoomsPage() {
 
     setIsSubmitting(true);
     try {
-      const payload = toPayload(form);
+      const basePayload = toPayload(form);
+      const coordinates = await resolveRoomCoordinates({
+        address: basePayload.address,
+        ward: basePayload.ward,
+        district: basePayload.district,
+        city: basePayload.city,
+      });
+
+      const payload: RoomPayload = {
+        ...basePayload,
+        ...(coordinates
+          ? {
+              latitude: coordinates.latitude,
+              longitude: coordinates.longitude,
+            }
+          : {}),
+      };
+
       if (editingRoom) {
         await roomApi.update(editingRoom._id, payload);
         closeForm();
         await loadRooms();
-        Alert.alert("Thành công", "Đã cập nhật phòng.");
+        Alert.alert(
+          "Thành công",
+          coordinates
+            ? "Đã cập nhật phòng và vị trí bản đồ."
+            : "Đã cập nhật phòng. Không xác định được tọa độ từ địa chỉ — hãy kiểm tra lại địa chỉ chi tiết hơn.",
+        );
       } else {
         const res = await roomApi.create(payload);
         const created = res.data;
@@ -258,7 +309,9 @@ export default function LandlordRoomsPage() {
         }
         Alert.alert(
           "Thành công",
-          "Đã tạo phòng. Bạn có thể thêm ảnh bên dưới trước khi đóng.",
+          coordinates
+            ? "Đã tạo phòng. Bạn có thể thêm ảnh bên dưới trước khi đóng."
+            : "Đã tạo phòng. Không xác định được tọa độ từ địa chỉ — bản đồ có thể hiển thị chưa chính xác.",
         );
       }
     } catch (err) {
@@ -568,13 +621,13 @@ export default function LandlordRoomsPage() {
           visible={formOpen}
           editing={Boolean(editingRoom)}
           roomId={editingRoom?._id}
-          form={form}
+          formSeed={formSeed}
+          initialForm={formInitial}
           images={roomImages}
           isSubmitting={isSubmitting}
           imageBusy={imageBusy}
-          onChange={setForm}
           onClose={closeForm}
-          onSubmit={() => void handleSubmit()}
+          onSubmit={(form) => void handleSubmit(form)}
           onPickImages={() => void handlePickAndUploadImages()}
           onSetPrimaryImage={(imageId) => void handleSetPrimaryImage(imageId)}
           onDeleteImage={handleDeleteImage}
@@ -741,15 +794,69 @@ function RoomCard({
   );
 }
 
+type TextFormField = "title" | "address" | "district" | "ward" | "description";
+
+type FormTextInputProps = Omit<
+  TextInputProps,
+  "value" | "onChangeText" | "defaultValue"
+> & {
+  fieldKey: string;
+  defaultValue: string;
+  onCommit: (value: string) => void;
+  onRegisterFlush?: (getter: () => string) => void;
+};
+
+function FormTextInput({
+  fieldKey,
+  defaultValue,
+  onCommit,
+  onRegisterFlush,
+  onFocus,
+  onBlur,
+  ...rest
+}: FormTextInputProps) {
+  const valueRef = useRef(defaultValue);
+
+  useEffect(() => {
+    valueRef.current = defaultValue;
+    onRegisterFlush?.(() => valueRef.current);
+  }, [fieldKey, defaultValue, onRegisterFlush]);
+
+  return (
+    <TextInput
+      key={fieldKey}
+      {...rest}
+      defaultValue={defaultValue}
+      onFocus={onFocus}
+      onBlur={(event) => {
+        onCommit(valueRef.current);
+        onBlur?.(event);
+      }}
+      onChangeText={(text) => {
+        valueRef.current = text;
+      }}
+      autoCorrect={false}
+      spellCheck={false}
+      autoComplete="off"
+      importantForAutofill="no"
+      textContentType="none"
+      keyboardType="default"
+      {...(Platform.OS === "android"
+        ? { textBreakStrategy: "simple" as const }
+        : {})}
+    />
+  );
+}
+
 function RoomFormModal({
   visible,
   editing,
   roomId,
-  form,
+  formSeed,
+  initialForm,
   images,
   isSubmitting,
   imageBusy,
-  onChange,
   onClose,
   onSubmit,
   onPickImages,
@@ -759,21 +866,68 @@ function RoomFormModal({
   visible: boolean;
   editing: boolean;
   roomId?: string;
-  form: FormState;
+  formSeed: string;
+  initialForm: FormState;
   images: RoomImage[];
   isSubmitting: boolean;
   imageBusy: boolean;
-  onChange: (next: FormState) => void;
   onClose: () => void;
-  onSubmit: () => void;
+  onSubmit: (form: FormState) => void;
   onPickImages: () => void;
   onSetPrimaryImage: (imageId: string) => void;
   onDeleteImage: (imageId: string) => void;
 }) {
   const insets = useSafeAreaInsets();
+  const [form, setForm] = useState<FormState>(initialForm);
+  const [textFieldRevision, setTextFieldRevision] = useState<
+    Partial<Record<TextFormField, number>>
+  >({});
+  const flushGettersRef = useRef<Partial<Record<TextFormField, () => string>>>({});
+
+  useEffect(() => {
+    if (visible) {
+      setForm(initialForm);
+      setTextFieldRevision({});
+      flushGettersRef.current = {};
+    }
+  }, [visible, formSeed, initialForm]);
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
-    onChange({ ...form, [key]: value });
+    setForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const bumpTextField = (field: TextFormField) => {
+    setTextFieldRevision((current) => ({
+      ...current,
+      [field]: (current[field] ?? 0) + 1,
+    }));
+  };
+
+  const textFieldKey = (field: TextFormField) =>
+    `${formSeed}-${field}-${textFieldRevision[field] ?? 0}`;
+
+  const registerFlush = useCallback((field: TextFormField) => {
+    return (getter: () => string) => {
+      flushGettersRef.current[field] = getter;
+    };
+  }, []);
+
+  const buildSubmitForm = () => {
+    const nextForm = { ...form };
+    (Object.keys(flushGettersRef.current) as TextFormField[]).forEach((field) => {
+      const getter = flushGettersRef.current[field];
+      if (getter) {
+        nextForm[field] = getter();
+      }
+    });
+    return nextForm;
+  };
+
+  const handleSave = () => {
+    Keyboard.dismiss();
+    const nextForm = buildSubmitForm();
+    setForm(nextForm);
+    onSubmit(nextForm);
   };
 
   return (
@@ -803,9 +957,11 @@ function RoomFormModal({
               keyboardShouldPersistTaps="handled"
             >
               <Field label="Tên phòng" required>
-                <TextInput
-                  value={form.title}
-                  onChangeText={(v) => setField("title", v)}
+                <FormTextInput
+                  fieldKey={textFieldKey("title")}
+                  defaultValue={form.title}
+                  onCommit={(v) => setField("title", v)}
+                  onRegisterFlush={registerFlush("title")}
                   placeholder="VD: Phòng 203 - Sunrise House"
                   placeholderTextColor="#9AA3B2"
                   style={styles.input}
@@ -813,9 +969,11 @@ function RoomFormModal({
               </Field>
 
               <Field label="Địa chỉ" required>
-                <TextInput
-                  value={form.address}
-                  onChangeText={(v) => setField("address", v)}
+                <FormTextInput
+                  fieldKey={textFieldKey("address")}
+                  defaultValue={form.address}
+                  onCommit={(v) => setField("address", v)}
+                  onRegisterFlush={registerFlush("address")}
                   placeholder="Số nhà, đường, phường/xã"
                   placeholderTextColor="#9AA3B2"
                   style={styles.input}
@@ -823,19 +981,51 @@ function RoomFormModal({
               </Field>
 
               <Field label="Quận / Huyện">
-                <TextInput
-                  value={form.district}
-                  onChangeText={(v) => setField("district", v)}
+                <FormTextInput
+                  fieldKey={textFieldKey("district")}
+                  defaultValue={form.district}
+                  onCommit={(v) => setField("district", v)}
+                  onRegisterFlush={registerFlush("district")}
                   placeholder="VD: Quận 7"
                   placeholderTextColor="#9AA3B2"
                   style={styles.input}
                 />
+                <View style={styles.districtChips}>
+                  {HCMC_DISTRICTS.map((district) => {
+                    const active = form.district === district;
+                    return (
+                      <Pressable
+                        key={district}
+                        style={[
+                          styles.districtChip,
+                          active && styles.districtChipActive,
+                        ]}
+                        onPress={() => {
+                          setField("district", district);
+                          bumpTextField("district");
+                        }}
+                      >
+                        <ThemedText
+                          type="small"
+                          style={[
+                            styles.districtChipText,
+                            active && styles.districtChipTextActive,
+                          ]}
+                        >
+                          {district}
+                        </ThemedText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </Field>
 
               <Field label="Phường / Xã">
-                <TextInput
-                  value={form.ward}
-                  onChangeText={(v) => setField("ward", v)}
+                <FormTextInput
+                  fieldKey={textFieldKey("ward")}
+                  defaultValue={form.ward}
+                  onCommit={(v) => setField("ward", v)}
+                  onRegisterFlush={registerFlush("ward")}
                   placeholder="VD: Phường Tân Phú"
                   placeholderTextColor="#9AA3B2"
                   style={styles.input}
@@ -974,9 +1164,11 @@ function RoomFormModal({
               </View>
 
               <Field label="Mô tả">
-                <TextInput
-                  value={form.description}
-                  onChangeText={(v) => setField("description", v)}
+                <FormTextInput
+                  fieldKey={textFieldKey("description")}
+                  defaultValue={form.description}
+                  onCommit={(v) => setField("description", v)}
+                  onRegisterFlush={registerFlush("description")}
                   placeholder="Tiện ích, nội thất, quy định..."
                   placeholderTextColor="#9AA3B2"
                   style={[styles.input, styles.textArea]}
@@ -1080,7 +1272,7 @@ function RoomFormModal({
                   styles.submitButton,
                   isSubmitting && styles.submitButtonDisabled,
                 ]}
-                onPress={onSubmit}
+                onPress={handleSave}
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
@@ -1422,6 +1614,31 @@ const styles = StyleSheet.create({
     minHeight: 48,
     fontSize: 15,
     color: "#1F2940",
+  },
+  districtChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 10,
+  },
+  districtChip: {
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#ECE7DF",
+    backgroundColor: "#FAFAF8",
+  },
+  districtChipActive: {
+    borderColor: "#E68A2E",
+    backgroundColor: "#FFF0DF",
+  },
+  districtChipText: {
+    color: "#7A869A",
+  },
+  districtChipTextActive: {
+    color: "#C47A10",
+    fontWeight: "700",
   },
   textArea: {
     minHeight: 96,

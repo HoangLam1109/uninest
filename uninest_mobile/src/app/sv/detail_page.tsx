@@ -18,6 +18,7 @@ import { bookingApi } from "@/api/booking.api";
 import { reviewApi } from "@/api/review.api";
 import { roomApi } from "@/api/room.api";
 import { FavoriteHeartButton } from "@/components/favorite-heart-button";
+import { RoomLocationMap } from "@/components/room-location-map";
 import { RoomReviewsSection } from "@/components/room-reviews-section";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -306,32 +307,19 @@ export default function DetailPage() {
             </>
           ) : null}
 
+          {!isLoading && !error && room ? (
           <View style={styles.section}>
-            <ThemedText type="smallBold" style={styles.sectionTitle}>
-              Vị trí
-            </ThemedText>
-            <View style={styles.mapCard}>
-              <View style={styles.mapBlob} />
-              <View style={styles.mapMarker}>
-                <Text style={styles.mapMarkerText}>⌂</Text>
-              </View>
-            </View>
-
-            <View style={styles.accessRow}>
-              <View style={styles.accessItem}>
-                <Text style={styles.accessIcon}>🚶</Text>
-                <ThemedText type="small" style={styles.accessText}>
-                  5 phút đến Cơ sở chính
-                </ThemedText>
-              </View>
-              <View style={styles.accessItem}>
-                <Text style={styles.accessIcon}>🚌</Text>
-                <ThemedText type="small" style={styles.accessText}>
-                  2 phút đến Trạm xe buýt
-                </ThemedText>
-              </View>
-            </View>
+            <RoomLocationMap
+              address={room.address}
+              title={room.title}
+              ward={room.ward}
+              district={room.district}
+              city={room.city}
+              latitude={room.latitude}
+              longitude={room.longitude}
+            />
           </View>
+          ) : null}
 
           {!isLoading && !error && room ? (
           <View style={styles.bookingCard}>

@@ -26,6 +26,8 @@ export type Room = {
   areaSqm?: number;
   maxOccupants?: number;
   isPublished?: boolean;
+  latitude?: number;
+  longitude?: number;
   landlordId?: string | RoomLandlord;
   deletedAt?: string | null;
 };
@@ -77,6 +79,8 @@ export type RoomPayload = {
   roomType?: RoomType;
   status?: RoomStatus;
   propertyId?: string | null;
+  latitude?: number;
+  longitude?: number;
 };
 
 export type RoomImageResponse = {

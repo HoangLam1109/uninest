@@ -11,6 +11,11 @@ export type RegisterPayload = {
   fullName: string;
   phone: string;
   password: string;
+  otp: string;
+};
+
+export type SendRegisterOtpPayload = {
+  email: string;
 };
 
 export type LoginPayload = {

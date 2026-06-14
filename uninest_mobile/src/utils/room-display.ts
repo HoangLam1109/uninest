@@ -4,12 +4,20 @@ export function formatPrice(value: number) {
   return `${value.toLocaleString("vi-VN")}đ`;
 }
 
-export function formatRoomLocation(room: Room) {
+export function formatRoomLocation(room: {
+  address: string;
+  ward?: string;
+  district?: string;
+  city?: string;
+}) {
   const parts = [room.address, room.ward, room.district, room.city].filter(
     Boolean,
   );
   return parts.join(", ");
 }
+
+/** Alias giống FE `formatRoomFullLocation`. */
+export const formatRoomFullLocation = formatRoomLocation;
 
 export function roomStatusLabel(status?: RoomStatus | string) {
   const map: Record<string, string> = {

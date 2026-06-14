@@ -11,11 +11,16 @@
       "icon": "./assets/expo.icon",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "UniNest cần truy cập thư viện ảnh để bạn upload hình phòng trọ.",
-        "NSCameraUsageDescription": "UniNest cần truy cập camera để bạn chụp ảnh phòng trọ."
+        "NSCameraUsageDescription": "UniNest cần truy cập camera để bạn chụp ảnh phòng trọ.",
+        "NSLocationWhenInUseUsageDescription": "UniNest cần truy cập vị trí để hiển thị phòng trọ gần bạn trên bản đồ."
       }
     },
     "android": {
       "usesCleartextTraffic": true,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -36,6 +41,12 @@
         {
           "photosPermission": "UniNest cần truy cập thư viện ảnh để bạn upload hình phòng trọ.",
           "cameraPermission": "UniNest cần truy cập camera để bạn chụp ảnh phòng trọ."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "UniNest cần truy cập vị trí để hiển thị phòng trọ gần bạn trên bản đồ."
         }
       ],
       [
