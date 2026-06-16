@@ -7,6 +7,10 @@ export type LandlordTenant = {
   isPrimaryTenant: boolean;
   roomTitle: string;
   address: string;
+  cccdNumber?: string;
+  cccdFrontImage?: string;
+  cccdBackImage?: string;
+  dateOfBirth?: string;
 };
 
 export type LandlordTenantListResponse = {

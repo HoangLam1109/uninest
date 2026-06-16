@@ -99,4 +99,35 @@ export const api = {
     }),
 
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+
+  /** Multipart upload — do not set Content-Type; fetch adds boundary. */
+  postForm: <T>(path: string, formData: FormData) => requestForm<T>(path, formData),
 };
+
+async function requestForm<T>(path: string, formData: FormData): Promise<T> {
+  let response: Response;
+  try {
+    const token = getAccessToken();
+    response = await fetch(`${env.apiBaseUrl}${path}`, {
+      method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+  } catch (error) {
+    throw new ApiError(toNetworkErrorMessage(error));
+  }
+
+  const body = await parseJsonSafe(response);
+
+  if (!response.ok || body.success === false) {
+    const message =
+      typeof body.message === "string" && body.message.length > 0
+        ? body.message
+        : `Yêu cầu thất bại (mã ${response.status})`;
+    throw new ApiError(message, response.status);
+  }
+
+  return body as T;
+}

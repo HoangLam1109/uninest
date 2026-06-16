@@ -1,13 +1,17 @@
 import type { Invoice, InvoiceStatus } from "@/types/invoice";
 
-export function formatBillingMonth(billingMonth: string) {
+export function formatBillingMonth(billingMonth?: string) {
+  if (!billingMonth) return "—";
   const [year, month] = billingMonth.split("-");
   if (!year || !month) return billingMonth;
   return `Tháng ${Number(month)}/${year}`;
 }
 
-export function formatInvoiceDate(iso: string) {
-  return new Date(iso).toLocaleDateString("vi-VN", {
+export function formatInvoiceDate(iso?: string | null) {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("vi-VN", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -50,7 +54,7 @@ export function invoiceStatusStyle(status: InvoiceStatus) {
 }
 
 export function isInvoiceUnpaid(status: InvoiceStatus) {
-  return status === "SENT" || status === "OVERDUE" || status === "DRAFT";
+  return status === "SENT" || status === "OVERDUE";
 }
 
 export function getLandlordName(invoice: Invoice) {

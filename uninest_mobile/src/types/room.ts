@@ -75,5 +75,12 @@ export type RoomPayload = {
   waterRate?: number;
   areaSqm?: number;
   roomType?: RoomType;
+  status?: RoomStatus;
   propertyId?: string | null;
+};
+
+export type RoomImageResponse = {
+  success: boolean;
+  data: RoomImage;
+  message?: string;
 };

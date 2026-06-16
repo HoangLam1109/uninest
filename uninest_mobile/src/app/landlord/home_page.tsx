@@ -1,8 +1,11 @@
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,41 +16,152 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
+import { authApi } from "@/api/auth.api";
+import { invoiceApi } from "@/api/invoice.api";
+import { roomApi } from "@/api/room.api";
 import { LandlordBottomNavigation } from "@/components/landlord/bottom-navigation";
 import { ThemedText } from "@/components/themed-text";
+import { useAuth } from "@/context/auth-context";
+import { getApiErrorMessage } from "@/lib/api-error";
+import type { Invoice } from "@/types/invoice";
+import type { Room } from "@/types/room";
+import {
+  getRoomTitleFromInvoice,
+  getTenantName,
+  sumUnpaidAmount,
+} from "@/utils/invoice-display";
+import { formatPrice } from "@/utils/room-display";
 
-const CHART_MONTHS = [
-  { label: "Th1", value: 0.45 },
-  { label: "Th2", value: 0.55 },
-  { label: "Th3", value: 0.5 },
-  { label: "Th4", value: 0.65 },
-  { label: "Th5", value: 0.7 },
-  { label: "Th6", value: 0.85, active: true },
-];
+type RecentPayment = {
+  id: string;
+  name: string;
+  meta: string;
+  amount: string;
+  status: "paid" | "pending";
+};
 
-const RECENT_PAYMENTS = [
-  {
-    id: "1",
-    name: "Nguyễn Minh Tuấn",
-    meta: "Phòng 402 • 2 giờ trước",
-    amount: "6.000.000 đ",
-    status: "paid" as const,
-  },
-  {
-    id: "2",
-    name: "Lê Thị Lan Anh",
-    meta: "Phòng 105 • 5 giờ trước",
-    amount: "20.000.000 đ",
-    status: "paid" as const,
-  },
-  {
-    id: "3",
-    name: "Trần Hoàng Nam",
-    meta: "Phòng 212 • Hôm qua",
-    amount: "20.000.000 đ",
-    status: "pending" as const,
-  },
-];
+type ChartMonth = {
+  label: string;
+  billingMonth: string;
+  value: number;
+  amount: number;
+  active: boolean;
+};
+
+function currentBillingMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function previousBillingMonth() {
+  const now = new Date();
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getLast6BillingMonths(): string[] {
+  const months: string[] = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(
+      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
+    );
+  }
+  return months;
+}
+
+function monthLabel(billingMonth: string) {
+  const month = Number(billingMonth.split("-")[1]);
+  return Number.isFinite(month) ? `Th${month}` : billingMonth;
+}
+
+function sumPaidForMonth(invoices: Invoice[], billingMonth: string) {
+  return invoices
+    .filter((inv) => inv.status === "PAID" && inv.billingMonth === billingMonth)
+    .reduce((sum, inv) => sum + (inv.totalAmount ?? 0), 0);
+}
+
+function sumUtilityForMonth(invoices: Invoice[], billingMonth: string) {
+  return invoices
+    .filter((inv) => inv.billingMonth === billingMonth)
+    .reduce(
+      (sum, inv) =>
+        sum + (inv.electricityAmount ?? 0) + (inv.waterAmount ?? 0),
+      0,
+    );
+}
+
+function buildUtilityChart(invoices: Invoice[]): ChartMonth[] {
+  const months = getLast6BillingMonths();
+  const current = currentBillingMonth();
+  const amounts = months.map((billingMonth) =>
+    sumUtilityForMonth(invoices, billingMonth),
+  );
+  const maxAmount = Math.max(...amounts, 1);
+
+  return months.map((billingMonth, index) => ({
+    label: monthLabel(billingMonth),
+    billingMonth,
+    amount: amounts[index],
+    value: amounts[index] / maxAmount,
+    active: billingMonth === current,
+  }));
+}
+
+function formatTimeAgo(iso?: string | null) {
+  if (!iso) return "";
+  const diffMs = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(diffMs)) return "";
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (hours < 1) return "Vừa xong";
+  if (hours < 24) return `${hours} giờ trước`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Hôm qua";
+  return `${days} ngày trước`;
+}
+
+function buildRecentPayments(invoices: Invoice[]): RecentPayment[] {
+  const sorted = [...invoices].sort((a, b) => {
+    const aTime = new Date(a.paidAt ?? a.sentAt ?? a.createdAt ?? 0).getTime();
+    const bTime = new Date(b.paidAt ?? b.sentAt ?? b.createdAt ?? 0).getTime();
+    return bTime - aTime;
+  });
+
+  return sorted.slice(0, 5).map((invoice) => {
+    const roomTitle = getRoomTitleFromInvoice(invoice);
+    const timeLabel = formatTimeAgo(
+      invoice.paidAt ?? invoice.sentAt ?? invoice.createdAt,
+    );
+    const paid = invoice.status === "PAID";
+
+    return {
+      id: invoice._id,
+      name: getTenantName(invoice),
+      meta: [roomTitle, timeLabel].filter(Boolean).join(" • "),
+      amount: formatPrice(invoice.totalAmount ?? 0),
+      status: paid ? "paid" : "pending",
+    };
+  });
+}
+
+function calcOccupancyRate(rooms: Room[]) {
+  if (rooms.length === 0) return 0;
+  const rented = rooms.filter((room) => room.status === "RENTED").length;
+  return Math.round((rented / rooms.length) * 100);
+}
+
+function calcRevenueTrend(current: number, previous: number) {
+  if (previous <= 0) {
+    return current > 0 ? { text: "+100%", up: true } : { text: "0%", up: true };
+  }
+  const change = Math.round(((current - previous) / previous) * 100);
+  if (change === 0) return { text: "0%", up: true };
+  return {
+    text: `${change > 0 ? "+" : ""}${change}%`,
+    up: change >= 0,
+  };
+}
 
 function StatCard({
   title,
@@ -137,13 +251,89 @@ function PaymentRow({
 export default function LandlordHomePage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [activeChartMonth] = useState(5);
+  const { user: sessionUser } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [tenantCount, setTenantCount] = useState(0);
+  const [displayName, setDisplayName] = useState(sessionUser?.fullName ?? "Chủ nhà");
+
+  const loadDashboard = useCallback(async () => {
+    try {
+      const [meRes, roomsRes, tenantsRes, invoicesRes] = await Promise.all([
+        authApi.getMe().catch(() => null),
+        roomApi.listMy({ page: 1, limit: 100 }),
+        roomApi.listTenants().catch(() => ({ success: true, data: [] })),
+        invoiceApi.listLandlord({ page: 1, limit: 100 }),
+      ]);
+
+      setDisplayName(meRes?.data?.user?.fullName ?? sessionUser?.fullName ?? "Chủ nhà");
+      setRooms(roomsRes.data ?? []);
+      setTenantCount(tenantsRes.data?.length ?? 0);
+      setInvoices(invoicesRes.data ?? []);
+    } catch (err) {
+      Alert.alert(
+        "Không tải được dữ liệu",
+        getApiErrorMessage(err, "Vui lòng thử lại."),
+      );
+      setRooms([]);
+      setInvoices([]);
+      setTenantCount(0);
+    }
+  }, [sessionUser?.fullName]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      void loadDashboard().finally(() => setLoading(false));
+    }, [loadDashboard]),
+  );
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadDashboard();
+    setRefreshing(false);
+  };
+
+  const occupancyRate = useMemo(() => calcOccupancyRate(rooms), [rooms]);
+  const currentMonth = currentBillingMonth();
+  const previousMonth = previousBillingMonth();
+  const monthlyRevenue = useMemo(
+    () => sumPaidForMonth(invoices, currentMonth),
+    [invoices, currentMonth],
+  );
+  const previousRevenue = useMemo(
+    () => sumPaidForMonth(invoices, previousMonth),
+    [invoices, previousMonth],
+  );
+  const revenueTrend = useMemo(
+    () => calcRevenueTrend(monthlyRevenue, previousRevenue),
+    [monthlyRevenue, previousRevenue],
+  );
+  const utilityChart = useMemo(() => buildUtilityChart(invoices), [invoices]);
+  const currentUtilityTotal = useMemo(
+    () => sumUtilityForMonth(invoices, currentMonth),
+    [invoices, currentMonth],
+  );
+  const recentPayments = useMemo(
+    () => buildRecentPayments(invoices),
+    [invoices],
+  );
+  const activeChartIndex = utilityChart.findIndex((item) => item.active);
 
   return (
     <View style={styles.screen}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScrollView
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void handleRefresh()}
+              tintColor="#E68A2E"
+            />
+          }
           contentContainerStyle={[
             styles.scrollContent,
             { paddingBottom: 120 + insets.bottom },
@@ -175,29 +365,38 @@ export default function LandlordHomePage() {
                 style={styles.profileCircle}
                 onPress={() => router.push("/landlord/profile_page" as any)}
               >
-                <Text style={styles.profileEmoji}>👨🏻</Text>
+                <Text style={styles.profileEmoji}>
+                  {displayName.charAt(0).toUpperCase()}
+                </Text>
               </Pressable>
             </View>
           </View>
 
+          {loading ? (
+            <ActivityIndicator
+              color="#E68A2E"
+              style={{ marginVertical: 40 }}
+              size="large"
+            />
+          ) : (
+            <>
           <StatCard
             title="Tổng số phòng"
-            value="20"
-            sub="Sức chứa"
+            value={String(rooms.length)}
+            sub={`${tenantCount} người thuê`}
             icon="🛏️"
           />
           <StatCard
             title="Tỉ lệ lấp đầy"
-            value="92%"
-            trend="+4%"
-            trendUp
+            value={`${occupancyRate}%`}
+            sub={`${rooms.filter((r) => r.status === "RENTED").length}/${rooms.length} phòng đã thuê`}
             icon="👥"
           />
           <StatCard
             title="Doanh thu tháng"
-            value="50.000.000đ"
-            trend="-2%"
-            trendUp={false}
+            value={formatPrice(monthlyRevenue)}
+            trend={revenueTrend.text}
+            trendUp={revenueTrend.up}
             icon="💵"
           />
 
@@ -211,7 +410,10 @@ export default function LandlordHomePage() {
                   Mức tiêu thụ điện & nước trung bình mỗi căn
                 </ThemedText>
               </View>
-              <Pressable style={styles.exportBtn}>
+              <Pressable
+                style={styles.exportBtn}
+                onPress={() => router.push("/landlord/invoices_page" as any)}
+              >
                 <Text style={styles.exportIcon}>⬇</Text>
                 <ThemedText type="smallBold" style={styles.exportText}>
                   Xuất báo cáo
@@ -219,15 +421,17 @@ export default function LandlordHomePage() {
               </Pressable>
             </View>
 
-            <Text style={styles.utilityAmount}>10.000.000đ</Text>
+            <Text style={styles.utilityAmount}>
+              {formatPrice(currentUtilityTotal)}
+            </Text>
             <ThemedText type="small" style={styles.utilityAmountLabel}>
-              Tổng tháng
+              Tổng điện nước tháng {monthLabel(currentMonth)}
             </ThemedText>
 
             <View style={styles.chartArea}>
               <View style={styles.chartBars}>
-                {CHART_MONTHS.map((month, index) => (
-                  <View key={month.label} style={styles.chartColumn}>
+                {utilityChart.map((month, index) => (
+                  <View key={month.billingMonth} style={styles.chartColumn}>
                     {month.active ? (
                       <Text style={styles.chartSpark}>〰</Text>
                     ) : (
@@ -239,7 +443,7 @@ export default function LandlordHomePage() {
                         {
                           height: 24 + month.value * 56,
                           backgroundColor:
-                            index === activeChartMonth ? "#E68A2E" : "#E5DCCF",
+                            index === activeChartIndex ? "#E68A2E" : "#E5DCCF",
                         },
                       ]}
                     />
@@ -247,7 +451,7 @@ export default function LandlordHomePage() {
                       type="small"
                       style={[
                         styles.chartLabel,
-                        index === activeChartMonth && styles.chartLabelActive,
+                        index === activeChartIndex && styles.chartLabelActive,
                       ]}
                     >
                       {month.label}
@@ -262,7 +466,7 @@ export default function LandlordHomePage() {
             <ThemedText type="smallBold" style={styles.sectionTitle}>
               Thanh toán gần đây
             </ThemedText>
-            <Pressable>
+            <Pressable onPress={() => router.push("/landlord/invoices_page" as any)}>
               <ThemedText type="smallBold" style={styles.seeAll}>
                 Xem tất cả
               </ThemedText>
@@ -270,26 +474,42 @@ export default function LandlordHomePage() {
           </View>
 
           <View style={styles.paymentsCard}>
-            {RECENT_PAYMENTS.map((item, index) => (
-              <View key={item.id}>
-                <PaymentRow
-                  name={item.name}
-                  meta={item.meta}
-                  amount={item.amount}
-                  status={item.status}
-                />
-                {index < RECENT_PAYMENTS.length - 1 ? (
-                  <View style={styles.paymentDivider} />
-                ) : null}
+            {recentPayments.length === 0 ? (
+              <View style={styles.emptyPayments}>
+                <ThemedText type="small" style={styles.emptyPaymentsText}>
+                  Chưa có hóa đơn nào. Tạo hóa đơn tại tab Báo cáo.
+                </ThemedText>
+                <ThemedText type="small" style={styles.emptyPaymentsSub}>
+                  Chờ thu: {formatPrice(sumUnpaidAmount(invoices))}
+                </ThemedText>
               </View>
-            ))}
+            ) : (
+              recentPayments.map((item, index) => (
+                <View key={item.id}>
+                  <PaymentRow
+                    name={item.name}
+                    meta={item.meta}
+                    amount={item.amount}
+                    status={item.status}
+                  />
+                  {index < recentPayments.length - 1 ? (
+                    <View style={styles.paymentDivider} />
+                  ) : null}
+                </View>
+              ))
+            )}
           </View>
 
-          <Pressable style={styles.primaryButton}>
+          <Pressable
+            style={styles.primaryButton}
+            onPress={() => router.push("/landlord/tenants_page" as any)}
+          >
             <ThemedText type="smallBold" style={styles.primaryButtonText}>
-              (+) Thêm người thuê mới
+              (+) Quản lý người thuê
             </ThemedText>
           </Pressable>
+            </>
+          )}
         </ScrollView>
 
         <LandlordBottomNavigation activeTab="home" />
@@ -591,6 +811,18 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#F0EBE3",
     marginLeft: 70,
+  },
+  emptyPayments: {
+    paddingHorizontal: 14,
+    paddingVertical: 20,
+    gap: 6,
+  },
+  emptyPaymentsText: {
+    color: "#7A869A",
+    lineHeight: 18,
+  },
+  emptyPaymentsSub: {
+    color: "#C47A10",
   },
   primaryButton: {
     backgroundColor: "#E68A2E",
