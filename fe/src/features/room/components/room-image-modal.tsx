@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { ImageOff, Star, Trash2 } from 'lucide-react'
+import { ImagePlus, ImageOff, Star, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
@@ -12,6 +12,8 @@ import {
 
 const inputClassName =
   'h-11 rounded-lg border border-primary/10 px-3 text-sm shadow-none focus-visible:ring-2'
+const imageInputClassName =
+  'flex h-11 w-full items-center gap-3 rounded-lg border border-primary/10 bg-white px-3 text-sm transition focus-within:ring-2 focus-within:ring-ring'
 
 function formatFileSize(size: number) {
   if (size < 1024) return `${size} B`
@@ -177,16 +179,28 @@ export function RoomImageModal({
             <span className="mb-1.5 block text-sm font-semibold text-slate-700">
               Ảnh phòng
             </span>
-            <Input
-              ref={imageInputRef}
-              type="file"
-              accept="image/*"
-              className={inputClassName}
-              onChange={(event) =>
-                setImageFile(event.target.files?.[0] ?? null)
-              }
-              required
-            />
+            <div className={imageInputClassName}>
+              <ImagePlus className="size-4 shrink-0 text-slate-400" />
+              <button
+                type="button"
+                className="shrink-0 rounded-md bg-primary/10 px-3 py-1.5 text-sm font-semibold text-primary transition hover:bg-primary/15"
+                onClick={() => imageInputRef.current?.click()}
+              >
+                Chọn ảnh
+              </button>
+              <span className="min-w-0 flex-1 truncate text-slate-500">
+                {imageFile?.name ?? 'Chưa chọn ảnh'}
+              </span>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(event) =>
+                  setImageFile(event.target.files?.[0] ?? null)
+                }
+              />
+            </div>
             {imageFile ? (
               <p className="mt-1 text-xs text-slate-500">
                 {imageFile.name} - {formatFileSize(imageFile.size)}

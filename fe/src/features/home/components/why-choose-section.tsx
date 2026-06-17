@@ -1,4 +1,5 @@
 import { Headphones, Home, Shield } from 'lucide-react'
+import { useGsapReveal } from '../hooks/use-gsap-reveal'
 import { whyChooseFeatures } from '../data'
 
 const iconMap = {
@@ -8,9 +9,15 @@ const iconMap = {
 } as const
 
 export function WhyChooseSection() {
+  const sectionRef = useGsapReveal<HTMLElement>()
+
   return (
-    <section id="about" className="bg-foreground px-6 py-16 text-white lg:px-20 lg:py-20">
-      <div className="mx-auto max-w-4xl text-center">
+    <section
+      ref={sectionRef}
+      id="about"
+      className="bg-foreground px-6 py-16 text-white lg:px-20 lg:py-20"
+    >
+      <div className="mx-auto max-w-4xl text-center" data-gsap-reveal>
         <h2 className="font-serif text-3xl font-bold lg:text-4xl">
           Tại sao nên chọn UniNest?
         </h2>
@@ -26,6 +33,7 @@ export function WhyChooseSection() {
           return (
             <article
               key={feature.title}
+              data-gsap-reveal
               className="flex flex-col items-center rounded-2xl border border-white/10 bg-white/5 p-8 text-center"
             >
               <div className="flex size-16 items-center justify-center rounded-full bg-primary/20">

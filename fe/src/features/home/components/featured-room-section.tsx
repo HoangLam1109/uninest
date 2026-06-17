@@ -14,6 +14,7 @@ import {
 } from '@/utils/room-display'
 import type { Room } from '@/features/room/types/room.type'
 import { images } from '../data'
+import { useGsapReveal } from '../hooks/use-gsap-reveal'
 
 type FeaturedRoomCardProps = {
   room: Room
@@ -71,6 +72,7 @@ function FeaturedRoomCard({ room, fallbackImage }: FeaturedRoomCardProps) {
 }
 
 export function FeaturedRoomsSection() {
+  const sectionRef = useGsapReveal<HTMLElement>()
   const params = useMemo(
     () => ({
       page: 1,
@@ -83,9 +85,16 @@ export function FeaturedRoomsSection() {
   const rooms = roomsQuery.data?.data ?? []
 
   return (
-    <section id="rooms" className="bg-surface px-6 py-16 lg:px-20 lg:py-20">
+    <section
+      ref={sectionRef}
+      id="rooms"
+      className="bg-surface px-6 py-16 lg:px-20 lg:py-20"
+    >
       <div className="mx-auto max-w-7xl">
-        <div className="mb-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div
+          className="mb-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
+          data-gsap-reveal
+        >
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.14em] text-primary">
                 Gợi ý cho bạn
@@ -129,11 +138,12 @@ export function FeaturedRoomsSection() {
         {!roomsQuery.isLoading && !roomsQuery.isError && rooms.length > 0 ? (
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
             {rooms.map((room, index) => (
-              <FeaturedRoomCard
-                key={room._id}
-                room={room}
-                fallbackImage={images.rooms[index % images.rooms.length]}
-              />
+              <div key={room._id} data-gsap-reveal>
+                <FeaturedRoomCard
+                  room={room}
+                  fallbackImage={images.rooms[index % images.rooms.length]}
+                />
+              </div>
             ))}
           </div>
         ) : null}
