@@ -126,11 +126,12 @@ export function RoomFormModal({
         onSubmit={handleSubmit((values) => onSubmit(toPayload(values)))}
         noValidate
       >
-        <label className="md:col-span-2">
+        <label className="md:col-span-2" htmlFor="room-title">
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Tên phòng
           </span>
           <Input
+            id="room-title"
             className={inputClassName}
             placeholder="Phòng 101 - Ban công"
             {...register('title')}
@@ -144,11 +145,12 @@ export function RoomFormModal({
 
        
 
-        <label>
+        <label htmlFor="room-price-per-month">
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Giá thuê/tháng
           </span>
           <Input
+            id="room-price-per-month"
             type="number"
             className={inputClassName}
             min={0}
@@ -161,11 +163,12 @@ export function RoomFormModal({
           ) : null}
         </label>
 
-        <label>
+        <label htmlFor="room-deposit-amount">
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Tiền cọc
           </span>
           <Input
+            id="room-deposit-amount"
             type="number"
             min={0}
             className={inputClassName}
@@ -173,11 +176,12 @@ export function RoomFormModal({
           />
         </label>
 
-        <label>
+        <label htmlFor="room-electricity-rate">
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Mức điện
           </span>
           <Input
+            id="room-electricity-rate"
             type="number"
             className={inputClassName}
             min={0}
@@ -185,11 +189,12 @@ export function RoomFormModal({
           />
         </label>
 
-        <label>
+        <label htmlFor="room-water-rate">
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Hóa đơn nước
           </span>
           <Input
+            id="room-water-rate"
             type="number"
             className={inputClassName}
             min={0}
@@ -197,11 +202,12 @@ export function RoomFormModal({
           />
         </label>
 
-        <label>
+        <label htmlFor="room-area-sqm">
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Diện tích
           </span>
           <Input
+            id="room-area-sqm"
             type="number"
             className={inputClassName}
             min={0}
@@ -210,11 +216,12 @@ export function RoomFormModal({
           />
         </label>
 
-        <label>
+        <label htmlFor="room-max-occupants">
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Số người thuê
           </span>
           <Input
+            id="room-max-occupants"
             type="number"
             className={inputClassName}
             min={1}
@@ -227,11 +234,12 @@ export function RoomFormModal({
           ) : null}
         </label>
         
-        <label>
+        <label htmlFor="room-type">
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Loại phòng
           </span>
           <select
+            id="room-type"
             className={`${inputClassName} w-full bg-white`}
             {...register('roomType', {
               setValueAs: (value) => value || undefined,
@@ -246,11 +254,15 @@ export function RoomFormModal({
           </select>
         </label>
 
-        <label>
+        <label htmlFor="room-status">
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Trạng thái
           </span>
-          <select className={`${inputClassName} w-full bg-white`} {...register('status')}>
+          <select
+            id="room-status"
+            className={`${inputClassName} w-full bg-white`}
+            {...register('status')}
+          >
             {statusOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -300,32 +312,33 @@ export function RoomFormModal({
           ) : null}
         </fieldset>
 
-        <label>
+        <label htmlFor="room-city">
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Thành phố
           </span>
-          <Input className={inputClassName} {...register('city')} />
+          <Input id="room-city" className={inputClassName} {...register('city')} />
         </label>
 
-        <label>
+        <label htmlFor="room-district">
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Quận/huyện
           </span>
-          <Input className={inputClassName} {...register('district')} />
+          <Input id="room-district" className={inputClassName} {...register('district')} />
         </label>
 
-        <label>
+        <label htmlFor="room-ward">
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Phường/xã
           </span>
-          <Input className={inputClassName} {...register('ward')} />
+          <Input id="room-ward" className={inputClassName} {...register('ward')} />
         </label>
 
-        <label>
+        <label htmlFor="room-latitude">
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Bề ngang
           </span>
           <Input
+            id="room-latitude"
             type="number"
             className={inputClassName}
             step="any"
@@ -333,11 +346,12 @@ export function RoomFormModal({
           />
         </label>
 
-        <label>
+        <label htmlFor="room-longitude">
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Bề dài
           </span>
           <Input
+            id="room-longitude"
             type="number"
             className={inputClassName}
             step="any"
@@ -345,21 +359,22 @@ export function RoomFormModal({
           />
         </label>
 
-        <label className="md:col-span-2">
+        <label className="md:col-span-2" htmlFor="room-address">
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Địa chỉ
           </span>
-          <Input className={inputClassName} {...register('address')} />
+          <Input id="room-address" className={inputClassName} {...register('address')} />
           {errors.address ? (
             <p className="mt-1 text-xs text-red-600">{errors.address.message}</p>
           ) : null}
         </label>
 
-        <label className="md:col-span-2">
+        <label className="md:col-span-2" htmlFor="room-description">
           <span className="mb-1.5 block text-sm font-semibold text-slate-700">
             Mô tả
           </span>
           <textarea
+            id="room-description"
             className="min-h-24 w-full rounded-lg border border-primary/10 bg-white px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
             {...register('description')}
           />

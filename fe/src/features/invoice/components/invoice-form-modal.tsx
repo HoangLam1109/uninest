@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useReducer } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
@@ -9,6 +9,24 @@ import {
 } from '@/features/booking/lib/booking-display'
 
 type InvoiceFormMode = 'manual' | 'utility'
+
+type InvoiceFormState = {
+  mode: InvoiceFormMode
+  bookingId: string
+  billingMonth: string
+  dueDate: string
+  rentAmount: string
+  electricityAmount: string
+  waterAmount: string
+  electricityNewIndex: string
+  waterNewIndex: string
+  additionalFees: string
+  notes: string
+}
+
+type InvoiceFormAction =
+  | { type: 'fieldChanged'; name: keyof InvoiceFormState; value: string }
+  | { type: 'modeChanged'; mode: InvoiceFormMode }
 
 type InvoiceFormModalProps = {
   open: boolean
@@ -50,6 +68,34 @@ function defaultDueDate() {
   return date.toISOString().slice(0, 10)
 }
 
+function createInvoiceFormState(): InvoiceFormState {
+  return {
+    mode: 'manual',
+    bookingId: '',
+    billingMonth: currentBillingMonth(),
+    dueDate: defaultDueDate(),
+    rentAmount: '',
+    electricityAmount: '',
+    waterAmount: '',
+    electricityNewIndex: '',
+    waterNewIndex: '',
+    additionalFees: '',
+    notes: '',
+  }
+}
+
+function invoiceFormReducer(
+  state: InvoiceFormState,
+  action: InvoiceFormAction,
+): InvoiceFormState {
+  switch (action.type) {
+    case 'fieldChanged':
+      return { ...state, [action.name]: action.value }
+    case 'modeChanged':
+      return { ...state, mode: action.mode }
+  }
+}
+
 function parseFloatSafe(value: string) {
   const n = Number(value)
   return Number.isFinite(n) ? n : undefined
@@ -64,17 +110,28 @@ export function InvoiceFormModal({
   onSubmitManual,
   onSubmitUtility,
 }: InvoiceFormModalProps) {
-  const [mode, setMode] = useState<InvoiceFormMode>('manual')
-  const [bookingId, setBookingId] = useState('')
-  const [billingMonth, setBillingMonth] = useState(currentBillingMonth())
-  const [dueDate, setDueDate] = useState(defaultDueDate())
-  const [rentAmount, setRentAmount] = useState('')
-  const [electricityAmount, setElectricityAmount] = useState('')
-  const [waterAmount, setWaterAmount] = useState('')
-  const [electricityNewIndex, setElectricityNewIndex] = useState('')
-  const [waterNewIndex, setWaterNewIndex] = useState('')
-  const [additionalFees, setAdditionalFees] = useState('')
-  const [notes, setNotes] = useState('')
+  const [formState, dispatch] = useReducer(
+    invoiceFormReducer,
+    undefined,
+    createInvoiceFormState,
+  )
+  const {
+    mode,
+    bookingId,
+    billingMonth,
+    dueDate,
+    rentAmount,
+    electricityAmount,
+    waterAmount,
+    electricityNewIndex,
+    waterNewIndex,
+    additionalFees,
+    notes,
+  } = formState
+
+  function updateField(name: keyof InvoiceFormState, value: string) {
+    dispatch({ type: 'fieldChanged', name, value })
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -112,7 +169,7 @@ export function InvoiceFormModal({
             className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${
               mode === 'manual' ? 'bg-white shadow-sm text-primary' : 'text-slate-500'
             }`}
-            onClick={() => setMode('manual')}
+            onClick={() => dispatch({ type: 'modeChanged', mode: 'manual' })}
           >
             Nhập tiền
           </button>
@@ -121,17 +178,17 @@ export function InvoiceFormModal({
             className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${
               mode === 'utility' ? 'bg-white shadow-sm text-primary' : 'text-slate-500'
             }`}
-            onClick={() => setMode('utility')}
+            onClick={() => dispatch({ type: 'modeChanged', mode: 'utility' })}
           >
             ⚡ Nhập chỉ số
           </button>
         </div>
 
         {/* Booking Picker */}
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-foreground">
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-semibold text-foreground">
             Đơn đặt phòng *
-          </label>
+          </legend>
           {isLoadingBookings ? (
             <p className="text-sm text-slate-400">Đang tải...</p>
           ) : bookings.length === 0 ? (
@@ -153,7 +210,7 @@ export function InvoiceFormModal({
                       name="bookingId"
                       value={b._id}
                       checked={bookingId === b._id}
-                      onChange={() => setBookingId(b._id)}
+                      onChange={() => updateField('bookingId', b._id)}
                       className="mt-1"
                     />
                     <div className="text-sm">
@@ -168,36 +225,39 @@ export function InvoiceFormModal({
               })}
             </div>
           )}
-        </div>
+        </fieldset>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
-            <label className="text-sm font-semibold">Kỳ hóa đơn (YYYY-MM) *</label>
+            <label className="text-sm font-semibold" htmlFor="invoice-billing-month">Kỳ hóa đơn (YYYY-MM) *</label>
             <Input
+              id="invoice-billing-month"
               required
               value={billingMonth}
-              onChange={(e) => setBillingMonth(e.target.value)}
+              onChange={(e) => updateField('billingMonth', e.target.value)}
               placeholder="2026-06"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-semibold">Hạn thanh toán *</label>
+            <label className="text-sm font-semibold" htmlFor="invoice-due-date">Hạn thanh toán *</label>
             <Input
+              id="invoice-due-date"
               required
               type="date"
               value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
+              onChange={(e) => updateField('dueDate', e.target.value)}
             />
           </div>
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-semibold">Tiền thuê *</label>
+          <label className="text-sm font-semibold" htmlFor="invoice-rent-amount">Tiền thuê *</label>
           <Input
+            id="invoice-rent-amount"
             required
             type="number"
             value={rentAmount}
-            onChange={(e) => setRentAmount(e.target.value)}
+            onChange={(e) => updateField('rentAmount', e.target.value)}
             placeholder="3500000"
           />
         </div>
@@ -205,20 +265,22 @@ export function InvoiceFormModal({
         {mode === 'manual' ? (
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <label className="text-sm font-semibold">Tiền điện</label>
+              <label className="text-sm font-semibold" htmlFor="invoice-electricity-amount">Tiền điện</label>
               <Input
+                id="invoice-electricity-amount"
                 type="number"
                 value={electricityAmount}
-                onChange={(e) => setElectricityAmount(e.target.value)}
+                onChange={(e) => updateField('electricityAmount', e.target.value)}
                 placeholder="0"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold">Tiền nước</label>
+              <label className="text-sm font-semibold" htmlFor="invoice-water-amount">Tiền nước</label>
               <Input
+                id="invoice-water-amount"
                 type="number"
                 value={waterAmount}
-                onChange={(e) => setWaterAmount(e.target.value)}
+                onChange={(e) => updateField('waterAmount', e.target.value)}
                 placeholder="0"
               />
             </div>
@@ -226,21 +288,23 @@ export function InvoiceFormModal({
         ) : (
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <label className="text-sm font-semibold">⚡ Chỉ số điện mới</label>
+              <label className="text-sm font-semibold" htmlFor="invoice-electricity-new-index">⚡ Chỉ số điện mới</label>
               <Input
+                id="invoice-electricity-new-index"
                 type="number"
                 value={electricityNewIndex}
-                onChange={(e) => setElectricityNewIndex(e.target.value)}
+                onChange={(e) => updateField('electricityNewIndex', e.target.value)}
                 placeholder="Số cuối công tơ"
               />
               <p className="text-xs text-slate-400">Tự tính: usage × đơn giá phòng</p>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold">💧 Chỉ số nước mới</label>
+              <label className="text-sm font-semibold" htmlFor="invoice-water-new-index">💧 Chỉ số nước mới</label>
               <Input
+                id="invoice-water-new-index"
                 type="number"
                 value={waterNewIndex}
-                onChange={(e) => setWaterNewIndex(e.target.value)}
+                onChange={(e) => updateField('waterNewIndex', e.target.value)}
                 placeholder="Số cuối đồng hồ"
               />
               <p className="text-xs text-slate-400">Tự tính: usage × đơn giá phòng</p>
@@ -249,20 +313,22 @@ export function InvoiceFormModal({
         )}
 
         <div className="space-y-2">
-          <label className="text-sm font-semibold">Phí khác</label>
+          <label className="text-sm font-semibold" htmlFor="invoice-additional-fees">Phí khác</label>
           <Input
+            id="invoice-additional-fees"
             type="number"
             value={additionalFees}
-            onChange={(e) => setAdditionalFees(e.target.value)}
+            onChange={(e) => updateField('additionalFees', e.target.value)}
             placeholder="0"
           />
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-semibold">Ghi chú</label>
+          <label className="text-sm font-semibold" htmlFor="invoice-notes">Ghi chú</label>
           <Input
+            id="invoice-notes"
             value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            onChange={(e) => updateField('notes', e.target.value)}
             placeholder="Ghi chú cho người thuê..."
           />
         </div>

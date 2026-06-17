@@ -1,4 +1,4 @@
-import { useState, useRef, type ComponentProps } from 'react'
+import { useReducer, useState, useRef, type ComponentProps } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Camera, Loader2, Search, Upload, X } from 'lucide-react'
@@ -24,6 +24,42 @@ type IdentityFormModalProps = {
   preSelectedUser?: UserSearchResult | null
   /** When true, skip user search and auto-fill from logged-in user */
   hideUserSearch?: boolean
+}
+
+type IdentitySearchState = {
+  searchQuery: string
+  searchResults: UserSearchResult[]
+  searching: boolean
+  selectedUser: UserSearchResult | null
+  searchError: string
+}
+
+type IdentitySearchAction =
+  | { type: 'patch'; value: Partial<IdentitySearchState> }
+  | { type: 'reset'; selectedUser: UserSearchResult | null }
+
+function createIdentitySearchState(
+  selectedUser: UserSearchResult | null,
+): IdentitySearchState {
+  return {
+    searchQuery: '',
+    searchResults: [],
+    searching: false,
+    selectedUser,
+    searchError: '',
+  }
+}
+
+function identitySearchReducer(
+  state: IdentitySearchState,
+  action: IdentitySearchAction,
+): IdentitySearchState {
+  switch (action.type) {
+    case 'patch':
+      return { ...state, ...action.value }
+    case 'reset':
+      return createIdentitySearchState(action.selectedUser)
+  }
 }
 
 function FilePreview({
@@ -117,20 +153,26 @@ export function IdentityFormModal({
   const createIdentity = useCreateIdentity()
   const updateIdentity = useUpdateIdentity()
   const isEditing = Boolean(existingIdentity)
+  const defaultSelectedUser =
+    hideUserSearch && currentUser
+      ? {
+          _id: currentUser.id,
+          fullName: currentUser.fullName,
+          phone: currentUser.phone ?? '',
+          email: currentUser.email,
+        }
+      : preSelectedUser ?? null
 
   const [frontFile, setFrontFile] = useState<File | null>(null)
   const [backFile, setBackFile] = useState<File | null>(null)
 
-  // User search state (only for creating new identity, not when hideUserSearch)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([])
-  const [searching, setSearching] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(
-    hideUserSearch && currentUser
-      ? { _id: currentUser.id, fullName: currentUser.fullName, phone: currentUser.phone ?? '', email: currentUser.email }
-      : preSelectedUser ?? null
+  const [searchState, dispatchSearch] = useReducer(
+    identitySearchReducer,
+    defaultSelectedUser,
+    createIdentitySearchState,
   )
-  const [searchError, setSearchError] = useState('')
+  const { searchQuery, searchResults, searching, selectedUser, searchError } =
+    searchState
 
   const {
     register,
@@ -159,14 +201,7 @@ export function IdentityFormModal({
     reset()
     setFrontFile(null)
     setBackFile(null)
-    setSearchQuery('')
-    setSearchResults([])
-    setSelectedUser(
-      hideUserSearch && currentUser
-        ? { _id: currentUser.id, fullName: currentUser.fullName, phone: currentUser.phone ?? '', email: currentUser.email }
-        : preSelectedUser ?? null
-    )
-    setSearchError('')
+    dispatchSearch({ type: 'reset', selectedUser: defaultSelectedUser })
     onClose()
   }
 
@@ -174,34 +209,46 @@ export function IdentityFormModal({
     const q = searchQuery.trim()
     if (!q) return
 
-    setSearching(true)
-    setSearchError('')
-    setSearchResults([])
+    dispatchSearch({
+      type: 'patch',
+      value: { searching: true, searchError: '', searchResults: [] },
+    })
 
     try {
       const { data } = await userApi.search(q)
-      setSearchResults(data.data)
+      dispatchSearch({ type: 'patch', value: { searchResults: data.data } })
       if (data.data.length === 0) {
-        setSearchError('Không tìm thấy người dùng nào')
+        dispatchSearch({
+          type: 'patch',
+          value: { searchError: 'Không tìm thấy người dùng nào' },
+        })
       }
     } catch {
-      setSearchError('Lỗi khi tìm kiếm')
+      dispatchSearch({
+        type: 'patch',
+        value: { searchError: 'Lỗi khi tìm kiếm' },
+      })
     } finally {
-      setSearching(false)
+      dispatchSearch({ type: 'patch', value: { searching: false } })
     }
   }
 
   const handleSelectUser = (user: UserSearchResult) => {
-    setSelectedUser(user)
+    dispatchSearch({
+      type: 'patch',
+      value: {
+        selectedUser: user,
+        searchResults: [],
+        searchQuery: '',
+        searchError: '',
+      },
+    })
     setValue('fullName', user.fullName)
     setValue('phone', user.phone)
-    setSearchResults([])
-    setSearchQuery('')
-    setSearchError('')
   }
 
   const handleClearUser = () => {
-    setSelectedUser(null)
+    dispatchSearch({ type: 'patch', value: { selectedUser: null } })
     setValue('fullName', '')
     setValue('phone', '')
   }
@@ -284,7 +331,12 @@ export function IdentityFormModal({
                     type="text"
                     placeholder="Nhập tên hoặc số điện thoại..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) =>
+                      dispatchSearch({
+                        type: 'patch',
+                        value: { searchQuery: e.target.value },
+                      })
+                    }
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault()

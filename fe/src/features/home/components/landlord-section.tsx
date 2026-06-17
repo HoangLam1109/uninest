@@ -5,15 +5,21 @@ import { Button } from '@/components/ui/button'
 import { paths } from '@/config/constants'
 import { useAuth } from '@/hooks/use-auth'
 import { landlordBenefits } from '../data'
+import { useGsapReveal } from '../hooks/use-gsap-reveal'
 
 export function LandlordSection() {
+  const sectionRef = useGsapReveal<HTMLElement>()
   const { isLoggedIn, dashboardPath } = useAuth()
   const ctaPath = isLoggedIn ? dashboardPath : paths.login
 
   return (
-    <section id="landlords" className="bg-white px-6 py-16 lg:px-20 lg:py-20">
+    <section
+      ref={sectionRef}
+      id="landlords"
+      className="bg-white px-6 py-16 lg:px-20 lg:py-20"
+    >
       <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2 lg:gap-16">
-        <div className="relative">
+        <div className="relative" data-gsap-reveal>
           <div
             className="absolute -left-10 -top-10 size-40 rounded-full bg-primary/10 blur-3xl"
             aria-hidden
@@ -33,7 +39,7 @@ export function LandlordSection() {
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6" data-gsap-reveal>
           <p className="text-sm font-bold uppercase tracking-[0.14em] text-primary">
             Hợp tác cùng chúng tôi
           </p>
@@ -47,7 +53,7 @@ export function LandlordSection() {
           </p>
           <ul className="space-y-4">
             {landlordBenefits.map((item) => (
-              <li key={item} className="flex items-center gap-3">
+              <li key={item} className="flex items-center gap-3" data-gsap-reveal>
                 <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/15">
                   <Check className="size-3.5 text-primary" strokeWidth={3} />
                 </span>

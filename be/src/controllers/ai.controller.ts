@@ -42,22 +42,85 @@ function isAdmin(req: Request) {
   return req.user?.role === USER_ROLES.ADMIN;
 }
 
+function normalizeQuestion(question: string) {
+  return question
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\u0111/g, "d")
+    .replace(/\u0110/g, "D")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function createStaticAiResponse(answer: string, startedAt: number) {
+  return {
+    answer,
+    rooms: [],
+    missingInfo: [],
+    matches: [],
+    filters: {},
+    source: "static",
+    latencyMs: Date.now() - startedAt,
+  };
+}
+
+function getNonRoomSearchResponse(question: string, startedAt: number) {
+  const normalized = normalizeQuestion(question);
+  const greetingPattern = /^(hi|hello|hey|chao|xin chao|alo|hola)( ban| ad| uninest| minh)?[!.? ]*$/i;
+  const helpPattern =
+    /\b(chuc nang|lam duoc gi|ban lam gi|co the lam gi|giup gi|tro giup|huong dan|help|feature|features)\b/i;
+
+  if (greetingPattern.test(normalized)) {
+    return createStaticAiResponse(
+      "Xin chao! Minh la tro ly UniNest. Minh co the goi y phong tro theo khu vuc, gia, loai phong, danh gia va cac tieu chi ban quan tam.",
+      startedAt
+    );
+  }
+
+  if (helpPattern.test(normalized)) {
+    return createStaticAiResponse(
+      [
+        "Minh co the ho tro:",
+        "- Tim phong theo khu vuc, quan/huyen, thanh pho.",
+        "- Loc theo gia toi da/toi thieu, khoang gia, loai phong.",
+        "- Goi y phong dua tren danh gia, review va thong tin phong hien co.",
+        "- Cho biet can them thong tin gi neu cau hoi con thieu du lieu.",
+      ].join("\n"),
+      startedAt
+    );
+  }
+
+  return undefined;
+}
+
 export const searchRoomsWithAi = async (req: Request, res: Response) => {
   try {
+    const startedAt = Date.now();
     const { question } = req.body;
 
-    if (!question || typeof question !== "string" || question.trim().length < 3) {
+    if (!question || typeof question !== "string") {
       return res.status(400).json({
         success: false,
         message: "Question must be at least 3 characters",
       });
     }
 
-    const parsedFilters = AiFilterParserService.parseRoomSearchFilters(question.trim());
+    const trimmedQuestion = question.trim();
+    const staticResponse = getNonRoomSearchResponse(trimmedQuestion, startedAt);
+    if (staticResponse) {
+      return res.json({
+        success: true,
+        data: staticResponse,
+      });
+    }
+
+
+    const parsedFilters = AiFilterParserService.parseRoomSearchFilters(trimmedQuestion);
     const explicitFilters = getFilters(req.body);
     const filters = mergeFilters(parsedFilters, explicitFilters);
 
-    const result = await RagRoomService.searchRoomsWithRag(question.trim(), filters);
+    const result = await RagRoomService.searchRoomsWithRag(trimmedQuestion, filters);
 
     return res.json({
       success: true,

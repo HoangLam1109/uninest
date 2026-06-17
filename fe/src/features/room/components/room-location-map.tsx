@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef } from 'react'
 import L from 'leaflet'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
@@ -19,6 +19,19 @@ type RoomLocationMapProps = {
   address: string
   title: string
   className?: string
+}
+
+type RoomLocationState = {
+  location: GeocodeResult | null
+  userLocation: Coordinates | null
+  isLoading: boolean
+  isLocatingUser: boolean
+  errorMessage: string | null
+}
+
+type RoomLocationAction = {
+  type: 'patch'
+  value: Partial<RoomLocationState>
 }
 
 const DEFAULT_CENTER: Coordinates = {
@@ -42,6 +55,24 @@ const USER_MARKER_ICON = L.divIcon({
   iconSize: [16, 16],
   iconAnchor: [8, 8],
 })
+
+const INITIAL_ROOM_LOCATION_STATE: RoomLocationState = {
+  location: null,
+  userLocation: null,
+  isLoading: false,
+  isLocatingUser: false,
+  errorMessage: null,
+}
+
+function roomLocationReducer(
+  state: RoomLocationState,
+  action: RoomLocationAction,
+): RoomLocationState {
+  switch (action.type) {
+    case 'patch':
+      return { ...state, ...action.value }
+  }
+}
 
 function createSearchUrl(address: string) {
   return `https://www.openstreetmap.org/search?query=${encodeURIComponent(address)}`
@@ -70,11 +101,12 @@ export function RoomLocationMap({
   const containerRef = useRef<HTMLDivElement | null>(null)
   const roomMarkerRef = useRef<L.Marker | null>(null)
   const userMarkerRef = useRef<L.Marker | null>(null)
-  const [location, setLocation] = useState<GeocodeResult | null>(null)
-  const [userLocation, setUserLocation] = useState<Coordinates | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isLocatingUser, setIsLocatingUser] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [mapState, dispatchMap] = useReducer(
+    roomLocationReducer,
+    INITIAL_ROOM_LOCATION_STATE,
+  )
+  const { location, userLocation, isLoading, isLocatingUser, errorMessage } =
+    mapState
   const searchUrl = useMemo(() => createSearchUrl(address), [address])
 
   useEffect(() => {
@@ -105,13 +137,20 @@ export function RoomLocationMap({
 
     async function geocodeAddress() {
       if (!trimmedAddress) {
-        setLocation(null)
-        setErrorMessage('Chưa có địa chỉ để hiển thị bản đồ.')
+        dispatchMap({
+          type: 'patch',
+          value: {
+            location: null,
+            errorMessage: 'Chưa có địa chỉ để hiển thị bản đồ.',
+          },
+        })
         return
       }
 
-      setIsLoading(true)
-      setErrorMessage(null)
+      dispatchMap({
+        type: 'patch',
+        value: { isLoading: true, errorMessage: null },
+      })
 
       try {
         const response = await fetch(
@@ -138,22 +177,37 @@ export function RoomLocationMap({
         const result = results[0]
 
         if (!result) {
-          setLocation(null)
-          setErrorMessage('Không tìm thấy vị trí phù hợp với địa chỉ này.')
+          dispatchMap({
+            type: 'patch',
+            value: {
+              location: null,
+              errorMessage: 'Không tìm thấy vị trí phù hợp với địa chỉ này.',
+            },
+          })
           return
         }
 
-        setLocation({
-          lat: Number(result.lat),
-          lng: Number(result.lon),
-          displayName: result.display_name,
+        dispatchMap({
+          type: 'patch',
+          value: {
+            location: {
+              lat: Number(result.lat),
+              lng: Number(result.lon),
+              displayName: result.display_name,
+            },
+          },
         })
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') return
-        setLocation(null)
-        setErrorMessage('Không thể tải vị trí bản đồ. Vui lòng thử lại sau.')
+        dispatchMap({
+          type: 'patch',
+          value: {
+            location: null,
+            errorMessage: 'Không thể tải vị trí bản đồ. Vui lòng thử lại sau.',
+          },
+        })
       } finally {
-        setIsLoading(false)
+        dispatchMap({ type: 'patch', value: { isLoading: false } })
       }
     }
 
@@ -211,11 +265,14 @@ export function RoomLocationMap({
 
   function handleLocateUser() {
     if (!navigator.geolocation) {
-      setErrorMessage('Trình duyệt không hỗ trợ lấy vị trí hiện tại.')
+      dispatchMap({
+        type: 'patch',
+        value: { errorMessage: 'Trình duyệt không hỗ trợ lấy vị trí hiện tại.' },
+      })
       return
     }
 
-    setIsLocatingUser(true)
+    dispatchMap({ type: 'patch', value: { isLocatingUser: true } })
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const nextUserLocation = {
@@ -223,8 +280,13 @@ export function RoomLocationMap({
           lng: position.coords.longitude,
         }
 
-        setUserLocation(nextUserLocation)
-        setIsLocatingUser(false)
+        dispatchMap({
+          type: 'patch',
+          value: {
+            userLocation: nextUserLocation,
+            isLocatingUser: false,
+          },
+        })
 
         if (mapRef.current && location) {
           const bounds = L.latLngBounds([
@@ -235,8 +297,13 @@ export function RoomLocationMap({
         }
       },
       () => {
-        setIsLocatingUser(false)
-        setErrorMessage('Không thể lấy vị trí hiện tại của bạn.')
+        dispatchMap({
+          type: 'patch',
+          value: {
+            isLocatingUser: false,
+            errorMessage: 'Không thể lấy vị trí hiện tại của bạn.',
+          },
+        })
       },
       {
         enableHighAccuracy: true,

@@ -37,10 +37,6 @@ export function DashboardSidebar({
   const { pathname } = useLocation()
 
   useEffect(() => {
-    onMobileClose()
-  }, [pathname, onMobileClose])
-
-  useEffect(() => {
     if (!mobileOpen) return
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -114,6 +110,7 @@ export function DashboardSidebar({
                   <Link
                     key={item.href}
                     to={item.href}
+                    onClick={onMobileClose}
                     className={cn(
                       'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors md:px-4 md:py-3 md:text-base',
                       isActive

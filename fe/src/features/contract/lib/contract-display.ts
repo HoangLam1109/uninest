@@ -26,9 +26,11 @@ export function formatContractCurrency(value?: number) {
   return formatRoomCurrency(value)
 }
 
+const contractDateFormatter = new Intl.DateTimeFormat('vi-VN')
+
 export function formatContractDate(value?: string) {
   if (!value) return 'Chưa cập nhật'
-  return new Intl.DateTimeFormat('vi-VN').format(new Date(value))
+  return contractDateFormatter.format(new Date(value))
 }
 
 export function getContractUser(value: string | ContractUser) {

@@ -1,10 +1,16 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useGsapReveal } from '../hooks/use-gsap-reveal'
 
 export function CtaSection() {
+  const sectionRef = useGsapReveal<HTMLElement>()
+
   return (
-    <section className="bg-surface px-6 py-16 lg:px-20 lg:py-20">
-      <div className="relative mx-auto max-w-5xl overflow-hidden rounded-3xl bg-primary px-8 py-12 text-center text-white lg:px-24 lg:py-14">
+    <section ref={sectionRef} className="bg-surface px-6 py-16 lg:px-20 lg:py-20">
+      <div
+        className="relative mx-auto max-w-5xl overflow-hidden rounded-3xl bg-primary px-8 py-12 text-center text-white lg:px-24 lg:py-14"
+        data-gsap-reveal
+      >
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_100%_0%,rgba(255,255,255,0.2),transparent_55%)]"
           aria-hidden
