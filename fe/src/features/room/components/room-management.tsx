@@ -192,13 +192,14 @@ export function RoomManagement() {
       <section className="rounded-xl border border-primary/10 bg-white">
         <div className="flex flex-col gap-3 border-b border-primary/10 p-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:flex-1">
-            <label className="sm:col-span-2 lg:col-span-1">
+            <label className="sm:col-span-2 lg:col-span-1" htmlFor="rooms-search">
               <span className="mb-1.5 block text-xs font-semibold text-slate-500">
                 Tìm kiếm
               </span>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
                 <Input
+                  id="rooms-search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   className="h-10 border border-primary/10 py-2 pl-9 pr-3 text-sm shadow-none"
@@ -207,11 +208,12 @@ export function RoomManagement() {
               </div>
             </label>
 
-            <label>
+            <label htmlFor="rooms-status">
               <span className="mb-1.5 block text-xs font-semibold text-slate-500">
                 Trạng thái
               </span>
               <select
+                id="rooms-status"
                 className="h-10 w-full rounded-lg border border-primary/10 bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={status}
                 onChange={(event) => setStatus(event.target.value as RoomStatus | '')}
@@ -224,11 +226,12 @@ export function RoomManagement() {
               </select>
             </label>
 
-            <label>
+            <label htmlFor="rooms-city">
               <span className="mb-1.5 block text-xs font-semibold text-slate-500">
                 Thành phố
               </span>
               <Input
+                id="rooms-city"
                 value={city}
                 onChange={(event) => setCity(event.target.value)}
                 className="h-10 border border-primary/10 px-3 text-sm shadow-none"
@@ -236,11 +239,12 @@ export function RoomManagement() {
               />
             </label>
 
-            <label>
+            <label htmlFor="rooms-district">
               <span className="mb-1.5 block text-xs font-semibold text-slate-500">
                 Quận/Huyện
               </span>
               <Input
+                id="rooms-district"
                 value={district}
                 onChange={(event) => setDistrict(event.target.value)}
                 className="h-10 border border-primary/10 px-3 text-sm shadow-none"
@@ -248,11 +252,12 @@ export function RoomManagement() {
               />
             </label>
 
-            <label>
+            <label htmlFor="rooms-sort">
               <span className="mb-1.5 block text-xs font-semibold text-slate-500">
                 Sắp xếp
               </span>
               <select
+                id="rooms-sort"
                 className="h-10 w-full rounded-lg border border-primary/10 bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={sort}
                 onChange={(event) => setSort(event.target.value as RoomSortOption)}

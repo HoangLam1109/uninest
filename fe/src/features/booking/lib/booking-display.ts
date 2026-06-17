@@ -27,25 +27,29 @@ export function getBookingTenant(booking: Booking): BookingUser | null {
   return typeof booking.tenantId === 'string' ? null : booking.tenantId
 }
 
+const bookingDateFormatter = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+})
+
+const bookingCurrencyFormatter = new Intl.NumberFormat('vi-VN', {
+  style: 'currency',
+  currency: 'VND',
+  maximumFractionDigits: 0,
+})
+
 export function formatBookingDate(value?: string) {
   if (!value) return 'Chưa cập nhật'
 
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return 'Chưa cập nhật'
 
-  return new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date)
+  return bookingDateFormatter.format(date)
 }
 
 export function formatBookingCurrency(value?: number) {
   if (typeof value !== 'number') return 'Chưa cập nhật'
 
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(value)
+  return bookingCurrencyFormatter.format(value)
 }

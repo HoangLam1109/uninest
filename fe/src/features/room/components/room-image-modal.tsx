@@ -175,7 +175,7 @@ export function RoomImageModal({
         </section>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <label>
+          <label htmlFor="room-image-file">
             <span className="mb-1.5 block text-sm font-semibold text-slate-700">
               Ảnh phòng
             </span>
@@ -192,6 +192,7 @@ export function RoomImageModal({
                 {imageFile?.name ?? 'Chưa chọn ảnh'}
               </span>
               <input
+                id="room-image-file"
                 ref={imageInputRef}
                 type="file"
                 accept="image/*"
@@ -208,22 +209,24 @@ export function RoomImageModal({
             ) : null}
           </label>
 
-          <label>
+          <label htmlFor="room-image-caption">
             <span className="mb-1.5 block text-sm font-semibold text-slate-700">
               Chú thích
             </span>
             <Input
+              id="room-image-caption"
               className={inputClassName}
               value={caption}
               onChange={(event) => setCaption(event.target.value)}
             />
           </label>
 
-          <label>
+          <label htmlFor="room-image-order">
             <span className="mb-1.5 block text-sm font-semibold text-slate-700">
               Thứ tự hiển thị
             </span>
             <Input
+              id="room-image-order"
               type="number"
               className={inputClassName}
               min={0}

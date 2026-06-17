@@ -6,15 +6,17 @@ import { Modal } from '@/components/ui/modal'
 import { useGetLandlordTenants } from '@/features/room/hooks/use-rooms'
 import { LandlordDashboardHeader } from '../components/landlord-dashboard-header'
 
+const tenantDateFormatter = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+})
+
 function formatDate(value?: string) {
   if (!value) return ''
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return value
-  return new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(d)
+  return tenantDateFormatter.format(d)
 }
 
 function ImageLightbox({ src, alt }: { src: string; alt: string }) {

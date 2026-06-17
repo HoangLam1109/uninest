@@ -189,7 +189,7 @@ export function AiRoomFinderPage() {
 
                   {aiRoomSearch.isPending ? (
                     <div className="flex items-start gap-3">
-                      <Avatar role="assistant" />
+                      <Avatar speaker="assistant" />
                       <div className="rounded-2xl rounded-tl-sm bg-primary/5 px-4 py-3 text-sm text-[#475569]">
                         <span className="inline-flex items-center gap-2">
                           <Loader2 className="size-4 animate-spin text-primary" />
@@ -265,7 +265,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
 
   return (
     <div className={`flex items-start gap-3 ${isUser ? 'justify-end' : ''}`}>
-      {!isUser ? <Avatar role="assistant" /> : null}
+      {!isUser ? <Avatar speaker="assistant" /> : null}
       <div className={`max-w-[min(100%,680px)] ${isUser ? 'order-1' : ''}`}>
         <div
           className={
@@ -278,21 +278,21 @@ function ChatBubble({ message }: { message: ChatMessage }) {
         </div>
         {message.result ? <AiSearchResult result={message.result} /> : null}
       </div>
-      {isUser ? <Avatar role="user" /> : null}
+      {isUser ? <Avatar speaker="user" /> : null}
     </div>
   )
 }
 
-function Avatar({ role }: { role: ChatMessage['role'] }) {
+function Avatar({ speaker }: { speaker: ChatMessage['role'] }) {
   return (
     <span
       className={
-        role === 'assistant'
+        speaker === 'assistant'
           ? 'flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-white'
           : 'flex size-9 shrink-0 items-center justify-center rounded-full bg-[#e2e8f0] text-[#334155]'
       }
     >
-      {role === 'assistant' ? <Sparkles className="size-4" /> : <UserRound className="size-4" />}
+      {speaker === 'assistant' ? <Sparkles className="size-4" /> : <UserRound className="size-4" />}
     </span>
   )
 }
