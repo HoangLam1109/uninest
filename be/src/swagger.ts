@@ -8,7 +8,8 @@ const options: swaggerJsDoc.Options = {
     info: {
       title: "UniNest API Documentation",
       version: "1.0.0",
-      description: "API documentation for UniNest - Student Housing Management Platform",
+      description:
+        "API documentation for UniNest - Student Housing Management Platform",
       contact: { name: "UniNest Team" },
     },
     servers: [
@@ -31,7 +32,10 @@ const options: swaggerJsDoc.Options = {
             fullName: { type: "string" },
             phone: { type: "string" },
             avatarUrl: { type: "string" },
-            role: { type: "string", enum: ["ADMIN", "STAFF", "LANDLORD", "TENANT", "GUEST"] },
+            role: {
+              type: "string",
+              enum: ["ADMIN", "STAFF", "LANDLORD", "TENANT", "GUEST"],
+            },
             isActive: { type: "boolean" },
             createdAt: { type: "string", format: "date-time" },
             updatedAt: { type: "string", format: "date-time" },
@@ -78,10 +82,25 @@ const options: swaggerJsDoc.Options = {
             waterRate: { type: "number" },
             areaSqm: { type: "number" },
             maxOccupants: { type: "number" },
-            roomType: { type: "string", enum: ["STUDIO", "SINGLE", "SHARED", "APARTMENT"] },
-            status: { type: "string", enum: ["AVAILABLE", "DEPOSITED", "RENTED", "MAINTENANCE"] },
+            roomType: {
+              type: "string",
+              enum: ["STUDIO", "SINGLE", "SHARED", "APARTMENT"],
+            },
+            status: {
+              type: "string",
+              enum: ["AVAILABLE", "DEPOSITED", "RENTED", "MAINTENANCE"],
+            },
             isPublished: { type: "boolean" },
-            tenants: { type: "array", items: { type: "object", properties: { tenantId: { type: "string" }, isPrimaryTenant: { type: "boolean" } } } },
+            tenants: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  tenantId: { type: "string" },
+                  isPrimaryTenant: { type: "boolean" },
+                },
+              },
+            },
             deletedAt: { type: "string", format: "date-time", nullable: true },
             createdAt: { type: "string", format: "date-time" },
             updatedAt: { type: "string", format: "date-time" },
@@ -107,8 +126,15 @@ const options: swaggerJsDoc.Options = {
             tenantId: { type: "string" },
             contractId: { type: "string", nullable: true },
             checkInDate: { type: "string", format: "date-time" },
-            checkOutDate: { type: "string", format: "date-time", nullable: true },
-            status: { type: "string", enum: ["PENDING", "APPROVED", "REJECTED", "CANCELLED"] },
+            checkOutDate: {
+              type: "string",
+              format: "date-time",
+              nullable: true,
+            },
+            status: {
+              type: "string",
+              enum: ["PENDING", "APPROVED", "REJECTED", "CANCELLED"],
+            },
             totalPrice: { type: "number" },
             movedInAt: { type: "string", format: "date-time", nullable: true },
             movedOutAt: { type: "string", format: "date-time", nullable: true },
@@ -132,7 +158,10 @@ const options: swaggerJsDoc.Options = {
             depositAmount: { type: "number" },
             terms: { type: "string" },
             contractFileUrl: { type: "string" },
-            status: { type: "string", enum: ["DRAFT", "ACTIVE", "EXPIRED", "TERMINATED"] },
+            status: {
+              type: "string",
+              enum: ["DRAFT", "ACTIVE", "EXPIRED", "TERMINATED"],
+            },
             signedAt: { type: "string", format: "date-time", nullable: true },
             createdAt: { type: "string", format: "date-time" },
             updatedAt: { type: "string", format: "date-time" },
@@ -152,7 +181,10 @@ const options: swaggerJsDoc.Options = {
             waterAmount: { type: "number" },
             additionalFees: { type: "number" },
             totalAmount: { type: "number" },
-            status: { type: "string", enum: ["DRAFT", "SENT", "PAID", "OVERDUE"] },
+            status: {
+              type: "string",
+              enum: ["DRAFT", "SENT", "PAID", "OVERDUE"],
+            },
             notes: { type: "string" },
             sentAt: { type: "string", format: "date-time", nullable: true },
             paidAt: { type: "string", format: "date-time", nullable: true },
@@ -204,6 +236,97 @@ const options: swaggerJsDoc.Options = {
             updatedAt: { type: "string", format: "date-time" },
           },
         },
+        Payment: {
+          type: "object",
+          properties: {
+            _id: { type: "string" },
+            bookingId: { type: "string", nullable: true },
+            paperId: { type: "string", description: "Payer ID" },
+            receiverId: { type: "string" },
+            walletTxId: { type: "string", nullable: true },
+            invoiceId: { type: "string", nullable: true },
+            amount: { type: "number", example: 3500000 },
+            currency: { type: "string", default: "VND" },
+            type: {
+              type: "string",
+              enum: ["RENT", "DEPOSIT", "UTILITY", "SERVICE_FEE", "REFUND"],
+            },
+            method: {
+              type: "string",
+              enum: ["BANK_TRANSFER", "CASH", "WALLET", "PAYOS"],
+            },
+            status: {
+              type: "string",
+              enum: ["PENDING", "COMPLETED", "FAILED", "REFUNDED"],
+            },
+            transactionRef: { type: "string", nullable: true },
+            gatewayResponse: { type: "object", nullable: true },
+            note: { type: "string" },
+            paidAt: { type: "string", format: "date-time", nullable: true },
+            createdAt: { type: "string", format: "date-time" },
+          },
+        },
+        Wallet: {
+          type: "object",
+          properties: {
+            _id: { type: "string" },
+            userId: { type: "string" },
+            balance: { type: "number", example: 10000000 },
+            currency: { type: "string", example: "VND" },
+            status: { type: "string", enum: ["ACTIVE", "FROZEN", "CLOSED"] },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+          },
+        },
+        WalletTransaction: {
+          type: "object",
+          properties: {
+            _id: { type: "string" },
+            walletId: { type: "string" },
+            type: {
+              type: "string",
+              enum: ["TOPUP", "WITHDRAW", "PAYMENT", "REFUND"],
+            },
+            amount: { type: "number" },
+            balanceBefore: { type: "number" },
+            balanceAfter: { type: "number" },
+            relatedPaymentId: { type: "string", nullable: true },
+            note: { type: "string" },
+            createdAt: { type: "string", format: "date-time" },
+          },
+        },
+        ServicePackage: {
+          type: "object",
+          properties: {
+            _id: { type: "string" },
+            name: { type: "string", example: "Premium" },
+            description: { type: "string" },
+            price: { type: "number", example: 99000 },
+            durationDays: { type: "number", example: 30 },
+            features: { type: "array", items: { type: "string" } },
+            isActive: { type: "boolean", default: true },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+          },
+        },
+        ServiceSubscription: {
+          type: "object",
+          properties: {
+            _id: { type: "string" },
+            userId: { type: "string" },
+            packageId: { type: "string" },
+            paymentId: { type: "string" },
+            startDate: { type: "string", format: "date-time" },
+            endDate: { type: "string", format: "date-time" },
+            status: {
+              type: "string",
+              enum: ["ACTIVE", "EXPIRED", "CANCELLED"],
+            },
+            autoRenew: { type: "boolean", default: false },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+          },
+        },
         ApiResponse: {
           type: "object",
           properties: {
@@ -251,9 +374,17 @@ const options: swaggerJsDoc.Options = {
                   type: "object",
                   required: ["email", "fullName", "password", "phone"],
                   properties: {
-                    email: { type: "string", format: "email", example: "user@example.com" },
+                    email: {
+                      type: "string",
+                      format: "email",
+                      example: "user@example.com",
+                    },
                     fullName: { type: "string", example: "Nguyen Van A" },
-                    password: { type: "string", format: "password", example: "Abc@1234" },
+                    password: {
+                      type: "string",
+                      format: "password",
+                      example: "Abc@1234",
+                    },
                     phone: { type: "string", example: "0912345678" },
                   },
                 },
@@ -262,7 +393,9 @@ const options: swaggerJsDoc.Options = {
           },
           responses: {
             201: { description: "User created successfully" },
-            400: { description: "Missing required fields / Email already exists" },
+            400: {
+              description: "Missing required fields / Email already exists",
+            },
           },
         },
       },
@@ -278,8 +411,16 @@ const options: swaggerJsDoc.Options = {
                   type: "object",
                   required: ["email", "password"],
                   properties: {
-                    email: { type: "string", format: "email", example: "user@example.com" },
-                    password: { type: "string", format: "password", example: "Abc@1234" },
+                    email: {
+                      type: "string",
+                      format: "email",
+                      example: "user@example.com",
+                    },
+                    password: {
+                      type: "string",
+                      format: "password",
+                      example: "Abc@1234",
+                    },
                   },
                 },
               },
@@ -327,7 +468,9 @@ const options: swaggerJsDoc.Options = {
                       message: { type: "string" },
                       data: {
                         type: "object",
-                        properties: { user: { $ref: "#/components/schemas/User" } },
+                        properties: {
+                          user: { $ref: "#/components/schemas/User" },
+                        },
                       },
                     },
                   },
@@ -360,7 +503,10 @@ const options: swaggerJsDoc.Options = {
                   type: "object",
                   required: ["refreshToken"],
                   properties: {
-                    refreshToken: { type: "string", example: "eyJhbGciOiJIUzI1NiIs..." },
+                    refreshToken: {
+                      type: "string",
+                      example: "eyJhbGciOiJIUzI1NiIs...",
+                    },
                   },
                 },
               },
@@ -396,7 +542,13 @@ const options: swaggerJsDoc.Options = {
           summary: "Get user by email",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "email", in: "path", required: true, schema: { type: "string" }, example: "user@example.com" },
+            {
+              name: "email",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              example: "user@example.com",
+            },
           ],
           responses: {
             200: { description: "User found" },
@@ -410,7 +562,13 @@ const options: swaggerJsDoc.Options = {
           summary: "Get user by full name",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "fullName", in: "path", required: true, schema: { type: "string" }, example: "Nguyen Van A" },
+            {
+              name: "fullName",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              example: "Nguyen Van A",
+            },
           ],
           responses: {
             200: { description: "User found" },
@@ -424,7 +582,13 @@ const options: swaggerJsDoc.Options = {
           summary: "Get user by phone",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "phone", in: "path", required: true, schema: { type: "string" }, example: "0912345678" },
+            {
+              name: "phone",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              example: "0912345678",
+            },
           ],
           responses: {
             200: { description: "User found" },
@@ -459,7 +623,10 @@ const options: swaggerJsDoc.Options = {
                     fullName: { type: "string" },
                     password: { type: "string" },
                     phone: { type: "string" },
-                    role: { type: "string", enum: ["ADMIN", "STAFF", "LANDLORD", "TENANT", "GUEST"] },
+                    role: {
+                      type: "string",
+                      enum: ["ADMIN", "STAFF", "LANDLORD", "TENANT", "GUEST"],
+                    },
                   },
                 },
               },
@@ -476,7 +643,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Update user by ID",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           requestBody: {
             content: {
@@ -504,7 +676,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Delete user by ID",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "User deleted" },
@@ -518,7 +695,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Get user by ID",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "User found" },
@@ -542,7 +724,10 @@ const options: swaggerJsDoc.Options = {
                   required: ["name", "address"],
                   properties: {
                     name: { type: "string", example: "Sunrise Apartments" },
-                    address: { type: "string", example: "123 Nguyen Hue, District 1" },
+                    address: {
+                      type: "string",
+                      example: "123 Nguyen Hue, District 1",
+                    },
                     city: { type: "string", example: "Ho Chi Minh" },
                     district: { type: "string", example: "District 1" },
                     ward: { type: "string", example: "Ben Nghe" },
@@ -572,8 +757,16 @@ const options: swaggerJsDoc.Options = {
             { name: "city", in: "query", schema: { type: "string" } },
             { name: "district", in: "query", schema: { type: "string" } },
             { name: "search", in: "query", schema: { type: "string" } },
-            { name: "page", in: "query", schema: { type: "number", default: 1 } },
-            { name: "limit", in: "query", schema: { type: "number", default: 10 } },
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
           ],
           responses: {
             200: { description: "Paginated list of properties" },
@@ -586,7 +779,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Get property by ID (Landlord)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Property found" },
@@ -598,7 +796,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Update property (Landlord)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           requestBody: {
             content: {
@@ -627,7 +830,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Soft delete property (Landlord)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Property deleted successfully" },
@@ -640,7 +848,12 @@ const options: swaggerJsDoc.Options = {
           tags: ["Properties"],
           summary: "Get property by ID (Public)",
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Property found" },
@@ -679,7 +892,10 @@ const options: swaggerJsDoc.Options = {
                     waterRate: { type: "number" },
                     areaSqm: { type: "number" },
                     maxOccupants: { type: "number", default: 1 },
-                    roomType: { type: "string", enum: ["STUDIO", "SINGLE", "SHARED", "APARTMENT"] },
+                    roomType: {
+                      type: "string",
+                      enum: ["STUDIO", "SINGLE", "SHARED", "APARTMENT"],
+                    },
                     amenityIds: { type: "array", items: { type: "string" } },
                   },
                 },
@@ -700,11 +916,26 @@ const options: swaggerJsDoc.Options = {
           parameters: [
             { name: "city", in: "query", schema: { type: "string" } },
             { name: "district", in: "query", schema: { type: "string" } },
-            { name: "status", in: "query", schema: { type: "string", enum: ["AVAILABLE", "DEPOSITED", "RENTED", "MAINTENANCE"] } },
+            {
+              name: "status",
+              in: "query",
+              schema: {
+                type: "string",
+                enum: ["AVAILABLE", "DEPOSITED", "RENTED", "MAINTENANCE"],
+              },
+            },
             { name: "minPrice", in: "query", schema: { type: "number" } },
             { name: "maxPrice", in: "query", schema: { type: "number" } },
-            { name: "page", in: "query", schema: { type: "number", default: 1 } },
-            { name: "limit", in: "query", schema: { type: "number", default: 10 } },
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
           ],
           responses: {
             200: { description: "Paginated list of rooms" },
@@ -716,13 +947,40 @@ const options: swaggerJsDoc.Options = {
           tags: ["Rooms"],
           summary: "Search rooms",
           parameters: [
-            { name: "q", in: "query", schema: { type: "string" }, description: "Search keyword (title, address, city, district)" },
-            { name: "status", in: "query", schema: { type: "string", enum: ["AVAILABLE", "DEPOSITED", "RENTED", "MAINTENANCE"] } },
-            { name: "roomType", in: "query", schema: { type: "string", enum: ["STUDIO", "SINGLE", "SHARED", "APARTMENT"] } },
+            {
+              name: "q",
+              in: "query",
+              schema: { type: "string" },
+              description: "Search keyword (title, address, city, district)",
+            },
+            {
+              name: "status",
+              in: "query",
+              schema: {
+                type: "string",
+                enum: ["AVAILABLE", "DEPOSITED", "RENTED", "MAINTENANCE"],
+              },
+            },
+            {
+              name: "roomType",
+              in: "query",
+              schema: {
+                type: "string",
+                enum: ["STUDIO", "SINGLE", "SHARED", "APARTMENT"],
+              },
+            },
             { name: "minPrice", in: "query", schema: { type: "number" } },
             { name: "maxPrice", in: "query", schema: { type: "number" } },
-            { name: "page", in: "query", schema: { type: "number", default: 1 } },
-            { name: "limit", in: "query", schema: { type: "number", default: 10 } },
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
           ],
           responses: {
             200: { description: "Search results" },
@@ -735,7 +993,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Get room by ID (Landlord)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Room found" },
@@ -749,7 +1012,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Update room (Landlord)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           requestBody: {
             content: {
@@ -760,7 +1028,10 @@ const options: swaggerJsDoc.Options = {
                     title: { type: "string" },
                     description: { type: "string" },
                     pricePerMonth: { type: "number" },
-                    status: { type: "string", enum: ["AVAILABLE", "DEPOSITED", "RENTED", "MAINTENANCE"] },
+                    status: {
+                      type: "string",
+                      enum: ["AVAILABLE", "DEPOSITED", "RENTED", "MAINTENANCE"],
+                    },
                     roomType: { type: "string" },
                   },
                 },
@@ -779,7 +1050,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Delete room (Landlord)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Room deleted successfully" },
@@ -793,7 +1069,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Publish a room",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Room published successfully" },
@@ -807,7 +1088,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Unpublish a room",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Room unpublished successfully" },
@@ -831,7 +1117,13 @@ const options: swaggerJsDoc.Options = {
           summary: "Upload room image (Landlord)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" }, description: "Room ID" },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "Room ID",
+            },
           ],
           requestBody: {
             required: true,
@@ -841,7 +1133,10 @@ const options: swaggerJsDoc.Options = {
                   type: "object",
                   required: ["url"],
                   properties: {
-                    url: { type: "string", example: "https://example.com/image.jpg" },
+                    url: {
+                      type: "string",
+                      example: "https://example.com/image.jpg",
+                    },
                     caption: { type: "string" },
                     order: { type: "number", default: 0 },
                     isPrimary: { type: "boolean", default: false },
@@ -859,7 +1154,13 @@ const options: swaggerJsDoc.Options = {
           tags: ["Rooms"],
           summary: "Get room images (Public)",
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" }, description: "Room ID" },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "Room ID",
+            },
           ],
           responses: {
             200: { description: "List of room images" },
@@ -872,8 +1173,20 @@ const options: swaggerJsDoc.Options = {
           summary: "Set primary room image",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" }, description: "Room ID" },
-            { name: "imageId", in: "path", required: true, schema: { type: "string" }, description: "Image ID" },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "Room ID",
+            },
+            {
+              name: "imageId",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "Image ID",
+            },
           ],
           responses: {
             200: { description: "Primary image set successfully" },
@@ -886,8 +1199,20 @@ const options: swaggerJsDoc.Options = {
           summary: "Delete room image",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" }, description: "Room ID" },
-            { name: "imageId", in: "path", required: true, schema: { type: "string" }, description: "Image ID" },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "Room ID",
+            },
+            {
+              name: "imageId",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "Image ID",
+            },
           ],
           responses: {
             200: { description: "Image deleted successfully" },
@@ -903,8 +1228,16 @@ const options: swaggerJsDoc.Options = {
           summary: "Get tenant's favorite rooms",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "page", in: "query", schema: { type: "number", default: 1 } },
-            { name: "limit", in: "query", schema: { type: "number", default: 10 } },
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
           ],
           responses: {
             200: { description: "Paginated list of favorites" },
@@ -917,7 +1250,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Check if room is favorited by current user",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "roomId", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "roomId",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: {
@@ -948,7 +1286,12 @@ const options: swaggerJsDoc.Options = {
           tags: ["Favorites"],
           summary: "Get room favorite count (Public)",
           parameters: [
-            { name: "roomId", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "roomId",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: {
@@ -980,7 +1323,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Add room to favorites",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "roomId", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "roomId",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             201: { description: "Room added to favorites" },
@@ -992,7 +1340,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Remove room from favorites",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "roomId", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "roomId",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Room removed from favorites" },
@@ -1016,8 +1369,16 @@ const options: swaggerJsDoc.Options = {
                   required: ["roomId", "checkInDate"],
                   properties: {
                     roomId: { type: "string", example: "665a1b2c..." },
-                    checkInDate: { type: "string", format: "date-time", example: "2026-07-01T00:00:00.000Z" },
-                    checkOutDate: { type: "string", format: "date-time", example: "2027-06-30T00:00:00.000Z" },
+                    checkInDate: {
+                      type: "string",
+                      format: "date-time",
+                      example: "2026-07-01T00:00:00.000Z",
+                    },
+                    checkOutDate: {
+                      type: "string",
+                      format: "date-time",
+                      example: "2027-06-30T00:00:00.000Z",
+                    },
                     notes: { type: "string" },
                   },
                 },
@@ -1036,8 +1397,16 @@ const options: swaggerJsDoc.Options = {
           summary: "Get current tenant's bookings",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "page", in: "query", schema: { type: "number", default: 1 } },
-            { name: "limit", in: "query", schema: { type: "number", default: 10 } },
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
           ],
           responses: {
             200: { description: "Paginated list of tenant's bookings" },
@@ -1050,9 +1419,24 @@ const options: swaggerJsDoc.Options = {
           summary: "Get landlord's bookings for their rooms",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "page", in: "query", schema: { type: "number", default: 1 } },
-            { name: "limit", in: "query", schema: { type: "number", default: 10 } },
-            { name: "status", in: "query", schema: { type: "string", enum: ["PENDING", "APPROVED", "REJECTED", "CANCELLED"] } },
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
+            {
+              name: "status",
+              in: "query",
+              schema: {
+                type: "string",
+                enum: ["PENDING", "APPROVED", "REJECTED", "CANCELLED"],
+              },
+            },
           ],
           responses: {
             200: { description: "Paginated list of landlord's bookings" },
@@ -1065,7 +1449,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Get booking by ID",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Booking found" },
@@ -1078,7 +1467,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Approve booking (Landlord)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Booking approved successfully" },
@@ -1093,7 +1487,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Reject booking (Landlord)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Booking rejected successfully" },
@@ -1108,7 +1507,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Cancel booking (Tenant)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Booking cancelled successfully" },
@@ -1135,7 +1539,11 @@ const options: swaggerJsDoc.Options = {
                     depositAmount: { type: "number", example: 3500000 },
                     terms: { type: "string" },
                     contractFileUrl: { type: "string" },
-                    startDate: { type: "string", format: "date-time", example: "2026-07-01T00:00:00.000Z" },
+                    startDate: {
+                      type: "string",
+                      format: "date-time",
+                      example: "2026-07-01T00:00:00.000Z",
+                    },
                   },
                 },
               },
@@ -1154,8 +1562,16 @@ const options: swaggerJsDoc.Options = {
           summary: "Get landlord's contracts",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "page", in: "query", schema: { type: "number", default: 1 } },
-            { name: "limit", in: "query", schema: { type: "number", default: 10 } },
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
           ],
           responses: {
             200: { description: "Paginated list of landlord's contracts" },
@@ -1168,8 +1584,16 @@ const options: swaggerJsDoc.Options = {
           summary: "Get tenant's contracts",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "page", in: "query", schema: { type: "number", default: 1 } },
-            { name: "limit", in: "query", schema: { type: "number", default: 10 } },
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
           ],
           responses: {
             200: { description: "Paginated list of tenant's contracts" },
@@ -1182,7 +1606,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Get contract by ID",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Contract found" },
@@ -1194,7 +1623,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Update contract (Landlord - DRAFT only)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           requestBody: {
             content: {
@@ -1226,7 +1660,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Activate contract (Landlord - DRAFT to ACTIVE)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Contract activated successfully" },
@@ -1240,7 +1679,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Terminate contract (Landlord)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Contract terminated successfully" },
@@ -1254,7 +1698,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Renew contract (Landlord)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           requestBody: {
             required: true,
@@ -1264,7 +1713,11 @@ const options: swaggerJsDoc.Options = {
                   type: "object",
                   required: ["startDate"],
                   properties: {
-                    startDate: { type: "string", format: "date-time", example: "2027-07-01T00:00:00.000Z" },
+                    startDate: {
+                      type: "string",
+                      format: "date-time",
+                      example: "2027-07-01T00:00:00.000Z",
+                    },
                     monthlyRent: { type: "number" },
                     depositAmount: { type: "number" },
                     endDate: { type: "string", format: "date-time" },
@@ -1295,11 +1748,24 @@ const options: swaggerJsDoc.Options = {
               "application/json": {
                 schema: {
                   type: "object",
-                  required: ["bookingId", "billingMonth", "dueDate", "rentAmount"],
+                  required: [
+                    "bookingId",
+                    "billingMonth",
+                    "dueDate",
+                    "rentAmount",
+                  ],
                   properties: {
                     bookingId: { type: "string" },
-                    billingMonth: { type: "string", example: "2026-06", pattern: "^\\d{4}-\\d{2}$" },
-                    dueDate: { type: "string", format: "date-time", example: "2026-07-05T00:00:00.000Z" },
+                    billingMonth: {
+                      type: "string",
+                      example: "2026-06",
+                      pattern: "^\\d{4}-\\d{2}$",
+                    },
+                    dueDate: {
+                      type: "string",
+                      format: "date-time",
+                      example: "2026-07-05T00:00:00.000Z",
+                    },
                     rentAmount: { type: "number", example: 3500000 },
                     electricityAmount: { type: "number", example: 450000 },
                     waterAmount: { type: "number", example: 80000 },
@@ -1313,7 +1779,10 @@ const options: swaggerJsDoc.Options = {
           },
           responses: {
             201: { description: "Invoice created successfully" },
-            400: { description: "Booking ID, billing month, due date, and rent amount are required" },
+            400: {
+              description:
+                "Booking ID, billing month, due date, and rent amount are required",
+            },
           },
         },
       },
@@ -1323,8 +1792,16 @@ const options: swaggerJsDoc.Options = {
           summary: "Get landlord's invoices",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "page", in: "query", schema: { type: "number", default: 1 } },
-            { name: "limit", in: "query", schema: { type: "number", default: 10 } },
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
           ],
           responses: {
             200: { description: "Paginated list of landlord's invoices" },
@@ -1337,8 +1814,16 @@ const options: swaggerJsDoc.Options = {
           summary: "Get tenant's invoices",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "page", in: "query", schema: { type: "number", default: 1 } },
-            { name: "limit", in: "query", schema: { type: "number", default: 10 } },
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
           ],
           responses: {
             200: { description: "Paginated list of tenant's invoices" },
@@ -1351,7 +1836,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Get invoice by ID",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Invoice found" },
@@ -1363,7 +1853,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Update invoice (Landlord - DRAFT only)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           requestBody: {
             content: {
@@ -1393,7 +1888,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Delete invoice (Landlord - DRAFT only)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Invoice deleted successfully" },
@@ -1408,7 +1908,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Send invoice (Landlord - DRAFT to SENT)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Invoice sent successfully" },
@@ -1422,7 +1927,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Mark invoice as paid (Landlord)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Invoice marked as paid" },
@@ -1436,7 +1946,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Get invoice detail",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Invoice detail" },
@@ -1448,7 +1963,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Update invoice detail (Landlord)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           requestBody: {
             content: {
@@ -1481,7 +2001,12 @@ const options: swaggerJsDoc.Options = {
           tags: ["Reviews"],
           summary: "Get room rating statistics (Public)",
           parameters: [
-            { name: "roomId", in: "query", required: true, schema: { type: "string" } },
+            {
+              name: "roomId",
+              in: "query",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Rating statistics" },
@@ -1494,9 +2019,22 @@ const options: swaggerJsDoc.Options = {
           tags: ["Reviews"],
           summary: "Get reviews by room (Public)",
           parameters: [
-            { name: "roomId", in: "query", required: true, schema: { type: "string" } },
-            { name: "page", in: "query", schema: { type: "number", default: 1 } },
-            { name: "limit", in: "query", schema: { type: "number", default: 10 } },
+            {
+              name: "roomId",
+              in: "query",
+              required: true,
+              schema: { type: "string" },
+            },
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
           ],
           responses: {
             200: { description: "Paginated list of reviews with statistics" },
@@ -1518,8 +2056,17 @@ const options: swaggerJsDoc.Options = {
                   required: ["roomId", "rating", "comment"],
                   properties: {
                     roomId: { type: "string" },
-                    rating: { type: "number", minimum: 1, maximum: 5, example: 4 },
-                    comment: { type: "string", minLength: 10, example: "Great room with excellent facilities!" },
+                    rating: {
+                      type: "number",
+                      minimum: 1,
+                      maximum: 5,
+                      example: 4,
+                    },
+                    comment: {
+                      type: "string",
+                      minLength: 10,
+                      example: "Great room with excellent facilities!",
+                    },
                     imageUrls: { type: "array", items: { type: "string" } },
                   },
                 },
@@ -1536,8 +2083,16 @@ const options: swaggerJsDoc.Options = {
           summary: "Get my reviews (Tenant)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "page", in: "query", schema: { type: "number", default: 1 } },
-            { name: "limit", in: "query", schema: { type: "number", default: 10 } },
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
           ],
           responses: {
             200: { description: "Paginated list of tenant's reviews" },
@@ -1550,7 +2105,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Get review by ID",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Review found" },
@@ -1562,7 +2122,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Update review (Tenant)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           requestBody: {
             content: {
@@ -1589,7 +2154,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Delete review (Tenant)",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           responses: {
             200: { description: "Review deleted successfully" },
@@ -1604,7 +2174,12 @@ const options: swaggerJsDoc.Options = {
           summary: "Add landlord reply to review",
           security: [{ bearerAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
           ],
           requestBody: {
             required: true,
@@ -1614,7 +2189,10 @@ const options: swaggerJsDoc.Options = {
                   type: "object",
                   required: ["reply"],
                   properties: {
-                    reply: { type: "string", example: "Thank you for your feedback!" },
+                    reply: {
+                      type: "string",
+                      example: "Thank you for your feedback!",
+                    },
                   },
                 },
               },
@@ -1624,6 +2202,791 @@ const options: swaggerJsDoc.Options = {
             200: { description: "Reply added successfully" },
             403: { description: "Landlord does not own the room" },
             404: { description: "Review not found" },
+          },
+        },
+      },
+
+      // ==================== PAYMENTS ====================
+      "/api/payments/pay-invoice/{invoiceId}": {
+        post: {
+          tags: ["Payments"],
+          summary: "Pay invoice (WALLET or PAYOS)",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "invoiceId",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "Invoice ID to pay",
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["method"],
+                  properties: {
+                    method: {
+                      type: "string",
+                      enum: ["WALLET", "PAYOS"],
+                      example: "WALLET",
+                      description:
+                        "Payment method: WALLET for instant wallet deduction, PAYOS for online payment gateway",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description:
+                "Payment processed. For WALLET: status COMPLETED. For PAYOS: status PENDING with checkoutUrl.",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: { type: "boolean" },
+                      message: { type: "string" },
+                      data: {
+                        type: "object",
+                        properties: {
+                          payment: { $ref: "#/components/schemas/Payment" },
+                          checkoutUrl: {
+                            type: "string",
+                            description:
+                              "PayOS checkout URL (only when method=PAYOS)",
+                          },
+                          orderCode: {
+                            type: "number",
+                            description:
+                              "PayOS order code (only when method=PAYOS)",
+                          },
+                          status: {
+                            type: "string",
+                            enum: ["COMPLETED", "PENDING"],
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Invalid invoice / Already paid / Wrong method",
+            },
+          },
+        },
+      },
+      "/api/payments/pay-deposit/{bookingId}": {
+        post: {
+          tags: ["Payments"],
+          summary: "Pay deposit (WALLET or PAYOS)",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "bookingId",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "Booking ID",
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["method"],
+                  properties: {
+                    method: {
+                      type: "string",
+                      enum: ["WALLET", "PAYOS"],
+                      example: "WALLET",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Deposit payment processed",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: { type: "boolean" },
+                      data: {
+                        type: "object",
+                        properties: {
+                          payment: { $ref: "#/components/schemas/Payment" },
+                          checkoutUrl: { type: "string" },
+                          status: { type: "string" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: { description: "Deposit already paid" },
+          },
+        },
+      },
+      "/api/payments/stats": {
+        get: {
+          tags: ["Payments"],
+          summary: "Get payment statistics",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Payment statistics",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: { type: "boolean" },
+                      data: {
+                        type: "object",
+                        properties: {
+                          totalPayments: { type: "number" },
+                          totalAmount: { type: "number" },
+                          pendingAmount: { type: "number" },
+                          completedAmount: { type: "number" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/api/payments/my": {
+        get: {
+          tags: ["Payments"],
+          summary: "Get my payments (as payer/tenant)",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
+          ],
+          responses: {
+            200: { description: "Paginated list of my payments" },
+          },
+        },
+      },
+      "/api/payments/received": {
+        get: {
+          tags: ["Payments"],
+          summary: "Get received payments (as receiver/landlord)",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
+          ],
+          responses: {
+            200: { description: "Paginated list of received payments" },
+          },
+        },
+      },
+      "/api/payments/invoice/{invoiceId}": {
+        get: {
+          tags: ["Payments"],
+          summary: "Get payments by invoice (Landlord)",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "invoiceId",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          responses: {
+            200: { description: "List of payments for invoice" },
+            403: { description: "You do not own this invoice" },
+          },
+        },
+      },
+      "/api/payments/{id}/refund": {
+        post: {
+          tags: ["Payments"],
+          summary: "Request refund for a payment",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "Payment ID",
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["reason"],
+                  properties: {
+                    reason: {
+                      type: "string",
+                      example: "Overcharged for electricity",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: { description: "Refund requested successfully" },
+            403: { description: "Can only request refund for own payments" },
+          },
+        },
+      },
+      "/api/payments/{id}": {
+        get: {
+          tags: ["Payments"],
+          summary: "Get payment by ID",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          responses: {
+            200: { description: "Payment found" },
+            403: { description: "You do not have access to this payment" },
+          },
+        },
+      },
+
+      // ==================== WALLET ====================
+      "/api/wallet/": {
+        get: {
+          tags: ["Wallet"],
+          summary: "Get current user's wallet info",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Wallet info",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: { type: "boolean" },
+                      data: { $ref: "#/components/schemas/Wallet" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/api/wallet/transactions": {
+        get: {
+          tags: ["Wallet"],
+          summary: "Get wallet transaction history",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
+          ],
+          responses: {
+            200: { description: "Paginated list of wallet transactions" },
+          },
+        },
+      },
+      "/api/wallet/topup": {
+        post: {
+          tags: ["Wallet"],
+          summary: "Top up wallet (Admin only)",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["userId", "amount"],
+                  properties: {
+                    userId: {
+                      type: "string",
+                      description: "User ID to top up",
+                    },
+                    amount: {
+                      type: "number",
+                      example: 5000000,
+                      description: "Amount to add (VND)",
+                    },
+                    note: { type: "string", example: "Manual top-up" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: { description: "Wallet topped up successfully" },
+            403: { description: "Admin only" },
+          },
+        },
+      },
+      "/api/wallet/withdraw": {
+        post: {
+          tags: ["Wallet"],
+          summary: "Withdraw from wallet (Admin only)",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["userId", "amount"],
+                  properties: {
+                    userId: { type: "string" },
+                    amount: { type: "number", example: 2000000 },
+                    note: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: { description: "Withdrawal successful" },
+            400: { description: "Insufficient balance" },
+            403: { description: "Admin only" },
+          },
+        },
+      },
+
+      // ==================== SERVICE PACKAGES ====================
+      "/api/service-packages/active": {
+        get: {
+          tags: ["Service Packages"],
+          summary: "Get active service packages (Public)",
+          responses: {
+            200: {
+              description: "List of active service packages",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: { type: "boolean" },
+                      data: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/ServicePackage" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/api/service-packages/": {
+        get: {
+          tags: ["Service Packages"],
+          summary: "Get all service packages (Public)",
+          parameters: [
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
+          ],
+          responses: {
+            200: { description: "Paginated list of service packages" },
+          },
+        },
+        post: {
+          tags: ["Service Packages"],
+          summary: "Create service package (Admin only)",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["name", "price", "durationDays"],
+                  properties: {
+                    name: { type: "string", example: "Premium" },
+                    description: {
+                      type: "string",
+                      example: "Premium listing with priority placement",
+                    },
+                    price: { type: "number", example: 99000 },
+                    durationDays: { type: "number", example: 30 },
+                    features: {
+                      type: "array",
+                      items: { type: "string" },
+                      example: ["Priority listing", "Highlighted badge"],
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: { description: "Package created" },
+            403: { description: "Admin only" },
+          },
+        },
+      },
+      "/api/service-packages/{id}": {
+        get: {
+          tags: ["Service Packages"],
+          summary: "Get package by ID (Public)",
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          responses: {
+            200: { description: "Package found" },
+            404: { description: "Package not found" },
+          },
+        },
+        put: {
+          tags: ["Service Packages"],
+          summary: "Update service package (Admin only)",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    description: { type: "string" },
+                    price: { type: "number" },
+                    durationDays: { type: "number" },
+                    features: { type: "array", items: { type: "string" } },
+                    isActive: { type: "boolean" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: { description: "Package updated" },
+            403: { description: "Admin only" },
+          },
+        },
+        delete: {
+          tags: ["Service Packages"],
+          summary: "Delete service package (Admin only)",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          responses: {
+            200: { description: "Package deleted" },
+            403: { description: "Admin only" },
+          },
+        },
+      },
+
+      // ==================== SERVICE SUBSCRIPTIONS ====================
+      "/api/service-subscriptions/packages/{packageId}/subscribe": {
+        post: {
+          tags: ["Service Subscriptions"],
+          summary: "Subscribe to a service package (WALLET or PAYOS)",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "packageId",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "Service package ID",
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["method"],
+                  properties: {
+                    method: {
+                      type: "string",
+                      enum: ["WALLET", "PAYOS"],
+                      example: "WALLET",
+                    },
+                    autoRenew: { type: "boolean", default: false },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description:
+                "Subscription created. WALLET: immediate. PAYOS: returns checkoutUrl.",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: { type: "boolean" },
+                      data: {
+                        type: "object",
+                        properties: {
+                          payment: { $ref: "#/components/schemas/Payment" },
+                          checkoutUrl: { type: "string" },
+                          status: { type: "string" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: { description: "Already have active subscription" },
+          },
+        },
+      },
+      "/api/service-subscriptions/my": {
+        get: {
+          tags: ["Service Subscriptions"],
+          summary: "Get my subscriptions",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "page",
+              in: "query",
+              schema: { type: "number", default: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: { type: "number", default: 10 },
+            },
+          ],
+          responses: {
+            200: { description: "Paginated list of my subscriptions" },
+          },
+        },
+      },
+      "/api/service-subscriptions/active": {
+        get: {
+          tags: ["Service Subscriptions"],
+          summary: "Get my active subscription",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Active subscription or null",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: { type: "boolean" },
+                      data: {
+                        $ref: "#/components/schemas/ServiceSubscription",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/api/service-subscriptions/check-expiry": {
+        post: {
+          tags: ["Service Subscriptions"],
+          summary: "Check and expire subscriptions (Admin only)",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Expiry check result",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: { type: "boolean" },
+                      message: { type: "string" },
+                      data: {
+                        type: "object",
+                        properties: {
+                          expiredCount: { type: "number" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            403: { description: "Admin only" },
+          },
+        },
+      },
+      "/api/service-subscriptions/{id}": {
+        get: {
+          tags: ["Service Subscriptions"],
+          summary: "Get subscription by ID",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          responses: {
+            200: { description: "Subscription found" },
+            403: { description: "Not your subscription" },
+          },
+        },
+      },
+      "/api/service-subscriptions/{id}/cancel": {
+        post: {
+          tags: ["Service Subscriptions"],
+          summary: "Cancel subscription",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          responses: {
+            200: { description: "Subscription cancelled" },
+            400: { description: "Only active subscriptions can be cancelled" },
+          },
+        },
+      },
+
+      // ==================== PAYOS ====================
+      "/api/payos/webhook": {
+        post: {
+          tags: ["PayOS"],
+          summary: "PayOS webhook callback (called by PayOS servers)",
+          description:
+            "No auth required. PayOS sends payment status updates to this endpoint. The backend verifies the signature and updates payment status accordingly.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["code", "desc", "success", "data", "signature"],
+                  properties: {
+                    code: { type: "string", example: "00" },
+                    desc: { type: "string" },
+                    success: { type: "boolean" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        orderCode: { type: "number" },
+                        amount: { type: "number" },
+                        description: { type: "string" },
+                        accountNumber: { type: "string" },
+                        reference: { type: "string" },
+                        transactionDateTime: { type: "string" },
+                        currency: { type: "string" },
+                      },
+                    },
+                    signature: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: { description: "Webhook processed successfully" },
+            400: { description: "Invalid webhook data / Payment not found" },
+          },
+        },
+      },
+      "/api/payos/status/{orderCode}": {
+        get: {
+          tags: ["PayOS"],
+          summary: "Check PayOS payment status",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "orderCode",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "PayOS order code",
+            },
+          ],
+          responses: {
+            200: { description: "Payment status from PayOS" },
           },
         },
       },
