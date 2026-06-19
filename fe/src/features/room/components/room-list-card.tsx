@@ -7,7 +7,8 @@ import {
   formatRoomType,
   formatRoomLocation,
   getRoomAmenityNames,
-  getPrimaryRoomImage,
+  getDisplayRoomImage,
+  resolveRoomImageUrl,
 } from '@/utils/room-display'
 import { useGetRoomImages } from '../hooks/use-rooms'
 import type { Room } from '../types/room.type'
@@ -19,7 +20,7 @@ type RoomListCardProps = {
 
 export function RoomListCard({ room }: RoomListCardProps) {
   const imagesQuery = useGetRoomImages(room._id)
-  const primaryImage = getPrimaryRoomImage(imagesQuery.data ?? [])
+  const primaryImage = getDisplayRoomImage(imagesQuery.data ?? [])
   const amenityNames = getRoomAmenityNames(room)
 
   return (
@@ -28,7 +29,7 @@ export function RoomListCard({ room }: RoomListCardProps) {
       <Link to={`/phong/${room._id}`} className="relative block h-56 bg-border/60">
         {primaryImage ? (
           <img
-            src={primaryImage.url}
+            src={resolveRoomImageUrl(primaryImage.url)}
             alt={primaryImage.caption || room.title}
             className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
           />

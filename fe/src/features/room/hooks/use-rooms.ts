@@ -240,6 +240,29 @@ export function useCreateRoom() {
   })
 }
 
+export function useCreateRoomWithImages() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: Parameters<typeof roomApi.createWithImages>[0]) => {
+      const { data } = await roomApi.createWithImages(payload)
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: roomKeys.all })
+      toast.success('Đã thêm phòng')
+    },
+    onError: (error) => {
+      toast.error('Không thể thêm phòng', {
+        description: getApiErrorMessage(
+          error,
+          'Vui lòng kiểm tra lại thông tin và ảnh phòng.',
+        ),
+      })
+    },
+  })
+}
+
 export function useUpdateRoom() {
   const queryClient = useQueryClient()
 

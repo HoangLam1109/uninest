@@ -248,7 +248,15 @@ const options: swaggerJsDoc.Options = {
             currency: { type: "string", default: "VND" },
             type: {
               type: "string",
-              enum: ["RENT", "DEPOSIT", "UTILITY", "SERVICE_FEE", "REFUND"],
+              enum: [
+                "RENT",
+                "DEPOSIT",
+                "UTILITY",
+                "SERVICE_FEE",
+                "TENANT_PACKAGE",
+                "LANDLORD_PACKAGE",
+                "REFUND",
+              ],
             },
             method: {
               type: "string",

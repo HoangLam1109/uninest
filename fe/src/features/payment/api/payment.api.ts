@@ -1,5 +1,7 @@
 import { api } from '@/lib/axios'
 import type {
+  AdminPaymentStatsResponse,
+  AdminPaymentsResponse,
   RoleUpgradePayload,
   RoleUpgradePaymentResponse,
   PayOSPaymentStatusResponse,
@@ -17,4 +19,10 @@ export const paymentApi = {
 
   cancelPayOSPayment: (orderCode: string) =>
     api.post<PayOSPaymentStatusResponse>(`/payos/cancel/${orderCode}`),
+
+  adminListPayments: (params?: { page?: number; limit?: number }) =>
+    api.get<AdminPaymentsResponse>('/payments/admin', { params }),
+
+  adminGetPaymentStats: () =>
+    api.get<AdminPaymentStatsResponse>('/payments/admin/stats'),
 }

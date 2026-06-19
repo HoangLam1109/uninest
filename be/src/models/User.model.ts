@@ -10,6 +10,7 @@ export interface IUser extends Document {
   avatarUrl?: string;
   isActive?: boolean;
   role?: UserRole;
+  roleExpiresAt?: Date | null;
 }
 
 const userSchema = new mongoose.Schema<IUser>(
@@ -53,6 +54,11 @@ const userSchema = new mongoose.Schema<IUser>(
       trim: true,
       enum: Object.values(USER_ROLES),
       default: USER_ROLES.GUEST,
+    },
+    roleExpiresAt: {
+      type: Date,
+      default: null,
+      index: true,
     },
     isActive: {
       type: Boolean,

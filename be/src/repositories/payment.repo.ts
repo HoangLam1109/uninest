@@ -3,6 +3,29 @@ import { PaymentModel, PAYMENT_STATUS, PAYMENT_TYPE } from "../models/Payment.mo
 export const PaymentRepository = {
   create: (data: any) => PaymentModel.create(data),
 
+  findAll: (skip: number, limit: number) =>
+    PaymentModel.find()
+      .populate("bookingId")
+      .populate("payerId", "fullName email phone")
+      .populate("receiverId", "fullName email phone")
+      .populate("invoiceId")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+
+  countAll: () => PaymentModel.countDocuments(),
+
+  getStats: () =>
+    PaymentModel.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+          amount: { $sum: "$amount" },
+        },
+      },
+    ]),
+
   findById: (id: string) =>
     PaymentModel.findById(id)
       .populate("bookingId")

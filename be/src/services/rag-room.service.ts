@@ -207,7 +207,7 @@ export const RagRoomService = {
       : "";
 
     const reviewLines = reviews.map((review) => {
-      const reply = review.landlordReply ? ` Phan hoi chu nha: ${review.landlordReply}` : "";
+      const reply = review.landlordReply ? ` Phản hồi chủ nhà: ${review.landlordReply}` : "";
       return `- Rating ${review.rating}: ${review.comment}${reply}`;
     });
 

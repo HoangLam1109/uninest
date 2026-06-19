@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { LandlordDashboardHeader } from '@/features/landlord'
 import { BookingCard } from '../components/booking-card'
 import {
   useApproveBooking,
@@ -38,15 +39,16 @@ export function LandlordBookingsPage() {
   const deleteBooking = useDeleteBooking()
   const bookings = bookingsQuery.data?.data ?? []
   const pagination = bookingsQuery.data?.pagination
+  const isActionPending =
+    approveBooking.isPending || rejectBooking.isPending || deleteBooking.isPending
 
   return (
     <div className="flex w-full flex-col gap-6">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="mt-1 text-2xl font-bold text-slate-950 md:text-3xl">
-            Duyệt yêu cầu đặt phòng
-          </h1>
-        </div>
+        <LandlordDashboardHeader
+          greeting="Duyệt yêu cầu đặt phòng"
+          subtitle="Kiểm tra thông tin người thuê, thời gian nhận phòng và phản hồi các yêu cầu mới."
+        />
         <div className="w-full rounded-lg border border-primary/10 bg-white px-3 py-2 lg:max-w-64">
           <Select
             value={status}
@@ -99,7 +101,7 @@ export function LandlordBookingsPage() {
               onApprove={approveBooking.mutate}
               onReject={rejectBooking.mutate}
               onDelete={deleteBooking.mutate}
-              isActionPending={approveBooking.isPending || rejectBooking.isPending || deleteBooking.isPending}
+              isActionPending={isActionPending}
             />
           ))}
         </div>

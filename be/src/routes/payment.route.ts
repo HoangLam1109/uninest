@@ -1,5 +1,7 @@
 import express from "express";
 import authenticateMiddleware from "../middlewares/authenticate.middleware.js";
+import { USER_ROLES } from "../constants/role.constant.js";
+import { authorizeRoles } from "../middlewares/authorize.middleware.js";
 import {
   payInvoice,
   payDeposit,
@@ -7,6 +9,8 @@ import {
   getPaymentById,
   getMyPayments,
   getReceivedPayments,
+  getAdminPayments,
+  getAdminPaymentStats,
   getPaymentsByInvoice,
   requestRefund,
   getPaymentStats,
@@ -31,6 +35,10 @@ router.post("/upgrade-role", payRoleUpgrade);
 
 // Payment stats
 router.get("/stats", getPaymentStats);
+
+// Admin payment management
+router.get("/admin", authorizeRoles(USER_ROLES.ADMIN), getAdminPayments);
+router.get("/admin/stats", authorizeRoles(USER_ROLES.ADMIN), getAdminPaymentStats);
 
 // My payments (as payer/tenant)
 router.get("/my", getMyPayments);

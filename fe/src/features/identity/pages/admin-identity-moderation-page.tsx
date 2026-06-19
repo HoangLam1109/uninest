@@ -5,7 +5,6 @@ import {
   Clock3,
   Eye,
   Loader2,
-  RefreshCcw,
   Search,
   XCircle,
 } from 'lucide-react'
@@ -127,12 +126,6 @@ export function AdminIdentityModerationPage() {
     identities.find((identity) => identity._id === selectedIdentityId) ?? null
   const isMutatingIdentity = verifyIdentity.isPending || rejectIdentity.isPending
 
-  function resetFilters() {
-    setSearch('')
-    setStatus('PENDING_VERIFICATION')
-    setSelectedIdentityId(null)
-  }
-
   return (
     <div className="min-h-svh bg-slate-50 px-4 py-6 md:px-6 lg:px-8 xl:px-10 2xl:px-12">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 xl:max-w-[1360px] xl:gap-7 2xl:max-w-[1536px] 2xl:gap-8">
@@ -146,29 +139,25 @@ export function AdminIdentityModerationPage() {
               Xem ảnh CCCD/CMND, kiểm tra thông tin người thuê và xác minh hồ sơ trước khi cho phép đặt phòng.
             </p>
           </div>
-          <Button type="button" onClick={resetFilters} variant="outline">
-            <RefreshCcw className="size-4" />
-            Đặt lại bộ lọc
-          </Button>
         </header>
 
         <section className="grid gap-4 md:grid-cols-3 xl:gap-5 2xl:gap-6">
           <div className="rounded-xl border border-primary/10 bg-white p-5 2xl:p-6">
-            <p className="text-sm text-slate-500">Cho xac minh</p>
+            <p className="text-sm text-slate-500">Chờ xác minh</p>
             <p className="mt-2 flex items-center gap-2 text-2xl font-bold text-amber-700 2xl:text-3xl">
               <Clock3 className="size-5" />
               {pendingCount}
             </p>
           </div>
           <div className="rounded-xl border border-primary/10 bg-white p-5 2xl:p-6">
-            <p className="text-sm text-slate-500">Da xac minh</p>
+            <p className="text-sm text-slate-500">Đã xác minh</p>
             <p className="mt-2 flex items-center gap-2 text-2xl font-bold text-green-700 2xl:text-3xl">
               <CheckCircle2 className="size-5" />
               {verifiedCount}
             </p>
           </div>
           <div className="rounded-xl border border-primary/10 bg-white p-5 2xl:p-6">
-            <p className="text-sm text-slate-500">Da tu choi</p>
+            <p className="text-sm text-slate-500">Đã từ chối</p>
             <p className="mt-2 flex items-center gap-2 text-2xl font-bold text-red-600 2xl:text-3xl">
               <XCircle className="size-5" />
               {rejectedCount}

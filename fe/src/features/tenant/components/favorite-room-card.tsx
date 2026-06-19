@@ -9,6 +9,7 @@ import {
   formatRoomFullLocation,
   getDisplayRoomImage,
   getRoomAmenityNames,
+  resolveRoomImageUrl,
   roomStatusClasses,
   roomStatusLabels,
 } from '@/utils/room-display'
@@ -44,7 +45,7 @@ export function FavoriteRoomCard({ room, view }: FavoriteRoomCardProps) {
       >
         {primaryImage ? (
           <img
-            src={primaryImage.url}
+            src={resolveRoomImageUrl(primaryImage.url)}
             alt={primaryImage.caption || room.title}
             className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
           />

@@ -16,11 +16,16 @@ import {
   uploadRoomImage,
 } from "../controllers/room.controller.js";
 import authenticateMiddleware from "../middlewares/authenticate.middleware.js";
-import { uploadSingleImage } from "../middlewares/upload.middleware.js";
+import { uploadRoomImages, uploadSingleImage } from "../middlewares/upload.middleware.js";
 
 const router = express.Router();
 
-router.post("/create", authenticateMiddleware.authenticateUser, createRoom);
+router.post(
+  "/create",
+  authenticateMiddleware.authenticateUser,
+  uploadRoomImages,
+  createRoom
+);
 router.get("/getAll", getAllRooms);
 router.get("/my", authenticateMiddleware.authenticateUser, getMyRooms);
 router.get("/search", searchRooms);

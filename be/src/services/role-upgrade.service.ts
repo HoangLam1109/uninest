@@ -2,6 +2,7 @@ import { USER_ROLES, type UserRole } from "../constants/role.constant.js";
 import { userRepository } from "../repositories/index.js";
 
 export const ROLE_UPGRADE_NOTE_PREFIX = "ROLE_UPGRADE:";
+export const ROLE_UPGRADE_DURATION_MONTHS = 1;
 
 export const ROLE_UPGRADE_PRICES = {
   [USER_ROLES.TENANT]: 2_000,
@@ -25,11 +26,36 @@ export function getRoleUpgradeTarget(note?: string | null) {
   return isPaidUpgradeRole(targetRole) ? targetRole : null;
 }
 
+export function getRoleUpgradeExpiresAt(from = new Date()) {
+  const expiresAt = new Date(from);
+  expiresAt.setMonth(expiresAt.getMonth() + ROLE_UPGRADE_DURATION_MONTHS);
+  return expiresAt;
+}
+
+export async function expireRoleUpgradeIfNeeded(user: any) {
+  if (!user?.roleExpiresAt) return user;
+
+  const expiresAt = new Date(user.roleExpiresAt);
+  if (Number.isNaN(expiresAt.getTime()) || expiresAt > new Date()) {
+    return user;
+  }
+
+  const updated = await userRepository.updateById(user._id.toString(), {
+    role: USER_ROLES.GUEST,
+    roleExpiresAt: null,
+  });
+
+  return updated || user;
+}
+
 export async function applyRoleUpgradeFromPayment(payment: any) {
   const targetRole = getRoleUpgradeTarget(payment.note);
   if (!targetRole) return null;
 
+  const roleExpiresAt = getRoleUpgradeExpiresAt();
+
   return userRepository.updateById(payment.payerId.toString(), {
     role: targetRole,
+    roleExpiresAt,
   });
 }

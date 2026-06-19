@@ -5,6 +5,7 @@ import type {
   RoomStatus,
   RoomType,
 } from '../features/room/types/room.type'
+import { env } from '../config/env'
 
 type RoomLocation = Pick<Room, 'address'> &
   Partial<Pick<Room, 'ward' | 'district' | 'city'>>
@@ -90,4 +91,14 @@ export function getPrimaryRoomImage(images: RoomImage[]) {
 
 export function getDisplayRoomImage(images: RoomImage[]) {
   return getPrimaryRoomImage(images) ?? images[0]
+}
+
+export function resolveRoomImageUrl(url?: string) {
+  if (!url) return ''
+  if (/^https?:\/\//i.test(url)) return url
+  if (url.startsWith('//')) return `${window.location.protocol}${url}`
+
+  const apiOrigin = new URL(env.apiBaseUrl).origin
+  const normalizedPath = url.startsWith('/') ? url : `/${url}`
+  return `${apiOrigin}${normalizedPath}`
 }

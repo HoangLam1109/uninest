@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/User.model.js";
+import { expireRoleUpgradeIfNeeded } from "../services/role-upgrade.service.js";
 import { extractBearerToken } from "../utils/auth.utils.js";
 import { verifyAccessToken, verifyRefreshToken } from "../utils/jwt.utils.js";
 
@@ -59,7 +60,7 @@ const authenticateUser = async (
 
     const user = await User.findById(
       decoded.userId,
-      "_id email fullName phone identityNumber gender age dateOfBirth role",
+      "_id email fullName phone identityNumber gender age dateOfBirth role roleExpiresAt",
     );
 
     if (!user) {
@@ -67,7 +68,7 @@ const authenticateUser = async (
       return;
     }
 
-    req.user = user;
+    req.user = await expireRoleUpgradeIfNeeded(user);
     req.userId = decoded.userId;
 
     next();

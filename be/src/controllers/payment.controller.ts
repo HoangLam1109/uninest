@@ -226,6 +226,43 @@ export const getReceivedPayments = async (req: Request, res: Response) => {
   }
 };
 
+export const getAdminPayments = async (req: Request, res: Response) => {
+  try {
+    const { page = 1, limit = 100 } = req.query;
+    const pageNumber = Math.max(1, Number(page));
+    const limitNumber = Math.min(500, Math.max(1, Number(limit)));
+    const skip = (pageNumber - 1) * limitNumber;
+
+    const { payments, total } = await PaymentService.getAdminPayments(
+      skip,
+      limitNumber
+    );
+
+    return res.json({
+      success: true,
+      data: payments,
+      pagination: {
+        total,
+        page: pageNumber,
+        limit: limitNumber,
+        totalPages: Math.ceil(total / limitNumber),
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const getAdminPaymentStats = async (req: Request, res: Response) => {
+  try {
+    const stats = await PaymentService.getAdminPaymentStats();
+
+    return res.json({ success: true, data: stats });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 export const getPaymentsByInvoice = async (req: Request, res: Response) => {
   try {
     const userId = req.userId;

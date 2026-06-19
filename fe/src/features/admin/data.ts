@@ -1,6 +1,7 @@
 import {
   BarChart3,
   ClipboardCheck,
+  CreditCard,
   LayoutGrid,
   ShieldCheck,
   UserPlus,
@@ -11,7 +12,7 @@ export const adminNavItems = [
   { label: 'Tổng quan', href: '/quan-tri', icon: LayoutGrid },
   { label: 'Người dùng', href: '/quan-tri/nguoi-dung', icon: Users },
   { label: 'Kiểm duyệt', href: '/quan-tri/kiem-duyet', icon: ShieldCheck },
-  { label: 'Báo cáo', href: '/quan-tri/bao-cao', icon: BarChart3 },
+  { label: 'Thanh toán', href: '/quan-tri/thanh-toan', icon: CreditCard },
   { label: 'Ticket', href: '/quan-tri/ticket', icon: ClipboardCheck },
 ] as const
 

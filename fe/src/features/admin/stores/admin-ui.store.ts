@@ -5,6 +5,7 @@ export type AdminStatusFilter =
   | 'all'
   | 'verified'
   | 'active'
+  | 'inactive'
   | 'new'
   | 'pending'
   | 'review'

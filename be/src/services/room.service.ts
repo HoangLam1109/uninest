@@ -165,13 +165,15 @@ export const RoomService = {
 
   // Room Images
   uploadRoomImage: async (roomId: string, imageData: any) => {
+    const existingImageCount = await RoomImageRepository.countByRoomId(roomId);
+
     return await RoomImageRepository.create({
       roomId,
       url: imageData.url,
       publicId: imageData.publicId,
       caption: imageData.caption,
       order: imageData.order || 0,
-      isPrimary: imageData.isPrimary || false,
+      isPrimary: imageData.isPrimary || existingImageCount === 0,
     });
   },
 

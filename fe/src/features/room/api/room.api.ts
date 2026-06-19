@@ -21,6 +21,15 @@ import type {
   RoomResponse,
 } from '../types/room.type'
 
+export type RoomCreateWithImagesPayload = {
+  room: RoomPayload
+  images?: Array<{
+    image: File
+    caption?: string
+    isPrimary?: boolean
+  }>
+}
+
 export const roomApi = {
   listAmenities: () =>
     api.get<AmenityListResponse>('/amenities'),
@@ -62,6 +71,35 @@ export const roomApi = {
 
   create: (payload: RoomPayload) =>
     api.post<RoomResponse>('/rooms/create', payload),
+
+  createWithImages: ({ room, images = [] }: RoomCreateWithImagesPayload) => {
+    const formData = new FormData()
+
+    Object.entries(room).forEach(([key, value]) => {
+      if (value === undefined || value === null) return
+      formData.append(
+        key,
+        Array.isArray(value) || typeof value === 'object'
+          ? JSON.stringify(value)
+          : String(value),
+      )
+    })
+
+    const captions: string[] = []
+    let primaryImageIndex = 0
+    images.forEach((image, index) => {
+      formData.append('images', image.image)
+      captions[index] = image.caption ?? ''
+      if (image.isPrimary) primaryImageIndex = index
+    })
+
+    if (images.length > 0) {
+      formData.append('imageCaptions', JSON.stringify(captions))
+      formData.append('primaryImageIndex', String(primaryImageIndex))
+    }
+
+    return api.post<RoomResponse>('/rooms/create', formData)
+  },
 
   update: (id: string, payload: RoomPayload) =>
     api.put<RoomResponse>(`/rooms/update/${id}`, payload),

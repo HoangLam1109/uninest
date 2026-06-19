@@ -5,6 +5,7 @@ export const paths = {
   register: '/dang-ky',
   rooms: '/phong',
   roomDetail: '/phong/:id',
+  createRoom: '/dang-tin',
   dashboard: '/dashboard',
   landlordDashboard: '/chu-nha',
   tenantDashboard: '/cu-dan',

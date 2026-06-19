@@ -91,14 +91,14 @@ export function RoomListPage() {
                 Danh sách phòng
               </p>
               <h1 className="mt-2 font-serif text-3xl font-bold text-foreground lg:text-5xl">
-                Tìm không gian sống phù hợp với bạn
+                Tìm phòng phù hợp với bạn
               </h1>
             </div>
             <form className="relative w-full lg:max-w-sm" onSubmit={handleSearch}>
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 className="h-11 rounded-lg border-primary/10 bg-white pl-9 shadow-none"
-                placeholder="Tim theo ten, dia chi..."
+                placeholder="Tìm theo tên, địa chỉ..."
                 value={keyword}
                 onChange={(event) => setKeyword(event.target.value)}
               />
@@ -124,7 +124,7 @@ export function RoomListPage() {
 
           {!activeQuery.isLoading && !activeQuery.isError && rooms.length === 0 ? (
             <div className="rounded-xl border border-primary/10 bg-white p-8 text-center text-sm text-muted-foreground">
-              Chua co phong phu hop de hien thi.
+              Chưa có phòng phù hợp để hiển thị.
             </div>
           ) : null}
 

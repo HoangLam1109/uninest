@@ -2,7 +2,6 @@ import { useMemo, useState, type FormEvent } from 'react'
 import {
   Edit3,
   Plus,
-  RefreshCcw,
   Search,
   Trash2,
   UserCheck,
@@ -39,10 +38,10 @@ const roleOptions = Object.values(USER_ROLES)
 
 const roleLabels: Record<UserRole, string> = {
   ADMIN: 'Admin',
-  STAFF: 'Nhan vien',
-  LANDLORD: 'Chu nha',
-  TENANT: 'Nguoi thue',
-  GUEST: 'Khach',
+  STAFF: 'Nhân viên',
+  LANDLORD: 'Chủ nhà',
+  TENANT: 'Người thuê',
+  GUEST: 'Khách hàng',
 }
 
 const initialForm: UserFormState = {
@@ -178,47 +177,36 @@ export function AdminUserManagementPage() {
           <div>
             <p className="text-sm font-semibold uppercase text-primary">Admin</p>
             <h1 className="mt-1 text-2xl font-bold text-slate-950 md:text-3xl 2xl:text-4xl">
-              Quan ly nguoi dung
+              Quản lý người dùng
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-500 md:text-base 2xl:max-w-3xl">
-              Tao, cap nhat, khoa hoac xoa tai khoan tren he thong UniNest.
+              Tạo, cập nhật, khóa hoặc xóa tài khoản trên hệ thống UniNest.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => usersQuery.refetch()}
-              disabled={usersQuery.isFetching}
-            >
-              <RefreshCcw
-                className={cn('size-4', usersQuery.isFetching && 'animate-spin')}
-              />
-              Lam moi
-            </Button>
             <Button type="button" onClick={openCreateModal}>
               <Plus className="size-4" />
-              Tao tai khoan
+              Tạo tài khoản
             </Button>
           </div>
         </header>
 
         <section className="grid gap-4 md:grid-cols-3 xl:gap-5 2xl:gap-6">
           <div className="rounded-xl border border-primary/10 bg-white p-5 2xl:p-6">
-            <p className="text-sm text-slate-500">Tong tai khoan</p>
+            <p className="text-sm text-slate-500">Tổng tài khoản</p>
             <p className="mt-2 text-2xl font-bold text-slate-950 2xl:text-3xl">
               {users.length}
             </p>
           </div>
           <div className="rounded-xl border border-primary/10 bg-white p-5 2xl:p-6">
-            <p className="text-sm text-slate-500">Dang hoat dong</p>
+            <p className="text-sm text-slate-500">Đang hoạt động</p>
             <p className="mt-2 flex items-center gap-2 text-2xl font-bold text-green-700 2xl:text-3xl">
               <UserCheck className="size-5" />
               {activeCount}
             </p>
           </div>
           <div className="rounded-xl border border-primary/10 bg-white p-5 2xl:p-6">
-            <p className="text-sm text-slate-500">Da khoa</p>
+            <p className="text-sm text-slate-500">Đã khóa</p>
             <p className="mt-2 flex items-center gap-2 text-2xl font-bold text-red-600 2xl:text-3xl">
               <UserX className="size-5" />
               {inactiveCount}
@@ -234,7 +222,7 @@ export function AdminUserManagementPage() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 className="h-10 border border-primary/10 py-2 pl-9 pr-3 text-sm shadow-none"
-                placeholder="Tim theo ten, email, so dien thoai..."
+                placeholder="Tìm theo tên, email, số điện thoại..."
               />
             </div>
             <select
@@ -242,7 +230,7 @@ export function AdminUserManagementPage() {
               value={role}
               onChange={(event) => setRole(event.target.value as RoleFilter)}
             >
-              <option value="ALL">Tat ca vai tro</option>
+              <option value="ALL">Tất cả vai trò</option>
               {roleOptions.map((option) => (
                 <option key={option} value={option}>
                   {roleLabels[option]}
@@ -254,21 +242,21 @@ export function AdminUserManagementPage() {
               value={status}
               onChange={(event) => setStatus(event.target.value as StatusFilter)}
             >
-              <option value="ALL">Tat ca trang thai</option>
-              <option value="ACTIVE">Dang hoat dong</option>
-              <option value="INACTIVE">Da khoa</option>
+              <option value="ALL">Tất cả trạng thái</option>
+              <option value="ACTIVE">Đang hoạt động</option>
+              <option value="INACTIVE">Đã khóa</option>
             </select>
           </div>
 
           {usersQuery.isLoading ? (
-            <Loading label="Dang tai nguoi dung..." />
+            <Loading label="Đang tải người dùng..." />
           ) : usersQuery.isError ? (
             <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
               <p className="font-semibold text-slate-900">
-                Khong the tai danh sach nguoi dung
+                Không thể tải danh sách người dùng
               </p>
               <Button type="button" variant="outline" onClick={() => usersQuery.refetch()}>
-                Thu lai
+                Thử lại
               </Button>
             </div>
           ) : (
@@ -277,22 +265,22 @@ export function AdminUserManagementPage() {
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                   <tr>
                     <th className="w-[34%] px-4 py-3 font-semibold xl:px-5 2xl:w-[38%] 2xl:px-6">
-                      Nguoi dung
+                      Người dùng
                     </th>
                     <th className="w-[16%] px-4 py-3 font-semibold xl:px-5 2xl:px-6">
-                      Dien thoai
+                      Điện thoại
                     </th>
                     <th className="w-[14%] px-4 py-3 font-semibold xl:px-5 2xl:px-6">
-                      Vai tro
+                      Vai trò
                     </th>
                     <th className="w-[14%] px-4 py-3 font-semibold xl:px-5 2xl:px-6">
-                      Ngay tao
+                      Ngày tạo
                     </th>
                     <th className="w-[14%] px-4 py-3 font-semibold xl:px-5 2xl:px-6">
-                      Trang thai
+                      Trạng thái
                     </th>
                     <th className="w-[8%] px-4 py-3 text-right font-semibold xl:px-5 2xl:px-6">
-                      Thao tac
+                      Thao tác
                     </th>
                   </tr>
                 </thead>
@@ -338,7 +326,7 @@ export function AdminUserManagementPage() {
                                 : 'bg-red-500/10 text-red-600',
                             )}
                           >
-                            {isActive ? 'Hoat dong' : 'Da khoa'}
+                            {isActive ? 'Hoạt động' : 'Đã khóa'}
                           </span>
                         </td>
                         <td className="px-4 py-4 xl:px-5 2xl:px-6 2xl:py-5">
@@ -372,7 +360,7 @@ export function AdminUserManagementPage() {
 
               {filteredUsers.length === 0 ? (
                 <div className="px-4 py-12 text-center text-sm text-slate-500">
-                  Khong co nguoi dung phu hop.
+                  Không có người dùng phù hợp.
                 </div>
               ) : null}
             </div>
@@ -403,7 +391,7 @@ export function AdminUserManagementPage() {
               />
             </label>
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
-              So dien thoai
+              Số điện thoại
               <Input
                 required
                 value={form.phone}
@@ -429,7 +417,7 @@ export function AdminUserManagementPage() {
           </label>
 
           <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
-            Mat khau
+            Mật khẩu
             <Input
               required={!editingUser}
               type="password"
@@ -441,13 +429,13 @@ export function AdminUserManagementPage() {
                 }))
               }
               className="h-10 border border-primary/10 px-3 text-sm shadow-none"
-              placeholder={editingUser ? 'De trong neu khong doi' : undefined}
+              placeholder={editingUser ? 'Để trống nếu không đổi' : undefined}
             />
           </label>
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
-              Vai tro
+              Vai trò
               <select
                 className="h-10 rounded-lg border border-primary/10 bg-white px-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={form.role}
@@ -467,7 +455,7 @@ export function AdminUserManagementPage() {
             </label>
 
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
-              Trang thai
+              Trạng thái
               <select
                 className="h-10 rounded-lg border border-primary/10 bg-white px-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={form.isActive ? 'ACTIVE' : 'INACTIVE'}
@@ -478,21 +466,21 @@ export function AdminUserManagementPage() {
                   }))
                 }
               >
-                <option value="ACTIVE">Hoat dong</option>
-                <option value="INACTIVE">Da khoa</option>
+                <option value="ACTIVE">Hoạt động</option>
+                <option value="INACTIVE">Đã khóa</option>
               </select>
             </label>
           </div>
 
           <div className="mt-2 flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={closeModal}>
-              Huy
+              Hủy
             </Button>
             <Button
               type="submit"
               disabled={createUser.isPending || updateUser.isPending}
             >
-              {editingUser ? 'Luu thay doi' : 'Tao tai khoan'}
+              {editingUser ? 'Lưu thay đổi' : 'Tạo tài khoản'}
             </Button>
           </div>
         </form>

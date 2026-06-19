@@ -227,11 +227,16 @@ export class PaymentService {
       }
     }
 
+    const paymentType =
+      targetRole === USER_ROLES.TENANT
+        ? PAYMENT_TYPE.TENANT_PACKAGE
+        : PAYMENT_TYPE.LANDLORD_PACKAGE;
+
     return this.processPayment({
       payerId: userId,
       receiverId: userId,
       amount: ROLE_UPGRADE_PRICES[targetRole],
-      type: PAYMENT_TYPE.SERVICE_FEE,
+      type: paymentType,
       description: buildRoleUpgradeNote(targetRole),
       method: PAYMENT_METHOD.PAYOS,
     });
@@ -271,6 +276,62 @@ export class PaymentService {
       PaymentRepository.countByReceiverId(userId),
     ]);
     return { payments, total };
+  }
+
+  static async getAdminPayments(skip: number, limit: number) {
+    const [payments, total] = await Promise.all([
+      PaymentRepository.findAll(skip, limit),
+      PaymentRepository.countAll(),
+    ]);
+    return { payments, total };
+  }
+
+  static async getAdminPaymentStats() {
+    const [rows, total] = await Promise.all([
+      PaymentRepository.getStats(),
+      PaymentRepository.countAll(),
+    ]);
+    let totalAmount = 0;
+    let pendingAmount = 0;
+    let completedAmount = 0;
+    let pendingCount = 0;
+    let completedCount = 0;
+    let failedCount = 0;
+    let refundedCount = 0;
+
+    for (const row of rows as Array<{
+      _id: PAYMENT_STATUS;
+      count: number;
+      amount: number;
+    }>) {
+      totalAmount += row.amount;
+
+      if (row._id === PAYMENT_STATUS.PENDING) {
+        pendingAmount += row.amount;
+        pendingCount += row.count;
+      } else if (row._id === PAYMENT_STATUS.COMPLETED) {
+        completedAmount += row.amount;
+        completedCount += row.count;
+      } else if (
+        row._id === PAYMENT_STATUS.FAILED ||
+        row._id === PAYMENT_STATUS.CANCELLED
+      ) {
+        failedCount += row.count;
+      } else if (row._id === PAYMENT_STATUS.REFUNDED) {
+        refundedCount += row.count;
+      }
+    }
+
+    return {
+      totalPayments: total,
+      totalAmount,
+      pendingAmount,
+      completedAmount,
+      pendingCount,
+      completedCount,
+      failedCount,
+      refundedCount,
+    };
   }
 
   static async getPaymentsByInvoice(invoiceId: string, landlordId: string) {

@@ -60,6 +60,13 @@ export function Navbar() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-3">
+          <Button
+            variant="outline"
+            size="default"
+            asChild
+          >
+            <Link to={paths.createRoom}>Đăng tin</Link>
+          </Button>
           {isLoggedIn && user ? (
             <NavbarUserMenu user={user} />
           ) : (

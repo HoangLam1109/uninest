@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { Plus } from 'lucide-react'
+import { FileText, Plus } from 'lucide-react'
 import { Pagination } from '@/components/common/pagination'
 import { Button } from '@/components/ui/button'
+import { LandlordDashboardHeader } from '@/features/landlord'
 import { ContractCard } from '../components/contract-card'
 import { ContractFormModal } from '../components/contract-form-modal'
+import { ContractSummary } from '../components/contract-summary'
 import {
   useActivateContract,
   useCreateContract,
@@ -80,15 +82,15 @@ export function LandlordContractsPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 2xl:mx-0 2xl:max-w-none">
+    <div className="flex flex-col gap-4 md:gap-6 lg:gap-8">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="mt-1 text-2xl font-bold text-slate-950 md:text-3xl">
-            Quản lý hợp đồng thuê phòng
-          </h1>
-        </div>
+        <LandlordDashboardHeader
+          greeting="Quản lý hợp đồng"
+          subtitle="Theo dõi trạng thái ký, thời hạn thuê và file hợp đồng của từng phòng."
+        />
         <Button
           type="button"
+          className="w-full sm:w-fit"
           onClick={() => setModalState({ mode: 'create', contract: null })}
         >
           <Plus className="size-4" />
@@ -96,10 +98,16 @@ export function LandlordContractsPage() {
         </Button>
       </header>
 
+      <ContractSummary
+        contracts={contracts}
+        total={pagination?.total}
+        mode="landlord"
+      />
+
       {contractsQuery.isLoading ? (
-        <div className="grid gap-5">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-64 animate-pulse rounded-xl bg-border/60" />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <div key={index} className="h-80 animate-pulse rounded-xl bg-border/60" />
           ))}
         </div>
       ) : null}
@@ -111,13 +119,21 @@ export function LandlordContractsPage() {
       ) : null}
 
       {!contractsQuery.isLoading && !contractsQuery.isError && contracts.length === 0 ? (
-        <div className="rounded-xl border border-primary/10 bg-white p-8 text-center text-sm text-slate-500">
-          Chưa có hợp đồng nào.
+        <div className="rounded-xl border border-primary/10 bg-white p-10 text-center shadow-sm">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <FileText className="size-6" />
+          </div>
+          <h2 className="mt-4 text-lg font-bold text-slate-950">
+            Chưa có hợp đồng nào
+          </h2>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+            Tạo hợp đồng từ booking đã duyệt để quản lý thời hạn thuê và quy trình ký.
+          </p>
         </div>
       ) : null}
 
       {!contractsQuery.isLoading && !contractsQuery.isError && contracts.length > 0 ? (
-        <div className="grid gap-5">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {contracts.map((contract) => (
             <ContractCard
               key={contract._id}

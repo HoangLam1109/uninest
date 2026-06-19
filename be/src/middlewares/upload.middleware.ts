@@ -44,3 +44,32 @@ export const uploadSingleImage = (
     });
   });
 };
+
+export const uploadRoomImages = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  uploadImageMiddleware.array("images", 12)(req, res, (error) => {
+    if (!error) {
+      next();
+      return;
+    }
+
+    if (error instanceof multer.MulterError) {
+      res.status(400).json({
+        success: false,
+        message:
+          error.code === "LIMIT_FILE_SIZE"
+            ? "Each image file must be 8MB or smaller"
+            : error.message,
+      });
+      return;
+    }
+
+    res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Invalid image upload",
+    });
+  });
+};

@@ -1,9 +1,9 @@
 import type { LucideIcon } from 'lucide-react'
 import {
-  ArrowLeft,
   Building2,
   CalendarDays,
   FileText,
+  LogOut,
   MessageCircle,
   ScrollText,
   Users,
@@ -29,9 +29,8 @@ export const landlordSidebarConfig = {
   label: 'Chủ nhà Dashboard',
   navLabel: 'Điều hướng chủ nhà',
   navItems: landlordNavItems,
-  ctaLabel: 'Trang chủ',
-  ctaIcon: ArrowLeft,
-  ctaHref: '/',
+  ctaLabel: 'Đăng xuất',
+  ctaIcon: LogOut,
 }
 
 export const landlordStats = [

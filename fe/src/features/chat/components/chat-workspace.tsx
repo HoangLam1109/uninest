@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
   Building2,
@@ -13,6 +13,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { USER_ROLES } from '@/constants/roles'
+import { LandlordDashboardHeader } from '@/features/landlord'
 import { formatRoomCurrency, formatRoomFullLocation } from '@/utils/room-display'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth.store'
@@ -157,6 +158,7 @@ function MessageBubble({
 }
 
 export function ChatWorkspace() {
+  const { pathname } = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [draft, setDraft] = useState('')
   const [keyword, setKeyword] = useState('')
@@ -227,9 +229,23 @@ export function ChatWorkspace() {
     ? getParticipant(selectedConversation, currentUserId)
     : null
   const room = selectedConversation?.roomId
+  const isLandlordMessagesPage = pathname.startsWith('/chu-nha/tin-nhan')
 
   return (
-    <section className="flex min-h-[calc(100svh-3.5rem)] flex-col gap-5 p-4 md:min-h-svh md:p-6 lg:p-8">
+    <section
+      className={cn(
+        'flex flex-col gap-5',
+        isLandlordMessagesPage
+          ? 'min-h-[calc(100svh-8rem)]'
+          : 'min-h-[calc(100svh-3.5rem)] p-4 md:min-h-svh md:p-6 lg:p-8',
+      )}
+    >
+      {isLandlordMessagesPage ? (
+        <LandlordDashboardHeader
+          greeting="Tin nhắn"
+          subtitle="Trao đổi với người thuê về lịch xem phòng, chi phí và điều kiện thuê."
+        />
+      ) : (
       <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="flex items-center gap-2 text-sm font-semibold text-primary">
@@ -247,6 +263,7 @@ export function ChatWorkspace() {
           </Link>
         </Button>
       </header>
+      )}
 
       <div className="grid min-h-[680px] flex-1 overflow-hidden rounded-xl border border-primary/10 bg-white shadow-sm lg:grid-cols-[22rem_minmax(0,1fr)]">
         <aside className="border-b border-primary/10 bg-white lg:border-b-0 lg:border-r">

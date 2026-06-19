@@ -19,6 +19,7 @@ import {
   formatRoomFullLocation,
   formatRoomType,
   getRoomAmenityNames,
+  resolveRoomImageUrl,
 } from '../../../utils/room-display'
 import type { RoomImage } from '../types/room.type'
 import { RoomLocationMap } from '../components/room-location-map'
@@ -103,7 +104,7 @@ export function RoomDetailPage() {
                 <div className="flex aspect-[16/10] max-h-[520px] min-h-[280px] items-center justify-center overflow-hidden rounded-xl bg-border/60">
                   {selectedImage ? (
                     <img
-                      src={selectedImage.url}
+                      src={resolveRoomImageUrl(selectedImage.url)}
                       alt={selectedImage.caption || room.title}
                       className="size-full object-cover object-center"
                       decoding="async"
@@ -131,7 +132,7 @@ export function RoomDetailPage() {
                           }`}
                         >
                           <img
-                            src={image.url}
+                            src={resolveRoomImageUrl(image.url)}
                             alt={image.caption || room.title}
                             className="size-full object-cover object-center"
                             decoding="async"

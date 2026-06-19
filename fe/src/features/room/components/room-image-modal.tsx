@@ -9,6 +9,7 @@ import {
   useSetPrimaryRoomImage,
   useUploadRoomImage,
 } from '../hooks/use-rooms'
+import { resolveRoomImageUrl } from '@/utils/room-display'
 
 const inputClassName =
   'h-11 rounded-lg border border-primary/10 px-3 text-sm shadow-none focus-visible:ring-2'
@@ -119,7 +120,7 @@ export function RoomImageModal({
               >
                 <div className="aspect-[4/3] bg-slate-100">
                   <img
-                    src={image.url}
+                    src={resolveRoomImageUrl(image.url)}
                     alt={image.caption || 'Ảnh phòng'}
                     className="h-full w-full object-cover"
                   />

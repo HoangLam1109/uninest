@@ -2,34 +2,39 @@ import { useMemo } from 'react'
 import {
   BadgeDollarSign,
   Edit3,
-  Images,
-  Plus,
+  Home,
+  ImageIcon,
+  MapPin,
+  Ruler,
   Search,
   Trash2,
+  Users,
 } from 'lucide-react'
 import { Pagination } from '@/components/common/pagination'
+import { AspectRatio } from '@/components/ui/aspect-ratio'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { LandlordDashboardHeader } from '@/features/landlord'
 import { useAuthStore } from '@/stores/auth.store'
 import {
-  useCreateRoom,
   useDeleteRoom,
   useGetMyRooms,
   useGetRoomById,
+  useGetRoomImages,
   useUpdateRoom,
 } from '../hooks/use-rooms'
 import {
   formatRoomCurrency,
   formatRoomType,
+  getDisplayRoomImage,
   getRoomAmenityNames,
+  resolveRoomImageUrl,
   roomStatusClasses,
   roomStatusLabels,
 } from '../../../utils/room-display'
 import { useRoomUiStore, type RoomSortOption } from '../stores/room-ui.store'
 import type { Room, RoomPayload, RoomStatus } from '../types/room.type'
 import { RoomFormModal } from './room-form-modal'
-import { RoomImageModal } from './room-image-modal'
 
 function getRoomLandlordId(room: Room) {
   if (typeof room.landlordId === 'string') return room.landlordId
@@ -68,6 +73,158 @@ function sortRooms(rooms: Room[], sort: RoomSortOption) {
   })
 }
 
+function RoomManagementCard({
+  room,
+  isDeleting,
+  onEdit,
+  onDelete,
+}: {
+  room: Room
+  isDeleting: boolean
+  onEdit: (roomId: string) => void
+  onDelete: (roomId: string) => void
+}) {
+  const imagesQuery = useGetRoomImages(room._id)
+  const primaryImage = getDisplayRoomImage(imagesQuery.data ?? [])
+  const amenityNames = getRoomAmenityNames(room)
+  const location = [room.district, room.city].filter(Boolean).join(', ')
+
+  return (
+    <article className="flex min-h-full flex-col overflow-hidden rounded-xl border border-primary/10 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
+      <div className="relative bg-slate-100">
+        <AspectRatio ratio={16 / 9}>
+          {primaryImage ? (
+            <img
+              src={resolveRoomImageUrl(primaryImage.url)}
+              alt={primaryImage.caption || room.title}
+              className="size-full object-cover"
+            />
+          ) : (
+            <div className="flex size-full flex-col items-center justify-center gap-2 text-sm font-semibold text-slate-500">
+              <ImageIcon className="size-7 text-slate-300" />
+              Chưa có ảnh phòng
+            </div>
+          )}
+        </AspectRatio>
+        <span
+          className={`absolute left-3 top-3 rounded-lg px-2.5 py-1 text-xs font-bold shadow-sm ${roomStatusClasses[room.status]}`}
+        >
+          {roomStatusLabels[room.status]}
+        </span>
+      </div>
+
+      <div className="flex flex-1 flex-col p-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="line-clamp-2 text-base font-bold text-slate-900">
+              {room.title}
+            </h3>
+            <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs font-medium text-slate-500">
+              <Home className="size-3.5 text-primary" />
+              {formatRoomType(room.roomType)}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-col gap-2.5 text-sm text-slate-600">
+          <div className="flex gap-2">
+            <MapPin className="mt-0.5 size-4 shrink-0 text-slate-400" />
+            <div className="min-w-0">
+              <p className="line-clamp-2">{room.address}</p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {location || 'Chưa cập nhật'}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg bg-slate-50 px-2.5 py-2">
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                <Ruler className="size-3.5" />
+                Diện tích
+              </p>
+              <p className="mt-1 font-bold text-slate-900">{room.areaSqm ?? 0} m2</p>
+            </div>
+            <div className="rounded-lg bg-slate-50 px-2.5 py-2">
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                <Users className="size-3.5" />
+                Sức chứa
+              </p>
+              <p className="mt-1 font-bold text-slate-900">
+                {room.maxOccupants} người
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-lg border border-primary/10 bg-primary/5 px-3 py-2">
+          <p className="inline-flex items-center gap-1.5 text-base font-black text-slate-900">
+            <BadgeDollarSign className="size-4 text-primary" />
+            {formatRoomCurrency(room.pricePerMonth)}
+          </p>
+          {room.depositAmount ? (
+            <p className="mt-1 text-xs font-medium text-slate-500">
+              Cọc {formatRoomCurrency(room.depositAmount)}
+            </p>
+          ) : null}
+        </div>
+
+        {amenityNames.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {amenityNames.slice(0, 3).map((amenity) => (
+              <span
+                key={amenity}
+                className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary"
+              >
+                {amenity}
+              </span>
+            ))}
+            {amenityNames.length > 3 ? (
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">
+                +{amenityNames.length - 3}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="mt-auto flex items-center justify-between gap-3 pt-4">
+          <span
+            className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+              room.isPublished
+                ? 'bg-green-50 text-green-700'
+                : 'bg-slate-100 text-slate-500'
+            }`}
+          >
+            {room.isPublished ? 'Đang hiển thị' : 'Bản nháp'}
+          </span>
+
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label="Sửa phòng"
+              onClick={() => onEdit(room._id)}
+            >
+              <Edit3 className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label="Xóa phòng"
+              disabled={isDeleting}
+              onClick={() => onDelete(room._id)}
+            >
+              <Trash2 className="size-4 text-red-600" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </article>
+  )
+}
+
 export function RoomManagement() {
   const currentUserId = useAuthStore((state) => state.user?.id)
   const search = useRoomUiStore((state) => state.search)
@@ -78,19 +235,13 @@ export function RoomManagement() {
   const page = useRoomUiStore((state) => state.page)
   const formOpen = useRoomUiStore((state) => state.modalOpen)
   const editingRoomId = useRoomUiStore((state) => state.editingRoomId)
-  const imageModalOpen = useRoomUiStore((state) => state.imageModalOpen)
-  const imageRoomId = useRoomUiStore((state) => state.imageRoomId)
   const setSearch = useRoomUiStore((state) => state.setSearch)
   const setStatus = useRoomUiStore((state) => state.setStatus)
-  const setCity = useRoomUiStore((state) => state.setCity)
   const setDistrict = useRoomUiStore((state) => state.setDistrict)
   const setSort = useRoomUiStore((state) => state.setSort)
   const setPage = useRoomUiStore((state) => state.setPage)
-  const openCreateModal = useRoomUiStore((state) => state.openCreateModal)
   const openEditModal = useRoomUiStore((state) => state.openEditModal)
   const closeModal = useRoomUiStore((state) => state.closeModal)
-  const openImageModal = useRoomUiStore((state) => state.openImageModal)
-  const closeImageModal = useRoomUiStore((state) => state.closeImageModal)
 
   const params = useMemo(
     () => ({
@@ -108,7 +259,6 @@ export function RoomManagement() {
     editingRoomId,
     formOpen && Boolean(editingRoomId),
   )
-  const createRoom = useCreateRoom()
   const updateRoom = useUpdateRoom()
   const deleteRoom = useDeleteRoom()
 
@@ -125,7 +275,6 @@ export function RoomManagement() {
     roomDetailQuery.data ??
     rooms.find((room) => room._id === editingRoomId) ??
     null
-  const imageRoom = rooms.find((room) => room._id === imageRoomId) ?? null
   const pagination = roomsQuery.data?.pagination
 
   const summary = useMemo(() => {
@@ -145,10 +294,7 @@ export function RoomManagement() {
         { id: editingRoomId, payload },
         { onSuccess: closeModal },
       )
-      return
     }
-
-    createRoom.mutate(payload, { onSuccess: closeModal })
   }
 
   return (
@@ -190,8 +336,8 @@ export function RoomManagement() {
       </div>
 
       <section className="rounded-xl border border-primary/10 bg-white">
-        <div className="flex flex-col gap-3 border-b border-primary/10 p-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:flex-1">
+        <div className="border-b border-primary/10 p-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label className="sm:col-span-2 lg:col-span-1" htmlFor="rooms-search">
               <span className="mb-1.5 block text-xs font-semibold text-slate-500">
                 Tìm kiếm
@@ -226,19 +372,6 @@ export function RoomManagement() {
               </select>
             </label>
 
-            <label htmlFor="rooms-city">
-              <span className="mb-1.5 block text-xs font-semibold text-slate-500">
-                Thành phố
-              </span>
-              <Input
-                id="rooms-city"
-                value={city}
-                onChange={(event) => setCity(event.target.value)}
-                className="h-10 border border-primary/10 px-3 text-sm shadow-none"
-                placeholder="VD: Hà Nội"
-              />
-            </label>
-
             <label htmlFor="rooms-district">
               <span className="mb-1.5 block text-xs font-semibold text-slate-500">
                 Quận/Huyện
@@ -270,148 +403,42 @@ export function RoomManagement() {
               </select>
             </label>
           </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row lg:shrink-0">
-            <Button type="button" onClick={openCreateModal}>
-              <Plus className="size-4" />
-              Thêm phòng
-            </Button>
-          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[780px] text-left">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Phòng</th>
-                <th className="px-4 py-3 font-semibold">Vị trí</th>
-                <th className="px-4 py-3 font-semibold">Giá thuê</th>
-                <th className="px-4 py-3 font-semibold">Trạng thái</th>
-                <th className="px-4 py-3 font-semibold">Hiển thị</th>
-                <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-primary/10">
-              {roomsQuery.isLoading ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
-                    Đang tải danh sách phòng...
-                  </td>
-                </tr>
-              ) : null}
+        <div className="p-4">
+          {roomsQuery.isLoading ? (
+            <div className="rounded-xl border border-dashed border-primary/20 bg-slate-50 px-4 py-12 text-center text-sm text-slate-500">
+              Đang tải danh sách phòng...
+            </div>
+          ) : null}
 
-              {roomsQuery.isError ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-red-600">
-                    Không thể tải danh sách phòng.
-                  </td>
-                </tr>
-              ) : null}
+          {roomsQuery.isError ? (
+            <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-12 text-center text-sm font-semibold text-red-600">
+              Không thể tải danh sách phòng.
+            </div>
+          ) : null}
 
-              {!roomsQuery.isLoading &&
-              !roomsQuery.isError &&
-              displayedRooms.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
-                    Chưa có phòng nào phù hợp với bộ lọc hiện tại.
-                  </td>
-                </tr>
-              ) : null}
+          {!roomsQuery.isLoading &&
+          !roomsQuery.isError &&
+          displayedRooms.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-primary/20 bg-slate-50 px-4 py-12 text-center text-sm text-slate-500">
+              Chưa có phòng nào phù hợp với bộ lọc hiện tại.
+            </div>
+          ) : null}
 
-              {displayedRooms.map((room) => {
-                const amenityNames = getRoomAmenityNames(room)
-
-                return (
-                <tr key={room._id} className="align-top">
-                  <td className="px-4 py-4">
-                    <p className="font-semibold text-slate-900">{room.title}</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {formatRoomType(room.roomType)} · {room.areaSqm ?? 0} m2 ·{' '}
-                      {room.maxOccupants} người
-                    </p>
-                    {amenityNames.length > 0 ? (
-                      <div className="mt-2 flex max-w-xs flex-wrap gap-1.5">
-                        {amenityNames.slice(0, 3).map((amenity) => (
-                          <span
-                            key={amenity}
-                            className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary"
-                          >
-                            {amenity}
-                          </span>
-                        ))}
-                        {amenityNames.length > 3 ? (
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">
-                            +{amenityNames.length - 3}
-                          </span>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-slate-600">
-                    <p>{room.address}</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {[room.district, room.city].filter(Boolean).join(', ') ||
-                        'Chưa cập nhật'}
-                    </p>
-                  </td>
-                  <td className="px-4 py-4">
-                    <p className="inline-flex items-center gap-1 font-semibold text-slate-900">
-                      <BadgeDollarSign className="size-4 text-primary" />
-                      {formatRoomCurrency(room.pricePerMonth)}
-                    </p>
-                    {room.depositAmount ? (
-                      <p className="mt-1 text-xs text-slate-500">
-                        Cọc {formatRoomCurrency(room.depositAmount)}
-                      </p>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-4">
-                    <span
-                      className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-bold ${roomStatusClasses[room.status]}`}
-                    >
-                      {roomStatusLabels[room.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-sm text-slate-600">
-                    {room.isPublished ? 'Đang hiển thị' : 'Bản nháp'}
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Quan ly anh phong"
-                        onClick={() => openImageModal(room._id)}
-                      >
-                        <Images className="size-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Sửa phòng"
-                        onClick={() => openEditModal(room._id)}
-                      >
-                        <Edit3 className="size-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Xóa phòng"
-                        disabled={deleteRoom.isPending}
-                        onClick={() => deleteRoom.mutate(room._id)}
-                      >
-                        <Trash2 className="size-4 text-red-600" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          {!roomsQuery.isLoading && !roomsQuery.isError && displayedRooms.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {displayedRooms.map((room) => (
+                <RoomManagementCard
+                  key={room._id}
+                  room={room}
+                  isDeleting={deleteRoom.isPending}
+                  onEdit={openEditModal}
+                  onDelete={(roomId) => deleteRoom.mutate(roomId)}
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <Pagination
@@ -433,19 +460,9 @@ export function RoomManagement() {
       <RoomFormModal
         open={formOpen}
         room={editingRoom}
-        isPending={
-          createRoom.isPending ||
-          updateRoom.isPending ||
-          roomDetailQuery.isFetching
-        }
+        isPending={updateRoom.isPending || roomDetailQuery.isFetching}
         onClose={closeModal}
         onSubmit={handleSubmit}
-      />
-      <RoomImageModal
-        open={imageModalOpen}
-        roomId={imageRoomId}
-        roomTitle={imageRoom?.title}
-        onClose={closeImageModal}
       />
     </div>
   )

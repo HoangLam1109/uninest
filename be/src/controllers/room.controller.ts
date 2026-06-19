@@ -1,4 +1,7 @@
 import type { Request, Response } from "express";
+import { randomUUID } from "crypto";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
 import mongoose from "mongoose";
 import { configureCloudinary } from "../config/cloudinary.config.js";
 import { RoomService } from "../services/room.service.js";
@@ -59,6 +62,84 @@ function uploadBufferToCloudinary(file: Express.Multer.File, roomId: string) {
   );
 }
 
+async function saveRoomImageLocally(
+  file: Express.Multer.File,
+  roomId: string,
+  req: Request,
+) {
+  const extension = path.extname(file.originalname) || ".jpg";
+  const fileName = `${randomUUID()}${extension.toLowerCase()}`;
+  const relativeDir = path.join("uploads", "rooms", roomId);
+  const absoluteDir = path.join(process.cwd(), relativeDir);
+
+  await mkdir(absoluteDir, { recursive: true });
+  await writeFile(path.join(absoluteDir, fileName), file.buffer);
+
+  const publicPath = `/uploads/rooms/${roomId}/${fileName}`;
+  return {
+    secure_url: `${req.protocol}://${req.get("host")}${publicPath}`,
+  };
+}
+
+function parseMaybeJson(value: unknown) {
+  if (typeof value !== "string") return value;
+  const trimmedValue = value.trim();
+
+  if (
+    (trimmedValue.startsWith("[") && trimmedValue.endsWith("]")) ||
+    (trimmedValue.startsWith("{") && trimmedValue.endsWith("}"))
+  ) {
+    try {
+      return JSON.parse(trimmedValue);
+    } catch {
+      return value;
+    }
+  }
+
+  return value;
+}
+
+function normalizeRoomCreateBody(body: Record<string, unknown>) {
+  const normalizedBody: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(body)) {
+    if (key === "imageCaptions" || key === "primaryImageIndex") continue;
+    normalizedBody[key] = parseMaybeJson(value);
+  }
+
+  return normalizedBody;
+}
+
+async function persistRoomImage(
+  file: Express.Multer.File,
+  roomId: string,
+  req: Request,
+  imageData: {
+    caption?: string;
+    order?: number;
+    isPrimary?: boolean;
+  },
+) {
+  let uploadedImage: { secure_url: string; public_id?: string };
+  try {
+    uploadedImage = await uploadBufferToCloudinary(file, roomId);
+  } catch (cloudinaryError: any) {
+    console.warn(
+      "[RoomController] Cloudinary upload failed, saving room image locally:",
+      cloudinaryError?.message ?? cloudinaryError,
+    );
+    uploadedImage = await saveRoomImageLocally(file, roomId, req);
+  }
+
+  return RoomService.uploadRoomImage(roomId, {
+    url: uploadedImage.secure_url,
+    publicId: uploadedImage.public_id,
+    caption: imageData.caption,
+    order: imageData.order ?? 0,
+    isPrimary: imageData.isPrimary ?? false,
+  });
+}
+
 /**
  * CREATE ROOM
  */
@@ -68,12 +149,44 @@ export const createRoom = async (req: Request, res: Response) => {
     if (!landlordId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
-    const room = await RoomService.createRoom(req.body, landlordId);
+    const room = await RoomService.createRoom(
+      normalizeRoomCreateBody(req.body),
+      landlordId
+    );
+    const roomId = room._id.toString();
+    const files = Array.isArray(req.files)
+      ? (req.files as Express.Multer.File[])
+      : [];
+    const parsedCaptions = parseMaybeJson(req.body.imageCaptions);
+    const captions = Array.isArray(parsedCaptions) ? parsedCaptions : [];
+    const primaryImageIndex = Number(req.body.primaryImageIndex ?? 0);
+    const images =
+      files.length > 0
+        ? await Promise.all(
+            files.map((file, index) => {
+              const imageData: {
+                caption?: string;
+                order: number;
+                isPrimary: boolean;
+              } = {
+                order: index,
+                isPrimary: index === primaryImageIndex,
+              };
+
+              if (typeof captions[index] === "string") {
+                imageData.caption = captions[index] as string;
+              }
+
+              return persistRoomImage(file, roomId, req, imageData);
+            })
+          )
+        : [];
 
     return res.status(201).json({
       success: true,
       message: "Room created successfully",
       data: room,
+      images,
     });
   } catch (err: any) {
     return handleError(res, err, "createRoom");
@@ -417,11 +530,7 @@ export const uploadRoomImage = async (req: Request, res: Response) => {
       });
     }
 
-    const uploadedImage = await uploadBufferToCloudinary(file, roomId as string);
-
-    const image = await RoomService.uploadRoomImage(roomId as string, {
-      url: uploadedImage.secure_url,
-      publicId: uploadedImage.public_id,
+    const image = await persistRoomImage(file, roomId as string, req, {
       caption,
       order: Number(order || 0),
       isPrimary: isPrimary === "true" || isPrimary === true,

@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import { errorHandler } from "../utils/error.utils.js";
 import { createAccessToken, createTokenPair } from "../utils/jwt.utils.js";
+import { expireRoleUpgradeIfNeeded } from "../services/role-upgrade.service.js";
 import {
   OtpRateLimitError,
   RegisterOtpService,
@@ -22,6 +23,7 @@ function toAuthUser(user: IUser) {
     fullName: user.fullName,
     phone: user.phone,
     role: user.role,
+    roleExpiresAt: user.roleExpiresAt,
     avatarUrl: user.avatarUrl,
   };
 }
@@ -105,7 +107,7 @@ const loginUser = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const user: IUser | null = await userService.getUserByEmail(email);
+    let user: IUser | null = await userService.getUserByEmail(email);
 
     if (!user) {
       res.status(400).json({ message: "User not found!" });
@@ -118,12 +120,14 @@ const loginUser = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const tokens = createTokenPair(user._id.toString());
+    const activeUser = await expireRoleUpgradeIfNeeded(user);
+
+    const tokens = createTokenPair(activeUser._id.toString());
 
     res.status(200).json({
       message: "Login successful!",
       data: {
-        user: toAuthUser(user),
+        user: toAuthUser(activeUser),
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
       },

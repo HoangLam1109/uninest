@@ -39,6 +39,7 @@ const packages: Array<{
     icon: KeyRound,
     tone: 'light',
     features: [
+      'Có hiệu lực trong 1 tháng',
       'Đặt phòng và theo dõi lịch hẹn',
       'Quản lý hợp đồng thuê',
       'Nhận và thanh toán hóa đơn',
@@ -53,6 +54,7 @@ const packages: Array<{
     icon: Building2,
     tone: 'warm',
     features: [
+      'Có hiệu lực trong 1 tháng',
       'Đăng và quản lý phòng cho thuê',
       'Duyệt yêu cầu đặt phòng',
       'Tạo hợp đồng và hóa đơn',
