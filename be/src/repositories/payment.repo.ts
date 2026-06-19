@@ -1,0 +1,99 @@
+import { PaymentModel, PAYMENT_STATUS, PAYMENT_TYPE } from "../models/Payment.model.js";
+
+export const PaymentRepository = {
+  create: (data: any) => PaymentModel.create(data),
+
+  findAll: (skip: number, limit: number) =>
+    PaymentModel.find()
+      .populate("bookingId")
+      .populate("payerId", "fullName email phone")
+      .populate("receiverId", "fullName email phone")
+      .populate("invoiceId")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+
+  countAll: () => PaymentModel.countDocuments(),
+
+  getStats: () =>
+    PaymentModel.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+          amount: { $sum: "$amount" },
+        },
+      },
+    ]),
+
+  findById: (id: string) =>
+    PaymentModel.findById(id)
+      .populate("bookingId")
+      .populate("payerId", "fullName email phone")
+      .populate("receiverId", "fullName email phone")
+      .populate("invoiceId"),
+
+  findByInvoice: (invoiceId: string) =>
+    PaymentModel.find({ invoiceId })
+      .populate("payerId", "fullName email phone")
+      .sort({ createdAt: -1 }),
+
+  findByBooking: (bookingId: string) =>
+    PaymentModel.find({ bookingId })
+      .populate("payerId", "fullName email phone")
+      .populate("receiverId", "fullName email phone")
+      .sort({ createdAt: -1 }),
+
+  findByPayerId: (payerId: string, skip: number, limit: number) =>
+    PaymentModel.find({ payerId })
+      .populate("bookingId")
+      .populate("receiverId", "fullName email phone")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+
+  countByPayerId: (payerId: string) =>
+    PaymentModel.countDocuments({ payerId }),
+
+  findByReceiverId: (receiverId: string, skip: number, limit: number) =>
+    PaymentModel.find({ receiverId })
+      .populate("bookingId")
+      .populate("payerId", "fullName email phone")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+
+  countByReceiverId: (receiverId: string) =>
+    PaymentModel.countDocuments({ receiverId }),
+
+  findByTypeAndBooking: (bookingId: string, type: PAYMENT_TYPE) =>
+    PaymentModel.findOne({ bookingId, type }),
+
+  findByTransactionRef: (ref: string) =>
+    PaymentModel.findOne({ transactionRef: ref }),
+
+  findByStatus: (status: PAYMENT_STATUS, skip: number, limit: number) =>
+    PaymentModel.find({ status })
+      .populate("payerId", "fullName email phone")
+      .populate("receiverId", "fullName email phone")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+
+  countByStatus: (status: PAYMENT_STATUS) =>
+    PaymentModel.countDocuments({ status }),
+
+  update: (id: string, data: any) =>
+    PaymentModel.findByIdAndUpdate(
+      id,
+      { $set: data },
+      { returnDocument: "after", runValidators: true }
+    ),
+
+  updateByTransactionRef: (ref: string, data: any) =>
+    PaymentModel.findOneAndUpdate(
+      { transactionRef: ref },
+      { $set: data },
+      { returnDocument: "after", runValidators: true }
+    ),
+};

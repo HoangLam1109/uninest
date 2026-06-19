@@ -1,0 +1,989 @@
+{
+  "info": {
+    "name": "UniNest API",
+    "description": "Student Housing Management Platform API Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"tenant@example.com\",\n  \"fullName\": \"Nguyen Van B\",\n  \"password\": \"Abc@1234\",\n  \"phone\": \"0912345679\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"tenant@example.com\",\n  \"password\": \"Abc@1234\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', json.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "auth", "logout"] }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/refresh-token", "host": ["{{baseUrl}}"], "path": ["api", "auth", "refresh-token"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/users/getAll", "host": ["{{baseUrl}}"], "path": ["api", "users", "getAll"] }
+          }
+        },
+        {
+          "name": "Get User By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/getById/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "getById", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Get User By Email",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/getByEmail/tenant@example.com",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "getByEmail", "tenant@example.com"]
+            }
+          }
+        },
+        {
+          "name": "Get User By Full Name",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/getByFullName/Nguyen Van B",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "getByFullName", "Nguyen Van B"]
+            }
+          }
+        },
+        {
+          "name": "Get User By Phone",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/getByPhone/0912345679",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "getByPhone", "0912345679"]
+            }
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"fullName\": \"New User\",\n  \"password\": \"Abc@1234\",\n  \"phone\": \"0900000000\",\n  \"role\": \"TENANT\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users/create", "host": ["{{baseUrl}}"], "path": ["api", "users", "create"] }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Updated Name\",\n  \"phone\": \"0911111111\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/update/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "update", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/delete/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "delete", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Properties",
+      "item": [
+        {
+          "name": "Create Property",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sunrise Apartments\",\n  \"address\": \"123 Nguyen Hue, District 1\",\n  \"city\": \"Ho Chi Minh\",\n  \"district\": \"District 1\",\n  \"ward\": \"Ben Nghe\",\n  \"latitude\": 10.7769,\n  \"longitude\": 106.7009,\n  \"totalRooms\": 20,\n  \"description\": \"Modern student housing near RMIT University\",\n  \"coverImageUrl\": \"https://example.com/cover.jpg\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/properties/create", "host": ["{{baseUrl}}"], "path": ["api", "properties", "create"] }
+          }
+        },
+        {
+          "name": "Get All Properties",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/properties/?city=Ho Chi Minh&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "properties", ""],
+              "query": [
+                { "key": "city", "value": "Ho Chi Minh" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Property By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/properties/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "properties", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Update Property",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sunrise Apartments V2\",\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/properties/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "properties", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Delete Property",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/properties/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "properties", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Get Property By ID (Public)",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/api/properties/public/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "properties", "public", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rooms",
+      "item": [
+        {
+          "name": "Create Room",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"665a1b2c3d4e5f6a7b8c9d0e\",\n  \"title\": \"Cozy Studio near RMIT\",\n  \"description\": \"Fully furnished studio with AC, private bathroom\",\n  \"address\": \"456 Nguyen Van Linh, District 7\",\n  \"city\": \"Ho Chi Minh\",\n  \"district\": \"District 7\",\n  \"ward\": \"Tan Phong\",\n  \"pricePerMonth\": 3500000,\n  \"depositAmount\": 3500000,\n  \"electricityRate\": 3500,\n  \"waterRate\": 15000,\n  \"areaSqm\": 25,\n  \"maxOccupants\": 2,\n  \"roomType\": \"STUDIO\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/rooms/create", "host": ["{{baseUrl}}"], "path": ["api", "rooms", "create"] }
+          }
+        },
+        {
+          "name": "Get All Rooms",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/getAll?city=Ho Chi Minh&status=AVAILABLE&minPrice=1000000&maxPrice=10000000&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "getAll"],
+              "query": [
+                { "key": "city", "value": "Ho Chi Minh" },
+                { "key": "status", "value": "AVAILABLE" },
+                { "key": "minPrice", "value": "1000000" },
+                { "key": "maxPrice", "value": "10000000" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Rooms",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/search?q=RMIT&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "search"],
+              "query": [
+                { "key": "q", "value": "RMIT" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Room By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/getById/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "getById", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Update Room",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Studio near RMIT\",\n  \"pricePerMonth\": 4000000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/update/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "update", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Delete Room",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/delete/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "delete", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Publish Room",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/665a1b2c3d4e5f6a7b8c9d0e/publish",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "665a1b2c3d4e5f6a7b8c9d0e", "publish"]
+            }
+          }
+        },
+        {
+          "name": "Unpublish Room",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/665a1b2c3d4e5f6a7b8c9d0e/unpublish",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "665a1b2c3d4e5f6a7b8c9d0e", "unpublish"]
+            }
+          }
+        },
+        {
+          "name": "Get Tenants By Landlord",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/tenants",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "tenants"]
+            }
+          }
+        },
+        {
+          "name": "Upload Room Image",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com/room1.jpg\",\n  \"caption\": \"Living room view\",\n  \"order\": 0,\n  \"isPrimary\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/665a1b2c3d4e5f6a7b8c9d0e/images",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "665a1b2c3d4e5f6a7b8c9d0e", "images"]
+            }
+          }
+        },
+        {
+          "name": "Get Room Images (Public)",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/665a1b2c3d4e5f6a7b8c9d0e/images",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "665a1b2c3d4e5f6a7b8c9d0e", "images"]
+            }
+          }
+        },
+        {
+          "name": "Set Primary Image",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/665a1b2c3d4e5f6a7b8c9d0e/images/665a1b2c3d4e5f6a7b8c9d0f/primary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "665a1b2c3d4e5f6a7b8c9d0e", "images", "665a1b2c3d4e5f6a7b8c9d0f", "primary"]
+            }
+          }
+        },
+        {
+          "name": "Delete Room Image",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/665a1b2c3d4e5f6a7b8c9d0e/images/665a1b2c3d4e5f6a7b8c9d0f",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "665a1b2c3d4e5f6a7b8c9d0e", "images", "665a1b2c3d4e5f6a7b8c9d0f"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Favorites",
+      "item": [
+        {
+          "name": "Get My Favorites",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/favorites/?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "favorites", ""],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Favorite",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/favorites/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "favorites", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Check Is Favorited",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/favorites/665a1b2c3d4e5f6a7b8c9d0e/check",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "favorites", "665a1b2c3d4e5f6a7b8c9d0e", "check"]
+            }
+          }
+        },
+        {
+          "name": "Get Favorite Count (Public)",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/api/favorites/665a1b2c3d4e5f6a7b8c9d0e/count",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "favorites", "665a1b2c3d4e5f6a7b8c9d0e", "count"]
+            }
+          }
+        },
+        {
+          "name": "Remove Favorite",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/favorites/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "favorites", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Create Booking",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"665a1b2c3d4e5f6a7b8c9d0e\",\n  \"checkInDate\": \"2026-07-01T00:00:00.000Z\",\n  \"checkOutDate\": \"2027-06-30T00:00:00.000Z\",\n  \"notes\": \"Looking forward to moving in!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/bookings/", "host": ["{{baseUrl}}"], "path": ["api", "bookings", ""] }
+          }
+        },
+        {
+          "name": "Get My Bookings (Tenant)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/my?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bookings", "my"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Landlord Bookings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/landlord?page=1&limit=10&status=PENDING",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bookings", "landlord"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "PENDING" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Booking By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bookings", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Approve Booking",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/665a1b2c3d4e5f6a7b8c9d0e/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bookings", "665a1b2c3d4e5f6a7b8c9d0e", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Reject Booking",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/665a1b2c3d4e5f6a7b8c9d0e/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bookings", "665a1b2c3d4e5f6a7b8c9d0e", "reject"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/665a1b2c3d4e5f6a7b8c9d0e/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bookings", "665a1b2c3d4e5f6a7b8c9d0e", "cancel"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contracts",
+      "item": [
+        {
+          "name": "Create Contract From Booking",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"665a1b2c3d4e5f6a7b8c9d0e\",\n  \"monthlyRent\": 3500000,\n  \"depositAmount\": 3500000,\n  \"terms\": \"Standard 12-month lease agreement\",\n  \"contractFileUrl\": \"https://example.com/contract.pdf\",\n  \"startDate\": \"2026-07-01T00:00:00.000Z\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/contracts/", "host": ["{{baseUrl}}"], "path": ["api", "contracts", ""] }
+          }
+        },
+        {
+          "name": "Get Landlord Contracts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts/landlord?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contracts", "landlord"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Tenant Contracts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts/tenant?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contracts", "tenant"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Contract By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contracts", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Update Contract",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"monthlyRent\": 3800000,\n  \"depositAmount\": 3800000,\n  \"terms\": \"Updated lease terms\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contracts", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Activate Contract",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts/665a1b2c3d4e5f6a7b8c9d0e/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contracts", "665a1b2c3d4e5f6a7b8c9d0e", "activate"]
+            }
+          }
+        },
+        {
+          "name": "Terminate Contract",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts/665a1b2c3d4e5f6a7b8c9d0e/terminate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contracts", "665a1b2c3d4e5f6a7b8c9d0e", "terminate"]
+            }
+          }
+        },
+        {
+          "name": "Renew Contract",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startDate\": \"2027-07-01T00:00:00.000Z\",\n  \"endDate\": \"2028-06-30T00:00:00.000Z\",\n  \"monthlyRent\": 4000000,\n  \"depositAmount\": 4000000,\n  \"terms\": \"Renewed contract for another year\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts/665a1b2c3d4e5f6a7b8c9d0e/renew",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contracts", "665a1b2c3d4e5f6a7b8c9d0e", "renew"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        {
+          "name": "Create Invoice",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"665a1b2c3d4e5f6a7b8c9d0e\",\n  \"billingMonth\": \"2026-06\",\n  \"dueDate\": \"2026-07-05T00:00:00.000Z\",\n  \"rentAmount\": 3500000,\n  \"electricityAmount\": 450000,\n  \"waterAmount\": 80000,\n  \"additionalFees\": 100000,\n  \"notes\": \"June 2026 monthly invoice\",\n  \"detailData\": {\n    \"electricityOldIndex\": 1000,\n    \"electricityNewIndex\": 1150,\n    \"waterOldIndex\": 500,\n    \"waterNewIndex\": 580\n  }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/invoices/", "host": ["{{baseUrl}}"], "path": ["api", "invoices", ""] }
+          }
+        },
+        {
+          "name": "Get Landlord Invoices",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/landlord?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "landlord"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Tenant Invoices",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/tenant?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "tenant"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Invoice By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Update Invoice",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rentAmount\": 3600000,\n  \"electricityAmount\": 500000,\n  \"dueDate\": \"2026-07-10T00:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Send Invoice",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/665a1b2c3d4e5f6a7b8c9d0e/send",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "665a1b2c3d4e5f6a7b8c9d0e", "send"]
+            }
+          }
+        },
+        {
+          "name": "Mark Invoice As Paid",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/665a1b2c3d4e5f6a7b8c9d0e/mark-paid",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "665a1b2c3d4e5f6a7b8c9d0e", "mark-paid"]
+            }
+          }
+        },
+        {
+          "name": "Delete Invoice",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Get Invoice Detail",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/665a1b2c3d4e5f6a7b8c9d0e/detail",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "665a1b2c3d4e5f6a7b8c9d0e", "detail"]
+            }
+          }
+        },
+        {
+          "name": "Update Invoice Detail",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"electricityOldIndex\": 1000,\n  \"electricityNewIndex\": 1150,\n  \"electricityRate\": 3500,\n  \"waterOldIndex\": 500,\n  \"waterNewIndex\": 580,\n  \"waterRate\": 15000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/665a1b2c3d4e5f6a7b8c9d0e/detail",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "665a1b2c3d4e5f6a7b8c9d0e", "detail"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        {
+          "name": "Get Room Rating Stats (Public)",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews/stats?roomId=665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reviews", "stats"],
+              "query": [{ "key": "roomId", "value": "665a1b2c3d4e5f6a7b8c9d0e" }]
+            }
+          }
+        },
+        {
+          "name": "Get Reviews By Room (Public)",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews/room?roomId=665a1b2c3d4e5f6a7b8c9d0e&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reviews", "room"],
+              "query": [
+                { "key": "roomId", "value": "665a1b2c3d4e5f6a7b8c9d0e" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Review",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"665a1b2c3d4e5f6a7b8c9d0e\",\n  \"rating\": 4,\n  \"comment\": \"Great room with excellent facilities and friendly landlord!\",\n  \"imageUrls\": [\"https://example.com/review1.jpg\"]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/reviews/", "host": ["{{baseUrl}}"], "path": ["api", "reviews", ""] }
+          }
+        },
+        {
+          "name": "Get My Reviews",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews/?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reviews", ""],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Review By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reviews", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Update Review",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Updated: Even better after living here for a month!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reviews", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Delete Review",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews/665a1b2c3d4e5f6a7b8c9d0e",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reviews", "665a1b2c3d4e5f6a7b8c9d0e"]
+            }
+          }
+        },
+        {
+          "name": "Add Landlord Reply",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reply\": \"Thank you for your feedback! We're glad you're enjoying your stay.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews/665a1b2c3d4e5f6a7b8c9d0e/reply",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reviews", "665a1b2c3d4e5f6a7b8c9d0e", "reply"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
