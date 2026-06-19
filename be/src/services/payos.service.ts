@@ -95,7 +95,7 @@ export class PayOSService {
       if (packageId) {
         const pkg = await ServicePackageRepository.findById(packageId);
         if (pkg) {
-          const userId = payment.paperId.toString();
+          const userId = payment.payerId.toString();
           const startDate = new Date();
           const endDate = new Date(startDate);
           endDate.setDate(endDate.getDate() + pkg.durationDays);

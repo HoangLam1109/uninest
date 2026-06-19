@@ -10,7 +10,6 @@ export enum PAYMENT_STATUS {
 export enum PAYMENT_METHOD {
   BANK_TRANSFER = "BANK_TRANSFER",
   CASH = "CASH",
-  WALLET = "WALLET",
   PAYOS = "PAYOS",
 }
 
@@ -23,10 +22,9 @@ export enum PAYMENT_TYPE {
 }
 
 export interface IPayment extends Document {
-  bookingId?: Types.ObjectId;
-  paperId: Types.ObjectId;
+  bookingId: Types.ObjectId;
+  payerId: Types.ObjectId;
   receiverId: Types.ObjectId;
-  walletTxId?: Types.ObjectId;
   invoiceId?: Types.ObjectId;
   amount: number;
   currency: String;
@@ -48,22 +46,16 @@ const PaymentSchema = new Schema<IPayment>(
       default: null,
       index: true,
     },
-    paperId: {
+    payerId: {
       type: Schema.Types.ObjectId,
-      ref: "Paper",
-      required: [true, "Paper ID is required"],
+      ref: "User",
+      required: [true, "Payer ID is required"],
       index: true,
     },
     receiverId: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: [true, "Receiver ID is required"],
-      index: true,
-    },
-    walletTxId: {
-      type: Schema.Types.ObjectId,
-      ref: "WalletTransaction",
-      default: null,
       index: true,
     },
     invoiceId: {
@@ -121,7 +113,7 @@ const PaymentSchema = new Schema<IPayment>(
   }
 );
 
-PaymentSchema.index({ bookingId: 1, paperId: 1 }, { unique: true, sparse: true });
+PaymentSchema.index({ bookingId: 1, payer: 1 }, { unique: true, sparse: true });
 PaymentSchema.index({ receiverId: 1, status: 1 });
 PaymentSchema.index({ bookingId: 1, status: 1 });
 PaymentSchema.index({ paidAt: 1 });

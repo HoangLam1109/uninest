@@ -241,9 +241,8 @@ const options: swaggerJsDoc.Options = {
           properties: {
             _id: { type: "string" },
             bookingId: { type: "string", nullable: true },
-            paperId: { type: "string", description: "Payer ID" },
+            payerId: { type: "string", description: "Payer ID" },
             receiverId: { type: "string" },
-            walletTxId: { type: "string", nullable: true },
             invoiceId: { type: "string", nullable: true },
             amount: { type: "number", example: 3500000 },
             currency: { type: "string", default: "VND" },
@@ -253,7 +252,7 @@ const options: swaggerJsDoc.Options = {
             },
             method: {
               type: "string",
-              enum: ["BANK_TRANSFER", "CASH", "WALLET", "PAYOS"],
+              enum: ["BANK_TRANSFER", "CASH", "PAYOS"],
             },
             status: {
               type: "string",
@@ -263,35 +262,6 @@ const options: swaggerJsDoc.Options = {
             gatewayResponse: { type: "object", nullable: true },
             note: { type: "string" },
             paidAt: { type: "string", format: "date-time", nullable: true },
-            createdAt: { type: "string", format: "date-time" },
-          },
-        },
-        Wallet: {
-          type: "object",
-          properties: {
-            _id: { type: "string" },
-            userId: { type: "string" },
-            balance: { type: "number", example: 10000000 },
-            currency: { type: "string", example: "VND" },
-            status: { type: "string", enum: ["ACTIVE", "FROZEN", "CLOSED"] },
-            createdAt: { type: "string", format: "date-time" },
-            updatedAt: { type: "string", format: "date-time" },
-          },
-        },
-        WalletTransaction: {
-          type: "object",
-          properties: {
-            _id: { type: "string" },
-            walletId: { type: "string" },
-            type: {
-              type: "string",
-              enum: ["TOPUP", "WITHDRAW", "PAYMENT", "REFUND"],
-            },
-            amount: { type: "number" },
-            balanceBefore: { type: "number" },
-            balanceAfter: { type: "number" },
-            relatedPaymentId: { type: "string", nullable: true },
-            note: { type: "string" },
             createdAt: { type: "string", format: "date-time" },
           },
         },
@@ -2210,7 +2180,7 @@ const options: swaggerJsDoc.Options = {
       "/api/payments/pay-invoice/{invoiceId}": {
         post: {
           tags: ["Payments"],
-          summary: "Pay invoice (WALLET or PAYOS)",
+          summary: "Pay invoice (PAYOS)",
           security: [{ bearerAuth: [] }],
           parameters: [
             {
@@ -2231,10 +2201,10 @@ const options: swaggerJsDoc.Options = {
                   properties: {
                     method: {
                       type: "string",
-                      enum: ["WALLET", "PAYOS"],
-                      example: "WALLET",
+                      enum: ["PAYOS"],
+                      example: "PAYOS",
                       description:
-                        "Payment method: WALLET for instant wallet deduction, PAYOS for online payment gateway",
+                        "Payment method: PAYOS for online payment gateway",
                     },
                   },
                 },
@@ -2244,7 +2214,7 @@ const options: swaggerJsDoc.Options = {
           responses: {
             200: {
               description:
-                "Payment processed. For WALLET: status COMPLETED. For PAYOS: status PENDING with checkoutUrl.",
+                "Payment processed. For PAYOS: status PENDING with checkoutUrl.",
               content: {
                 "application/json": {
                   schema: {
@@ -2286,7 +2256,7 @@ const options: swaggerJsDoc.Options = {
       "/api/payments/pay-deposit/{bookingId}": {
         post: {
           tags: ["Payments"],
-          summary: "Pay deposit (WALLET or PAYOS)",
+          summary: "Pay deposit (PAYOS)",
           security: [{ bearerAuth: [] }],
           parameters: [
             {
@@ -2307,8 +2277,8 @@ const options: swaggerJsDoc.Options = {
                   properties: {
                     method: {
                       type: "string",
-                      enum: ["WALLET", "PAYOS"],
-                      example: "WALLET",
+                      enum: ["PAYOS"],
+                      example: "PAYOS",
                     },
                   },
                 },
@@ -2491,116 +2461,6 @@ const options: swaggerJsDoc.Options = {
           },
         },
       },
-
-      // ==================== WALLET ====================
-      "/api/wallet/": {
-        get: {
-          tags: ["Wallet"],
-          summary: "Get current user's wallet info",
-          security: [{ bearerAuth: [] }],
-          responses: {
-            200: {
-              description: "Wallet info",
-              content: {
-                "application/json": {
-                  schema: {
-                    type: "object",
-                    properties: {
-                      success: { type: "boolean" },
-                      data: { $ref: "#/components/schemas/Wallet" },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      "/api/wallet/transactions": {
-        get: {
-          tags: ["Wallet"],
-          summary: "Get wallet transaction history",
-          security: [{ bearerAuth: [] }],
-          parameters: [
-            {
-              name: "page",
-              in: "query",
-              schema: { type: "number", default: 1 },
-            },
-            {
-              name: "limit",
-              in: "query",
-              schema: { type: "number", default: 10 },
-            },
-          ],
-          responses: {
-            200: { description: "Paginated list of wallet transactions" },
-          },
-        },
-      },
-      "/api/wallet/topup": {
-        post: {
-          tags: ["Wallet"],
-          summary: "Top up wallet (Admin only)",
-          security: [{ bearerAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              "application/json": {
-                schema: {
-                  type: "object",
-                  required: ["userId", "amount"],
-                  properties: {
-                    userId: {
-                      type: "string",
-                      description: "User ID to top up",
-                    },
-                    amount: {
-                      type: "number",
-                      example: 5000000,
-                      description: "Amount to add (VND)",
-                    },
-                    note: { type: "string", example: "Manual top-up" },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            200: { description: "Wallet topped up successfully" },
-            403: { description: "Admin only" },
-          },
-        },
-      },
-      "/api/wallet/withdraw": {
-        post: {
-          tags: ["Wallet"],
-          summary: "Withdraw from wallet (Admin only)",
-          security: [{ bearerAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              "application/json": {
-                schema: {
-                  type: "object",
-                  required: ["userId", "amount"],
-                  properties: {
-                    userId: { type: "string" },
-                    amount: { type: "number", example: 2000000 },
-                    note: { type: "string" },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            200: { description: "Withdrawal successful" },
-            400: { description: "Insufficient balance" },
-            403: { description: "Admin only" },
-          },
-        },
-      },
-
       // ==================== SERVICE PACKAGES ====================
       "/api/service-packages/active": {
         get: {
@@ -2756,7 +2616,7 @@ const options: swaggerJsDoc.Options = {
       "/api/service-subscriptions/packages/{packageId}/subscribe": {
         post: {
           tags: ["Service Subscriptions"],
-          summary: "Subscribe to a service package (WALLET or PAYOS)",
+          summary: "Subscribe to a service package (PAYOS)",
           security: [{ bearerAuth: [] }],
           parameters: [
             {
@@ -2777,8 +2637,8 @@ const options: swaggerJsDoc.Options = {
                   properties: {
                     method: {
                       type: "string",
-                      enum: ["WALLET", "PAYOS"],
-                      example: "WALLET",
+                      enum: ["PAYOS"],
+                      example: "PAYOS",
                     },
                     autoRenew: { type: "boolean", default: false },
                   },
@@ -2789,7 +2649,7 @@ const options: swaggerJsDoc.Options = {
           responses: {
             201: {
               description:
-                "Subscription created. WALLET: immediate. PAYOS: returns checkoutUrl.",
+                "Subscription created. PAYOS: returns checkoutUrl.",
               content: {
                 "application/json": {
                   schema: {
