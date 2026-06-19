@@ -241,7 +241,7 @@ const options: swaggerJsDoc.Options = {
           properties: {
             _id: { type: "string" },
             bookingId: { type: "string", nullable: true },
-            paperId: { type: "string", description: "Payer ID" },
+            payerId: { type: "string", description: "Payer ID" },
             receiverId: { type: "string" },
             walletTxId: { type: "string", nullable: true },
             invoiceId: { type: "string", nullable: true },

@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import { PaymentService } from "../services/payment.service.js";
 import { PAYMENT_METHOD } from "../models/Payment.model.js";
+import { isValidUserRole } from "../constants/role.constant.js";
 
 export const payInvoice = async (req: Request, res: Response) => {
   try {
@@ -89,6 +90,45 @@ export const payDeposit = async (req: Request, res: Response) => {
     return res
       .status(statusCode)
       .json({ success: false, message: err.message });
+  }
+};
+
+export const payRoleUpgrade = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const { targetRole, method } = req.body;
+
+    if (!targetRole || !isValidUserRole(targetRole)) {
+      return res.status(400).json({
+        success: false,
+        message: "Target role must be TENANT or LANDLORD",
+      });
+    }
+
+    if (method && method !== PAYMENT_METHOD.PAYOS) {
+      return res.status(400).json({
+        success: false,
+        message: "Role upgrade payments only support PAYOS",
+      });
+    }
+
+    const payment = await PaymentService.payRoleUpgrade(
+      userId,
+      req.user?.role,
+      targetRole,
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Role upgrade payment created successfully",
+      data: payment,
+    });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
   }
 };
 

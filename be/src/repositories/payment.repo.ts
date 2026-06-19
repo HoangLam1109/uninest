@@ -6,37 +6,37 @@ export const PaymentRepository = {
   findById: (id: string) =>
     PaymentModel.findById(id)
       .populate("bookingId")
-      .populate("paperId", "fullName email phone")
+      .populate("payerId", "fullName email phone")
       .populate("receiverId", "fullName email phone")
       .populate("invoiceId")
       .populate("walletTxId"),
 
   findByInvoice: (invoiceId: string) =>
     PaymentModel.find({ invoiceId })
-      .populate("paperId", "fullName email phone")
+      .populate("payerId", "fullName email phone")
       .sort({ createdAt: -1 }),
 
   findByBooking: (bookingId: string) =>
     PaymentModel.find({ bookingId })
-      .populate("paperId", "fullName email phone")
+      .populate("payerId", "fullName email phone")
       .populate("receiverId", "fullName email phone")
       .sort({ createdAt: -1 }),
 
-  findByPayerId: (paperId: string, skip: number, limit: number) =>
-    PaymentModel.find({ paperId })
+  findByPayerId: (payerId: string, skip: number, limit: number) =>
+    PaymentModel.find({ payerId })
       .populate("bookingId")
       .populate("receiverId", "fullName email phone")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
 
-  countByPayerId: (paperId: string) =>
-    PaymentModel.countDocuments({ paperId }),
+  countByPayerId: (payerId: string) =>
+    PaymentModel.countDocuments({ payerId }),
 
   findByReceiverId: (receiverId: string, skip: number, limit: number) =>
     PaymentModel.find({ receiverId })
       .populate("bookingId")
-      .populate("paperId", "fullName email phone")
+      .populate("payerId", "fullName email phone")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
@@ -52,7 +52,7 @@ export const PaymentRepository = {
 
   findByStatus: (status: PAYMENT_STATUS, skip: number, limit: number) =>
     PaymentModel.find({ status })
-      .populate("paperId", "fullName email phone")
+      .populate("payerId", "fullName email phone")
       .populate("receiverId", "fullName email phone")
       .sort({ createdAt: -1 })
       .skip(skip)

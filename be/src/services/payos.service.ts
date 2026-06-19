@@ -6,6 +6,7 @@ import { ServicePackageRepository } from "../repositories/service-package.repo.j
 import { PAYMENT_STATUS } from "../models/Payment.model.js";
 import { SUBSCRIPTION_STATUS } from "../models/ServiceSubscription.model.js";
 import { INVOICE_STATUS } from "../models/Invoice.model.js";
+import { applyRoleUpgradeFromPayment } from "./role-upgrade.service.js";
 
 export class PayOSService {
   static async createPaymentLink(params: {
@@ -68,6 +69,17 @@ export class PayOSService {
 
       await this.executePostPayment(payment);
       return updated;
+    } else if (pinfo.status === "CANCELLED") {
+      const updated = await PaymentRepository.update(payment._id.toString(), {
+        status: PAYMENT_STATUS.CANCELLED,
+        gatewayResponse: {
+          ...(payment.gatewayResponse || {}),
+          payosStatus: pinfo.status,
+          webhookReceived: true,
+        },
+      });
+
+      return updated;
     } else {
       await PaymentRepository.update(payment._id.toString(), {
         status: PAYMENT_STATUS.FAILED,
@@ -95,7 +107,7 @@ export class PayOSService {
       if (packageId) {
         const pkg = await ServicePackageRepository.findById(packageId);
         if (pkg) {
-          const userId = payment.paperId.toString();
+          const userId = payment.payerId.toString();
           const startDate = new Date();
           const endDate = new Date(startDate);
           endDate.setDate(endDate.getDate() + pkg.durationDays);
@@ -112,13 +124,96 @@ export class PayOSService {
         }
       }
     }
+
+    await applyRoleUpgradeFromPayment(payment);
+  }
+
+  static async syncPaymentStatus(orderCode: string) {
+    const payment = await PaymentRepository.findByTransactionRef(orderCode);
+    if (!payment) {
+      throw new Error(`Payment not found for orderCode: ${orderCode}`);
+    }
+
+    const pinfo = await payosClient.paymentRequests.get(Number(orderCode));
+
+    if (payment.status === PAYMENT_STATUS.COMPLETED) {
+      return { payment, payosStatus: pinfo.status };
+    }
+
+    if (pinfo.status === "PAID") {
+      const updated = await PaymentRepository.update(payment._id.toString(), {
+        status: PAYMENT_STATUS.COMPLETED,
+        paidAt: new Date(),
+        gatewayResponse: {
+          ...(payment.gatewayResponse || {}),
+          payosStatus: pinfo.status,
+          statusSyncedAt: new Date(),
+        },
+      });
+
+      await this.executePostPayment(payment);
+      return { payment: updated || payment, payosStatus: pinfo.status };
+    }
+
+    if (pinfo.status === "CANCELLED") {
+      const updated = await PaymentRepository.update(payment._id.toString(), {
+        status: PAYMENT_STATUS.CANCELLED,
+        gatewayResponse: {
+          ...(payment.gatewayResponse || {}),
+          payosStatus: pinfo.status,
+          statusSyncedAt: new Date(),
+        },
+      });
+
+      return { payment: updated || payment, payosStatus: pinfo.status };
+    }
+
+    return { payment, payosStatus: pinfo.status };
   }
 
   static async getPaymentStatus(orderCode: string) {
-    return await payosClient.paymentRequests.get(Number(orderCode));
+    return await this.syncPaymentStatus(orderCode);
   }
 
   static async cancelPayment(orderCode: string) {
-    return await payosClient.paymentRequests.cancel(Number(orderCode));
+    const payment = await PaymentRepository.findByTransactionRef(orderCode);
+    if (!payment) {
+      throw new Error(`Payment not found for orderCode: ${orderCode}`);
+    }
+
+    if (payment.status === PAYMENT_STATUS.COMPLETED) {
+      return { payment, payosStatus: "PAID" };
+    }
+
+    const pinfo = await payosClient.paymentRequests.get(Number(orderCode));
+    if (pinfo.status === "PAID") {
+      const updated = await PaymentRepository.update(payment._id.toString(), {
+        status: PAYMENT_STATUS.COMPLETED,
+        paidAt: new Date(),
+        gatewayResponse: {
+          ...(payment.gatewayResponse || {}),
+          payosStatus: pinfo.status,
+          statusSyncedAt: new Date(),
+        },
+      });
+
+      await this.executePostPayment(payment);
+      return { payment: updated || payment, payosStatus: pinfo.status };
+    }
+
+    if (pinfo.status !== "CANCELLED") {
+      await payosClient.paymentRequests.cancel(Number(orderCode));
+    }
+
+    const updated = await PaymentRepository.update(payment._id.toString(), {
+      status: PAYMENT_STATUS.CANCELLED,
+      gatewayResponse: {
+        ...(payment.gatewayResponse || {}),
+        payosStatus: "CANCELLED",
+        statusSyncedAt: new Date(),
+      },
+    });
+
+    return { payment: updated || payment, payosStatus: "CANCELLED" };
   }
 }

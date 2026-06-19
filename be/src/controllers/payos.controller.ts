@@ -33,3 +33,19 @@ export const getPayOSPaymentStatus = async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
+
+export const cancelPayOSPayment = async (req: Request, res: Response) => {
+  try {
+    const orderCode = req.params.orderCode as string;
+
+    if (!orderCode) {
+      return res.status(400).json({ success: false, message: "Order code is required" });
+    }
+
+    const payment = await PayOSService.cancelPayment(orderCode);
+
+    return res.json({ success: true, data: payment });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};

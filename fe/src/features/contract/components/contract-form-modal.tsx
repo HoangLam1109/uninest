@@ -21,6 +21,7 @@ type ContractFormMode = 'create' | 'edit' | 'renew'
 
 type ContractFieldsState = {
   bookingId: string
+  bookingSearch: string
   isBookingPickerOpen: boolean
   monthlyRent: string
   depositAmount: string
@@ -69,6 +70,7 @@ function createContractFieldsState({
 }: ContractFieldsInit): ContractFieldsState {
   return {
     bookingId: '',
+    bookingSearch: '',
     isBookingPickerOpen: false,
     monthlyRent: contract?.monthlyRent ? String(contract.monthlyRent) : '',
     depositAmount: contract?.depositAmount ? String(contract.depositAmount) : '',
@@ -151,6 +153,7 @@ function ContractFormFields({
   )
   const {
     bookingId,
+    bookingSearch,
     isBookingPickerOpen,
     monthlyRent,
     depositAmount,
@@ -169,14 +172,21 @@ function ContractFormFields({
   )
   const filteredBookingOptions = useMemo(() => {
     const bookingOptions = landlordBookingsQuery.data?.data ?? []
-    const keyword = bookingId.trim().toLowerCase()
+    const keyword = bookingSearch.trim().toLowerCase()
 
     if (!keyword) return bookingOptions.slice(0, 8)
 
     return bookingOptions
       .filter((booking) => getBookingSearchText(booking).includes(keyword))
       .slice(0, 8)
-  }, [bookingId, landlordBookingsQuery.data?.data])
+  }, [bookingSearch, landlordBookingsQuery.data?.data])
+  const selectedBooking = useMemo(
+    () =>
+      (landlordBookingsQuery.data?.data ?? []).find(
+        (booking) => booking._id === bookingId,
+      ),
+    [bookingId, landlordBookingsQuery.data?.data],
+  )
 
   const handleSubmit: ComponentProps<'form'>['onSubmit'] = (event) => {
     event.preventDefault()
@@ -191,6 +201,7 @@ function ContractFormFields({
     }
 
     if (mode === 'create') {
+      if (!bookingId) return
       onSubmit({ ...payload, bookingId: bookingId.trim() })
       return
     }
@@ -207,11 +218,11 @@ function ContractFormFields({
     <form className="grid gap-4" onSubmit={handleSubmit}>
         {mode === 'create' ? (
           <div className="relative block space-y-2 text-sm font-semibold text-foreground">
-            <label htmlFor="contract-booking-id">Booking ID *</label>
+            <label htmlFor="contract-booking-id">Booking *</label>
             <Input
               id="contract-booking-id"
-              required
-              value={bookingId}
+              required={!bookingId}
+              value={bookingSearch}
               onBlur={() =>
                 window.setTimeout(
                   () =>
@@ -223,7 +234,8 @@ function ContractFormFields({
                 )
               }
               onChange={(event) => {
-                updateField('bookingId', event.target.value)
+                updateField('bookingSearch', event.target.value)
+                updateField('bookingId', '')
                 dispatchFields({ type: 'bookingPickerChanged', open: true })
               }}
               onFocus={() =>
@@ -233,6 +245,22 @@ function ContractFormFields({
               placeholder="Nhập ID hoặc tìm theo tên người đặt"
               autoComplete="off"
             />
+            {selectedBooking ? (
+              <div className="rounded-lg border border-primary/10 bg-primary/5 px-3 py-2.5">
+                <p className="truncate text-sm font-bold text-foreground">
+                  {getBookingTenant(selectedBooking)?.fullName ??
+                    getBookingTenant(selectedBooking)?.email ??
+                    'Người thuê'}
+                </p>
+                <p className="mt-0.5 truncate text-xs font-medium text-slate-500">
+                  {getBookingRoom(selectedBooking)?.title ??
+                    'Phòng chưa có thông tin'}
+                  {selectedBooking.checkInDate
+                    ? ` - ${formatBookingDate(selectedBooking.checkInDate)}`
+                    : ''}
+                </p>
+              </div>
+            ) : null}
             {isBookingPickerOpen ? (
               <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-72 overflow-y-auto rounded-lg border border-primary/10 bg-white p-1 shadow-lg">
                 {landlordBookingsQuery.isLoading ? (
@@ -260,6 +288,7 @@ function ContractFormFields({
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
                         updateField('bookingId', booking._id)
+                        updateField('bookingSearch', '')
                         dispatchFields({
                           type: 'bookingPickerChanged',
                           open: false,
@@ -358,7 +387,7 @@ function ContractFormFields({
           <Button type="button" variant="ghost" disabled={isPending} onClick={onClose}>
             Hủy
           </Button>
-          <Button type="submit" disabled={isPending}>
+          <Button type="submit" disabled={isPending || (mode === 'create' && !bookingId)}>
             <FileText className="size-4" />
             {isPending ? 'Đang lưu...' : 'Lưu hợp đồng'}
           </Button>

@@ -10,13 +10,15 @@ import {
   rejectBooking,
 } from "../controllers/booking.controller.js";
 import authenticateMiddleware from "../middlewares/authenticate.middleware.js";
+import { authorizeRoles } from "../middlewares/authorize.middleware.js";
+import { USER_ROLES } from "../constants/role.constant.js";
 
 const router = express.Router();
 // All booking routes are protected
 router.use(authenticateMiddleware.authenticateUser);
 
 // Create booking
-router.post("/", createBooking);
+router.post("/", authorizeRoles(USER_ROLES.TENANT), createBooking);
 
 // Specific paths before param routes
 router.get("/my", getTenantBookings);

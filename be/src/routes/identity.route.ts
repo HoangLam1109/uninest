@@ -1,13 +1,18 @@
 import express from "express";
 import {
   createIdentity,
+  getAdminIdentities,
   getIdentitiesByUserId,
   getIdentityById,
   getMyIdentities,
+  rejectIdentityByAdmin,
   searchIdentityByCccd,
   updateIdentity,
+  verifyIdentityByAdmin,
 } from "../controllers/identity.controller.js";
+import { USER_ROLES } from "../constants/role.constant.js";
 import authenticateMiddleware from "../middlewares/authenticate.middleware.js";
+import { authorizeRoles } from "../middlewares/authorize.middleware.js";
 import { uploadImageMiddleware } from "../middlewares/upload.middleware.js";
 
 const router = express.Router();
@@ -27,6 +32,19 @@ router.post(
 
 // Get my identities (must be before :id)
 router.get("/my", getMyIdentities);
+
+// Admin identity verification queue
+router.get("/admin", authorizeRoles(USER_ROLES.ADMIN), getAdminIdentities);
+router.patch(
+  "/admin/:id/verify",
+  authorizeRoles(USER_ROLES.ADMIN),
+  verifyIdentityByAdmin
+);
+router.patch(
+  "/admin/:id/reject",
+  authorizeRoles(USER_ROLES.ADMIN),
+  rejectIdentityByAdmin
+);
 
 // Get identities by user ID (must be before :id)
 router.get("/by-user/:userId", getIdentitiesByUserId);

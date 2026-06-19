@@ -2,12 +2,15 @@ import bcrypt from "bcryptjs";
 import { userRepository } from "../repositories/index.js";
 
 import type { IUser } from "../models/User.model.js";
+import type { UserRole } from "../constants/role.constant.js";
 
 export interface CreateUserData {
   email: string;
   fullName: string;
   password: string;
   phone: string;
+  role?: UserRole;
+  isActive?: boolean;
 }
 
 export interface UpdateUserData {
@@ -16,6 +19,8 @@ export interface UpdateUserData {
   phone?: string;
   password?: string;
   avatarUrl?: string;
+  role?: UserRole;
+  isActive?: boolean;
 }
 
 export interface ITenant {
@@ -74,7 +79,7 @@ export class UserService {
 
   async getAllUsers(): Promise<IUser[]> {
     return await userRepository.findAll(
-      "_id email fullName phoneNumber identityNumber gender age dateOfBirth address"
+      "_id email fullName phone avatarUrl role isActive createdAt updatedAt"
     );
   }
 
@@ -106,9 +111,6 @@ export class UserService {
   }
   
 
-  async getUserByPhone(phone: string): Promise<IUser | null> {
-    return await userRepository.findByPhone(phone);
-  }
   async updateUserProfile(userId: string, userData: UpdateUserData): Promise<IUser | null> {
     const updatedUser = await userRepository.updateById(userId, userData);
     return updatedUser;

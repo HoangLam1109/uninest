@@ -6,6 +6,12 @@ import { ServiceSubscriptionRepository } from "../repositories/service-subscript
 import { SUBSCRIPTION_STATUS } from "../models/ServiceSubscription.model.js";
 import { WalletService } from "./wallet.service.js";
 import { PayOSService } from "./payos.service.js";
+import { USER_ROLES, type UserRole } from "../constants/role.constant.js";
+import {
+  buildRoleUpgradeNote,
+  isPaidUpgradeRole,
+  ROLE_UPGRADE_PRICES,
+} from "./role-upgrade.service.js";
 import {
   PAYMENT_STATUS,
   PAYMENT_METHOD,
@@ -26,17 +32,23 @@ export class PaymentService {
     subscriptionPackageId?: string;
   }) {
     const paymentData: any = {
-      bookingId: params.bookingId || null,
-      paperId: params.payerId,
+      payerId: params.payerId,
       receiverId: params.receiverId,
       amount: params.amount,
       currency: "VND",
       type: params.type,
       method: params.method,
       status: PAYMENT_STATUS.PENDING,
-      invoiceId: params.invoiceId || null,
       note: params.description,
     };
+
+    if (params.bookingId) {
+      paymentData.bookingId = params.bookingId;
+    }
+
+    if (params.invoiceId) {
+      paymentData.invoiceId = params.invoiceId;
+    }
 
     const payment: any = await PaymentRepository.create(paymentData);
     if (!payment) {
@@ -110,7 +122,7 @@ export class PaymentService {
     endDate.setDate(endDate.getDate() + pkg.durationDays);
 
     await ServiceSubscriptionRepository.create({
-      userId: payment.paperId,
+      userId: payment.payerId,
       packageId,
       paymentId: payment._id,
       startDate,
@@ -208,6 +220,57 @@ export class PaymentService {
     });
   }
 
+  static async payRoleUpgrade(
+    userId: string,
+    currentRole: UserRole | undefined,
+    targetRole: UserRole,
+  ) {
+    if (currentRole !== USER_ROLES.GUEST) {
+      throw new Error("Only GUEST users can upgrade role via payment");
+    }
+
+    if (!isPaidUpgradeRole(targetRole)) {
+      throw new Error("Target role must be TENANT or LANDLORD");
+    }
+
+    const existingPayments = await PaymentRepository.findByPayerId(
+      userId,
+      0,
+      20,
+    );
+    const existingPendingUpgrade = existingPayments.find(
+      (payment: any) =>
+        payment.status === PAYMENT_STATUS.PENDING &&
+        payment.note === buildRoleUpgradeNote(targetRole),
+    );
+    if (existingPendingUpgrade) {
+      const orderCode = existingPendingUpgrade.transactionRef?.toString();
+      if (!orderCode) {
+        await PaymentRepository.update(existingPendingUpgrade._id.toString(), {
+          status: PAYMENT_STATUS.CANCELLED,
+        });
+      } else {
+        const synced = await PayOSService.syncPaymentStatus(orderCode);
+        if (synced.payment.status === PAYMENT_STATUS.COMPLETED) {
+          throw new Error("This role upgrade payment has already been completed");
+        }
+
+        if (synced.payment.status === PAYMENT_STATUS.PENDING) {
+          await PayOSService.cancelPayment(orderCode);
+        }
+      }
+    }
+
+    return this.processPayment({
+      payerId: userId,
+      receiverId: userId,
+      amount: ROLE_UPGRADE_PRICES[targetRole],
+      type: PAYMENT_TYPE.SERVICE_FEE,
+      description: buildRoleUpgradeNote(targetRole),
+      method: PAYMENT_METHOD.PAYOS,
+    });
+  }
+
   static async getPaymentById(paymentId: string, userId: string) {
     const payment = await PaymentRepository.findById(paymentId);
     if (!payment) {
@@ -215,7 +278,7 @@ export class PaymentService {
     }
 
     if (
-      payment.paperId.toString() !== userId &&
+      payment.payerId.toString() !== userId &&
       payment.receiverId.toString() !== userId
     ) {
       throw new Error("You do not have access to this payment");
@@ -273,7 +336,7 @@ export class PaymentService {
       throw new Error("Payment not found");
     }
 
-    if (payment.paperId.toString() !== userId) {
+    if (payment.payerId.toString() !== userId) {
       throw new Error("You can only request refund for your own payments");
     }
 
@@ -301,7 +364,7 @@ export class PaymentService {
 
     await WalletService.payWithWallet(
       payment.receiverId.toString(),
-      payment.paperId.toString(),
+      payment.payerId.toString(),
       payment.amount,
       paymentId,
       `Refund for payment ${paymentId}`,

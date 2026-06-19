@@ -1,4 +1,4 @@
-import { IdentityModel } from "../models/Identity.model.js";
+import { IDENTITY_STATUS, IdentityModel } from "../models/Identity.model.js";
 
 export const IdentityRepository = {
   create: (data: any) => IdentityModel.create(data),
@@ -15,7 +15,7 @@ export const IdentityRepository = {
   findByCccdNumberPublic: (cccdNumber: string) =>
     IdentityModel.findOne({
       cccdNumber,
-      status: { $ne: "REJECTED" },
+      status: { $ne: IDENTITY_STATUS.REJECTED },
       deletedAt: null,
     }).select("_id fullName cccdNumber status userId"),
 
@@ -23,12 +23,18 @@ export const IdentityRepository = {
     IdentityModel.find({ userId, deletedAt: null })
       .sort({ createdAt: -1 }),
 
+  findAll: (filter: any = {}) =>
+    IdentityModel.find({ ...filter, deletedAt: null })
+      .populate("userId", "fullName email phone role")
+      .populate("verifiedBy", "fullName email")
+      .sort({ createdAt: -1 }),
+
   findLatestByUserId: (userId: string) =>
     IdentityModel.findOne({ userId, deletedAt: null })
       .sort({ createdAt: -1 }),
 
   findVerifiedByUserId: (userId: string) =>
-    IdentityModel.findOne({ userId, status: "VERIFIED", deletedAt: null })
+    IdentityModel.findOne({ userId, status: IDENTITY_STATUS.VERIFIED, deletedAt: null })
       .sort({ createdAt: -1 }),
 
   update: (id: string, data: any) =>

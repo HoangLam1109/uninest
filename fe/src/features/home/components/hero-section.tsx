@@ -5,6 +5,7 @@ import { DoorOpen, MapPin, Search, Wallet } from 'lucide-react'
 import { images } from '@/assets/images'
 import { Button } from '@/components/ui/button'
 import { paths } from '@/config/constants'
+import { UpgradePackageButton } from '@/features/payment'
 import {
   Select,
   SelectContent,
@@ -188,6 +189,10 @@ export function HeroSection() {
             </Button>
           </div>
         </form>
+
+        <div data-hero-animate>
+          <UpgradePackageButton />
+        </div>
       </div>
     </section>
   )

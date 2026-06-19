@@ -138,6 +138,62 @@ export const getMyIdentities = async (req: Request, res: Response) => {
   }
 };
 
+export const getAdminIdentities = async (req: Request, res: Response) => {
+  try {
+    const status = typeof req.query.status === "string" ? req.query.status : undefined;
+    const identities = await IdentityService.getIdentitiesForAdmin(status);
+    return res.json({ success: true, data: identities });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const verifyIdentityByAdmin = async (req: Request, res: Response) => {
+  try {
+    const adminId = req.userId;
+    const id = req.params.id as string;
+
+    if (!adminId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ success: false, message: "Invalid identity id" });
+
+    const identity = await IdentityService.verifyIdentity(id, adminId);
+    return res.json({
+      success: true,
+      message: "Identity verified successfully",
+      data: identity,
+    });
+  } catch (err: any) {
+    const statusCode = err.message.includes("not found") ? 404 : 400;
+    return res.status(statusCode).json({ success: false, message: err.message });
+  }
+};
+
+export const rejectIdentityByAdmin = async (req: Request, res: Response) => {
+  try {
+    const adminId = req.userId;
+    const id = req.params.id as string;
+
+    if (!adminId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ success: false, message: "Invalid identity id" });
+
+    const identity = await IdentityService.rejectIdentity(id, adminId);
+    return res.json({
+      success: true,
+      message: "Identity rejected successfully",
+      data: identity,
+    });
+  } catch (err: any) {
+    const statusCode = err.message.includes("not found") ? 404 : 400;
+    return res.status(statusCode).json({ success: false, message: err.message });
+  }
+};
+
 /**
  * GET /api/identities/by-user/:userId
  * Lấy danh sách hồ sơ định danh của một người dùng cụ thể.

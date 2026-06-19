@@ -102,6 +102,7 @@ export function LandlordTenantsPage() {
               <div className="flex items-center gap-3">
                 <Avatar
                   name={tenant.tenantName}
+                  src={tenant.tenantAvatarUrl}
                   className="size-12 text-sm"
                 />
                 <div className="min-w-0">
@@ -170,6 +171,21 @@ export function LandlordTenantsPage() {
       >
         {selectedTenant ? (
           <div className="space-y-4">
+            <div className="flex items-center gap-3 rounded-lg bg-surface p-3">
+              <Avatar
+                name={selectedTenant.tenantName}
+                src={selectedTenant.tenantAvatarUrl}
+                className="size-12 text-sm"
+              />
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-foreground">
+                  {selectedTenant.tenantName}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {selectedTenant.roomTitle}
+                </p>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               {selectedTenant.cccdFrontImage ? (
                 <div>
