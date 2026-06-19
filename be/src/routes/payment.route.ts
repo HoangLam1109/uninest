@@ -10,6 +10,7 @@ import {
   getPaymentsByInvoice,
   requestRefund,
   getPaymentStats,
+  processRefund,
 } from "../controllers/payment.controller.js";
 
 const router = express.Router();
@@ -42,6 +43,9 @@ router.get("/invoice/:invoiceId", getPaymentsByInvoice);
 
 // Request refund
 router.post("/:id/refund", requestRefund);
+
+// Process refund
+router.post("/:id/process-refund", processRefund);
 
 // Get payment by ID (must be after all specific routes)
 router.get("/:id", getPaymentById);

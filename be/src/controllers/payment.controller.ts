@@ -267,12 +267,6 @@ export const requestRefund = async (req: Request, res: Response) => {
     const id = req.params.id as string;
     const { reason } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid payment ID" });
-    }
-
     if (!reason || typeof reason !== "string") {
       return res
         .status(400)
@@ -284,6 +278,32 @@ export const requestRefund = async (req: Request, res: Response) => {
     return res.json({
       success: true,
       message: "Refund requested successfully",
+      data: payment,
+    });
+  } catch (err: any) {
+    const statusCode = err.message.includes("not found") ||
+      err.message.includes("your own")
+      ? 403
+      : 400;
+    return res
+      .status(statusCode)
+      .json({ success: false, message: err.message });
+  }
+};
+
+export const processRefund = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const id = req.params.id as string;
+    const payment = await PaymentService.processRefund(id, userId);
+
+    return res.json({
+      success: true,
+      message: "Refund processed successfully",
       data: payment,
     });
   } catch (err: any) {

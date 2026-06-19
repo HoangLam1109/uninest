@@ -11,7 +11,6 @@ export enum PAYMENT_STATUS {
 export enum PAYMENT_METHOD {
   BANK_TRANSFER = "BANK_TRANSFER",
   CASH = "CASH",
-  WALLET = "WALLET",
   PAYOS = "PAYOS",
 }
 
@@ -27,7 +26,6 @@ export interface IPayment extends Document {
   bookingId?: Types.ObjectId;
   payerId: Types.ObjectId;
   receiverId: Types.ObjectId;
-  walletTxId?: Types.ObjectId;
   invoiceId?: Types.ObjectId;
   amount: number;
   currency: String;
@@ -58,12 +56,6 @@ const PaymentSchema = new Schema<IPayment>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: [true, "Receiver ID is required"],
-      index: true,
-    },
-    walletTxId: {
-      type: Schema.Types.ObjectId,
-      ref: "WalletTransaction",
-      default: null,
       index: true,
     },
     invoiceId: {

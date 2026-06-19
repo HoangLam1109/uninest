@@ -8,8 +8,7 @@ export const PaymentRepository = {
       .populate("bookingId")
       .populate("payerId", "fullName email phone")
       .populate("receiverId", "fullName email phone")
-      .populate("invoiceId")
-      .populate("walletTxId"),
+      .populate("invoiceId"),
 
   findByInvoice: (invoiceId: string) =>
     PaymentModel.find({ invoiceId })

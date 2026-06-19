@@ -4,7 +4,6 @@ import { BookingRepository } from "../repositories/booking.repo.js";
 import { ServicePackageRepository } from "../repositories/service-package.repo.js";
 import { ServiceSubscriptionRepository } from "../repositories/service-subscription.repo.js";
 import { SUBSCRIPTION_STATUS } from "../models/ServiceSubscription.model.js";
-import { WalletService } from "./wallet.service.js";
 import { PayOSService } from "./payos.service.js";
 import { USER_ROLES, type UserRole } from "../constants/role.constant.js";
 import {
@@ -32,6 +31,7 @@ export class PaymentService {
     subscriptionPackageId?: string;
   }) {
     const paymentData: any = {
+      bookingId: params.bookingId || null,
       payerId: params.payerId,
       receiverId: params.receiverId,
       amount: params.amount,
@@ -56,52 +56,18 @@ export class PaymentService {
     }
 
     try {
-      if (params.method === PAYMENT_METHOD.WALLET) {
-        const result = await WalletService.payWithWallet(
-          params.payerId,
-          params.receiverId,
-          params.amount,
-          payment._id.toString(),
-          params.description,
-        );
+      const payosResult = await PayOSService.createPaymentLink({
+        paymentId: payment._id.toString(),
+        amount: params.amount,
+        description: params.description,
+      });
 
-        const updated = await PaymentRepository.update(payment._id.toString(), {
-          walletTxId: result.payerTransaction._id,
-          status: PAYMENT_STATUS.COMPLETED,
-          paidAt: new Date(),
-        });
-
-        if (params.invoiceId) {
-          await InvoiceRepository.update(params.invoiceId, {
-            status: INVOICE_STATUS.PAID,
-            paidAt: new Date(),
-          });
-        }
-
-        if (params.subscriptionPackageId) {
-          await this.createSubscriptionForPayment(
-            payment,
-            params.subscriptionPackageId,
-          );
-        }
-
-        return { payment: updated || payment, status: "COMPLETED" as const };
-      } else if (params.method === PAYMENT_METHOD.PAYOS) {
-        const payosResult = await PayOSService.createPaymentLink({
-          paymentId: payment._id.toString(),
-          amount: params.amount,
-          description: params.description,
-        });
-
-        return {
-          payment,
-          checkoutUrl: payosResult.checkoutUrl,
-          orderCode: payosResult.orderCode,
-          status: "PENDING" as const,
-        };
-      } else {
-        throw new Error(`Unsupported payment method: ${params.method}`);
-      }
+      return {
+        payment,
+        checkoutUrl: payosResult.checkoutUrl,
+        orderCode: payosResult.orderCode,
+        status: "PENDING" as const,
+      };
     } catch (err: any) {
       await PaymentRepository.update(payment._id.toString(), {
         status: PAYMENT_STATUS.FAILED,
@@ -362,13 +328,11 @@ export class PaymentService {
       );
     }
 
-    await WalletService.payWithWallet(
-      payment.receiverId.toString(),
-      payment.payerId.toString(),
-      payment.amount,
-      paymentId,
-      `Refund for payment ${paymentId}`,
-    );
+    await PayOSService.createPaymentLink({
+      paymentId: payment._id.toString(),
+      amount: payment.amount,
+      description: `Refund for payment ${payment._id.toString()}`,
+    });
 
     return await PaymentRepository.update(paymentId, {
       status: PAYMENT_STATUS.REFUNDED,
