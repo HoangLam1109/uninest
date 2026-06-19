@@ -26,15 +26,17 @@ const statusStyles: Record<string, string> = {
   REJECTED: 'bg-red-500/10 text-red-600',
 }
 
+const identityDateFormatter = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+})
+
 function formatDate(value?: string) {
   if (!value) return 'Chưa cập nhật'
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return 'Chưa cập nhật'
-  return new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(d)
+  return identityDateFormatter.format(d)
 }
 
 function ImageLightbox({ src, alt }: { src: string; alt: string }) {

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { images } from '@/assets/images'
 import { paths } from '@/config/constants'
@@ -14,6 +14,16 @@ export function AuthLayout({
   children: ReactNode
   footer: ReactNode
 }) {
+  const [currentYear, setCurrentYear] = useState<number | null>(null)
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      setCurrentYear(new Date().getFullYear())
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [])
+
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
       <aside className="relative hidden overflow-hidden lg:block">
@@ -53,7 +63,7 @@ export function AuthLayout({
             </p>
           </div>
           <p className="text-sm text-white/60">
-            © {new Date().getFullYear()} UniNest. Bảo mật thông tin của bạn.
+            © {currentYear} UniNest. Bảo mật thông tin của bạn.
           </p>
         </div>
       </aside>

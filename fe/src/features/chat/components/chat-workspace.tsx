@@ -48,12 +48,19 @@ function getParticipantAvatarUrl(conversation: ChatConversation, currentUserId: 
   return participant?.avatarUrl
 }
 
+const messageTimeFormatter = new Intl.DateTimeFormat('vi-VN', {
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+const conversationDateFormatter = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit',
+})
+
 function formatMessageTime(value?: string) {
   if (!value) return ''
-  return new Intl.DateTimeFormat('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value))
+  return messageTimeFormatter.format(new Date(value))
 }
 
 function formatConversationTime(value?: string) {
@@ -64,10 +71,7 @@ function formatConversationTime(value?: string) {
 
   if (isToday) return formatMessageTime(value)
 
-  return new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-  }).format(date)
+  return conversationDateFormatter.format(date)
 }
 
 function ChatConversationRow({

@@ -1,5 +1,6 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import gsap from 'gsap'
 import { DoorOpen, MapPin, Search, Wallet } from 'lucide-react'
 import { images } from '@/assets/images'
 import { Button } from '@/components/ui/button'
@@ -29,9 +30,44 @@ const roomTypeValues = {
 
 export function HeroSection() {
   const navigate = useNavigate()
+  const sectionRef = useRef<HTMLElement>(null)
   const [keyword, setKeyword] = useState('')
   const [budget, setBudget] = useState<keyof typeof budgetRanges>('under-5')
   const [roomType, setRoomType] = useState<keyof typeof roomTypeValues>('studio')
+
+  useLayoutEffect(() => {
+    const section = sectionRef.current
+    if (!section) return
+
+    const context = gsap.context(() => {
+      const media = gsap.matchMedia()
+
+      media.add('(prefers-reduced-motion: reduce)', () => {
+        gsap.set('[data-hero-animate]', { clearProps: 'all' })
+      })
+
+      media.add('(prefers-reduced-motion: no-preference)', () => {
+        const timeline = gsap.timeline({ defaults: { ease: 'power3.out' } })
+
+        timeline
+          .fromTo(
+            '[data-hero-image]',
+            { scale: 1.08 },
+            { scale: 1, duration: 1.6, ease: 'power2.out' },
+          )
+          .fromTo(
+            '[data-hero-animate]',
+            { autoAlpha: 0, y: 28 },
+            { autoAlpha: 1, y: 0, duration: 0.85, stagger: 0.14 },
+            '-=1.1',
+          )
+      })
+
+      return () => media.revert()
+    }, section)
+
+    return () => context.revert()
+  }, [])
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -53,7 +89,10 @@ export function HeroSection() {
   }
 
   return (
-    <section className="relative flex min-h-[520px] items-center justify-center overflow-hidden px-4 py-20 lg:min-h-[650px]">
+    <section
+      ref={sectionRef}
+      className="relative flex min-h-[520px] items-center justify-center overflow-hidden px-4 py-20 lg:min-h-[650px]"
+    >
       <img
         src={images.hero}
         alt=""
@@ -61,6 +100,7 @@ export function HeroSection() {
         height={1600}
         decoding="async"
         fetchPriority="high"
+        data-hero-image
         className="absolute inset-0 size-full object-cover object-center"
       />
       <div
@@ -69,7 +109,7 @@ export function HeroSection() {
       />
 
       <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center gap-8 text-center">
-        <div className="space-y-4">
+        <div className="space-y-4" data-hero-animate>
           <h1 className="font-sans text-4xl font-bold leading-tight tracking-normal text-white drop-shadow-sm sm:text-5xl lg:text-7xl lg:leading-[1.1]">
             Tìm kiếm không gian sống{' '}
             <span className="text-primary">lí tưởng</span> tại TP.HCM
@@ -81,6 +121,7 @@ export function HeroSection() {
         </div>
 
         <form
+          data-hero-animate
           className="w-full max-w-4xl rounded-xl bg-white p-4 shadow-2xl"
           onSubmit={handleSearch}
         >

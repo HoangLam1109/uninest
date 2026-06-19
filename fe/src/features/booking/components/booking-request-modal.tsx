@@ -1,4 +1,4 @@
-import { useState, type ComponentProps } from 'react'
+import { useReducer, type ComponentProps } from 'react'
 import { CalendarDays, ChevronDown, ChevronUp, FileText, Plus, Search, UserX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,6 +18,55 @@ type BookingRequestModalProps = {
   roomTitle: string
 }
 
+type BookingRequestState = {
+  searchQuery: string
+  searchResults: UserSearchResult[]
+  searching: boolean
+  selectedTenants: UserSearchResult[]
+  identitiesMap: Record<string, Identity[]>
+  loadingUserId: string | null
+  expandedUsers: Set<string>
+  selectedIdentityIds: string[]
+  checkInDate: string
+  checkOutDate: string
+  notes: string
+}
+
+type BookingRequestAction =
+  | { type: 'patch'; value: Partial<BookingRequestState> }
+  | { type: 'update'; updater: (state: BookingRequestState) => BookingRequestState }
+  | { type: 'reset' }
+
+function createBookingRequestState(): BookingRequestState {
+  return {
+    searchQuery: '',
+    searchResults: [],
+    searching: false,
+    selectedTenants: [],
+    identitiesMap: {},
+    loadingUserId: null,
+    expandedUsers: new Set(),
+    selectedIdentityIds: [],
+    checkInDate: '',
+    checkOutDate: '',
+    notes: '',
+  }
+}
+
+function bookingRequestReducer(
+  state: BookingRequestState,
+  action: BookingRequestAction,
+): BookingRequestState {
+  switch (action.type) {
+    case 'patch':
+      return { ...state, ...action.value }
+    case 'update':
+      return action.updater(state)
+    case 'reset':
+      return createBookingRequestState()
+  }
+}
+
 function toIsoDate(value: string) {
   return new Date(`${value}T00:00:00.000`).toISOString()
 }
@@ -31,41 +80,28 @@ export function BookingRequestModal({
   roomTitle,
 }: BookingRequestModalProps) {
   const createBooking = useCreateBooking()
-
-  // ---- Search tenant -------------------------------------------------------
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([])
-  const [searching, setSearching] = useState(false)
-
-  // ---- Selected tenants (multiple) -----------------------------------------
-  const [selectedTenants, setSelectedTenants] = useState<UserSearchResult[]>([])
-
-  // ---- Identities per tenant: userId -> Identity[] -------------------------
-  const [identitiesMap, setIdentitiesMap] = useState<Record<string, Identity[]>>({})
-  const [loadingUserId, setLoadingUserId] = useState<string | null>(null)
-  const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set())
-
-  // ---- Selected identity IDs (flat, across all tenants) ---------------------
-  const [selectedIdentityIds, setSelectedIdentityIds] = useState<string[]>([])
-
-  // ---- Dates & notes -------------------------------------------------------
-  const [checkInDate, setCheckInDate] = useState('')
-  const [checkOutDate, setCheckOutDate] = useState('')
-  const [notes, setNotes] = useState('')
+  const [state, dispatch] = useReducer(
+    bookingRequestReducer,
+    undefined,
+    createBookingRequestState,
+  )
+  const {
+    searchQuery,
+    searchResults,
+    searching,
+    selectedTenants,
+    identitiesMap,
+    loadingUserId,
+    expandedUsers,
+    selectedIdentityIds,
+    checkInDate,
+    checkOutDate,
+    notes,
+  } = state
 
   // ── Reset all state ──────────────────────────────────────────────────────
   const resetAll = () => {
-    setSearchQuery('')
-    setSearchResults([])
-    setSearching(false)
-    setSelectedTenants([])
-    setIdentitiesMap({})
-    setLoadingUserId(null)
-    setExpandedUsers(new Set())
-    setSelectedIdentityIds([])
-    setCheckInDate('')
-    setCheckOutDate('')
-    setNotes('')
+    dispatch({ type: 'reset' })
   }
 
   const handleClose = () => {
@@ -77,17 +113,19 @@ export function BookingRequestModal({
   const handleSearch = async () => {
     const q = searchQuery.trim()
     if (!q) return
-    setSearching(true)
-    setSearchResults([])
+    dispatch({ type: 'patch', value: { searching: true, searchResults: [] } })
     try {
       const { data } = await userApi.search(q)
       // Filter out already selected tenants
       const selectedIds = new Set(selectedTenants.map((t) => t._id))
-      setSearchResults(data.data.filter((u) => !selectedIds.has(u._id)))
+      dispatch({
+        type: 'patch',
+        value: { searchResults: data.data.filter((u) => !selectedIds.has(u._id)) },
+      })
     } catch {
       // ignore
     } finally {
-      setSearching(false)
+      dispatch({ type: 'patch', value: { searching: false } })
     }
   }
 
@@ -96,59 +134,92 @@ export function BookingRequestModal({
     // Don't add if already selected
     if (selectedTenants.some((t) => t._id === user._id)) return
 
-    setSelectedTenants((prev) => [...prev, user])
-    setSearchResults([])
-    setSearchQuery('')
-    setExpandedUsers((prev) => new Set(prev).add(user._id))
-
-    setLoadingUserId(user._id)
+    dispatch({
+      type: 'update',
+      updater: (prev) => ({
+        ...prev,
+        selectedTenants: [...prev.selectedTenants, user],
+        searchResults: [],
+        searchQuery: '',
+        expandedUsers: new Set(prev.expandedUsers).add(user._id),
+        loadingUserId: user._id,
+      }),
+    })
     try {
       const { data } = await identityApi.getByUserId(user._id)
       const ids = data.data ?? []
-      setIdentitiesMap((prev) => ({
-        ...prev,
-        [user._id]: ids.filter((i: Identity) => i.status !== 'REJECTED'),
-      }))
+      dispatch({
+        type: 'update',
+        updater: (prev) => ({
+          ...prev,
+          identitiesMap: {
+            ...prev.identitiesMap,
+            [user._id]: ids.filter((i: Identity) => i.status !== 'REJECTED'),
+          },
+        }),
+      })
     } catch {
-      setIdentitiesMap((prev) => ({ ...prev, [user._id]: [] }))
+      dispatch({
+        type: 'update',
+        updater: (prev) => ({
+          ...prev,
+          identitiesMap: { ...prev.identitiesMap, [user._id]: [] },
+        }),
+      })
     } finally {
-      setLoadingUserId(null)
+      dispatch({ type: 'patch', value: { loadingUserId: null } })
     }
   }
 
   // ── Remove tenant + their selected identities ────────────────────────────
   const handleRemoveTenant = (userId: string) => {
-    setSelectedTenants((prev) => prev.filter((t) => t._id !== userId))
-    setExpandedUsers((prev) => {
-      const next = new Set(prev)
-      next.delete(userId)
-      return next
-    })
     // Remove identities belonging to this user
     const removedIds = identitiesMap[userId]?.map((i) => i._id) ?? []
-    setSelectedIdentityIds((prev) => prev.filter((id) => !removedIds.includes(id)))
-    setIdentitiesMap((prev) => {
-      const next = { ...prev }
-      delete next[userId]
-      return next
+    dispatch({
+      type: 'update',
+      updater: (prev) => {
+        const expanded = new Set(prev.expandedUsers)
+        expanded.delete(userId)
+        const identities = { ...prev.identitiesMap }
+        delete identities[userId]
+
+        return {
+          ...prev,
+          selectedTenants: prev.selectedTenants.filter((t) => t._id !== userId),
+          expandedUsers: expanded,
+          selectedIdentityIds: prev.selectedIdentityIds.filter(
+            (id) => !removedIds.includes(id),
+          ),
+          identitiesMap: identities,
+        }
+      },
     })
   }
 
   // ── Toggle expand/collapse for a tenant's identities ─────────────────────
   const toggleExpand = (userId: string) => {
-    setExpandedUsers((prev) => {
-      const next = new Set(prev)
-      if (next.has(userId)) next.delete(userId)
-      else next.add(userId)
-      return next
+    dispatch({
+      type: 'update',
+      updater: (prev) => {
+        const expanded = new Set(prev.expandedUsers)
+        if (expanded.has(userId)) expanded.delete(userId)
+        else expanded.add(userId)
+        return { ...prev, expandedUsers: expanded }
+      },
     })
   }
 
   // ── Identity checkbox toggle ─────────────────────────────────────────────
   const toggleIdentity = (id: string) => {
-    setSelectedIdentityIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
-    )
+    dispatch({
+      type: 'update',
+      updater: (prev) => ({
+        ...prev,
+        selectedIdentityIds: prev.selectedIdentityIds.includes(id)
+          ? prev.selectedIdentityIds.filter((i) => i !== id)
+          : [...prev.selectedIdentityIds, id],
+      }),
+    })
   }
 
   // ── Submit booking ───────────────────────────────────────────────────────
@@ -200,7 +271,9 @@ export function BookingRequestModal({
               type="text"
               placeholder="Nhập tên hoặc số điện thoại..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) =>
+                dispatch({ type: 'patch', value: { searchQuery: e.target.value } })
+              }
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
@@ -385,34 +458,43 @@ export function BookingRequestModal({
 
         {/* ── Dates ─────────────────────────────────────────────────────── */}
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-1.5 text-sm font-semibold text-foreground">
+          <label className="space-y-1.5 text-sm font-semibold text-foreground" htmlFor="booking-check-in-date">
             <span>
               Ngày nhận phòng <span className="text-red-500">*</span>
             </span>
             <Input
+              id="booking-check-in-date"
               type="date"
               required
               value={checkInDate}
-              onChange={(e) => setCheckInDate(e.target.value)}
+              onChange={(e) =>
+                dispatch({ type: 'patch', value: { checkInDate: e.target.value } })
+              }
             />
           </label>
-          <label className="space-y-1.5 text-sm font-semibold text-foreground">
+          <label className="space-y-1.5 text-sm font-semibold text-foreground" htmlFor="booking-check-out-date">
             <span>Ngày trả phòng dự kiến</span>
             <Input
+              id="booking-check-out-date"
               type="date"
               min={checkInDate || undefined}
               value={checkOutDate}
-              onChange={(e) => setCheckOutDate(e.target.value)}
+              onChange={(e) =>
+                dispatch({ type: 'patch', value: { checkOutDate: e.target.value } })
+              }
             />
           </label>
         </div>
 
         {/* ── Notes ─────────────────────────────────────────────────────── */}
-        <label className="block space-y-1.5 text-sm font-semibold text-foreground">
+        <label className="block space-y-1.5 text-sm font-semibold text-foreground" htmlFor="booking-notes">
           <span>Ghi chú</span>
           <textarea
+            id="booking-notes"
             value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            onChange={(e) =>
+              dispatch({ type: 'patch', value: { notes: e.target.value } })
+            }
             rows={3}
             className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             placeholder="Ví dụ: tôi muốn thuê dài hạn, cần tư vấn về phòng"

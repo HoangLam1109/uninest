@@ -17,9 +17,9 @@ export function Modal({
   if (!open) return null
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
+    <dialog
+      className="fixed inset-0 z-50 flex h-auto max-h-none w-auto max-w-none items-center justify-center bg-transparent p-4"
+      open
       aria-modal="true"
       aria-labelledby={title ? 'modal-title' : undefined}
     >
@@ -42,6 +42,6 @@ export function Modal({
         ) : null}
         {children}
       </div>
-    </div>
+    </dialog>
   )
 }

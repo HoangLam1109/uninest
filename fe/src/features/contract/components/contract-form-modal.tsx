@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentProps } from 'react'
+import { useMemo, useReducer, type ComponentProps } from 'react'
 import { FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,6 +18,26 @@ import type {
 } from '../types/contract.type'
 
 type ContractFormMode = 'create' | 'edit' | 'renew'
+
+type ContractFieldsState = {
+  bookingId: string
+  isBookingPickerOpen: boolean
+  monthlyRent: string
+  depositAmount: string
+  startDate: string
+  endDate: string
+  contractFileUrl: string
+  terms: string
+}
+
+type ContractFieldsAction =
+  | { type: 'fieldChanged'; name: keyof ContractFieldsState; value: string }
+  | { type: 'bookingPickerChanged'; open: boolean }
+
+type ContractFieldsInit = {
+  mode: ContractFormMode
+  contract?: Contract | null
+}
 
 type ContractFormModalProps = {
   open: boolean
@@ -41,6 +61,34 @@ function toIsoDate(value: string) {
 
 function optionalNumber(value: string) {
   return value ? Number(value) : undefined
+}
+
+function createContractFieldsState({
+  mode,
+  contract,
+}: ContractFieldsInit): ContractFieldsState {
+  return {
+    bookingId: '',
+    isBookingPickerOpen: false,
+    monthlyRent: contract?.monthlyRent ? String(contract.monthlyRent) : '',
+    depositAmount: contract?.depositAmount ? String(contract.depositAmount) : '',
+    startDate: mode === 'renew' ? '' : toDateInput(contract?.startDate),
+    endDate: mode === 'renew' ? '' : toDateInput(contract?.endDate),
+    contractFileUrl: contract?.contractFileUrl ?? '',
+    terms: contract?.terms ?? '',
+  }
+}
+
+function contractFieldsReducer(
+  state: ContractFieldsState,
+  action: ContractFieldsAction,
+): ContractFieldsState {
+  switch (action.type) {
+    case 'fieldChanged':
+      return { ...state, [action.name]: action.value }
+    case 'bookingPickerChanged':
+      return { ...state, isBookingPickerOpen: action.open }
+  }
 }
 
 function getBookingSearchText(booking: Booking) {
@@ -96,24 +144,25 @@ function ContractFormFields({
   onClose,
   onSubmit,
 }: Omit<ContractFormModalProps, 'open'>) {
-  const [bookingId, setBookingId] = useState('')
-  const [isBookingPickerOpen, setIsBookingPickerOpen] = useState(false)
-  const [monthlyRent, setMonthlyRent] = useState(
-    contract?.monthlyRent ? String(contract.monthlyRent) : '',
+  const [fields, dispatchFields] = useReducer(
+    contractFieldsReducer,
+    { mode, contract },
+    createContractFieldsState,
   )
-  const [depositAmount, setDepositAmount] = useState(
-    contract?.depositAmount ? String(contract.depositAmount) : '',
-  )
-  const [startDate, setStartDate] = useState(
-    mode === 'renew' ? '' : toDateInput(contract?.startDate),
-  )
-  const [endDate, setEndDate] = useState(
-    mode === 'renew' ? '' : toDateInput(contract?.endDate),
-  )
-  const [contractFileUrl, setContractFileUrl] = useState(
-    contract?.contractFileUrl ?? '',
-  )
-  const [terms, setTerms] = useState(contract?.terms ?? '')
+  const {
+    bookingId,
+    isBookingPickerOpen,
+    monthlyRent,
+    depositAmount,
+    startDate,
+    endDate,
+    contractFileUrl,
+    terms,
+  } = fields
+
+  function updateField(name: keyof ContractFieldsState, value: string) {
+    dispatchFields({ type: 'fieldChanged', name, value })
+  }
   const landlordBookingsQuery = useGetLandlordBookings(
     { page: 1, limit: 100, status: 'APPROVED' },
     mode === 'create',
@@ -163,12 +212,23 @@ function ContractFormFields({
               id="contract-booking-id"
               required
               value={bookingId}
-              onBlur={() => window.setTimeout(() => setIsBookingPickerOpen(false), 120)}
+              onBlur={() =>
+                window.setTimeout(
+                  () =>
+                    dispatchFields({
+                      type: 'bookingPickerChanged',
+                      open: false,
+                    }),
+                  120,
+                )
+              }
               onChange={(event) => {
-                setBookingId(event.target.value)
-                setIsBookingPickerOpen(true)
+                updateField('bookingId', event.target.value)
+                dispatchFields({ type: 'bookingPickerChanged', open: true })
               }}
-              onFocus={() => setIsBookingPickerOpen(true)}
+              onFocus={() =>
+                dispatchFields({ type: 'bookingPickerChanged', open: true })
+              }
               className="h-11 border border-primary/10 px-3 text-sm shadow-none"
               placeholder="Nhập ID hoặc tìm theo tên người đặt"
               autoComplete="off"
@@ -199,8 +259,11 @@ function ContractFormFields({
                       className="w-full rounded-md px-3 py-2 text-left text-sm transition hover:bg-primary/5 focus:bg-primary/5 focus:outline-none"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
-                        setBookingId(booking._id)
-                        setIsBookingPickerOpen(false)
+                        updateField('bookingId', booking._id)
+                        dispatchFields({
+                          type: 'bookingPickerChanged',
+                          open: false,
+                        })
                       }}
                     >
                       <span className="block font-semibold text-foreground">
@@ -221,65 +284,71 @@ function ContractFormFields({
         ) : null}
 
         <div className="grid gap-4 md:grid-cols-2">
-          <label className="block space-y-2 text-sm font-semibold text-foreground">
+          <label className="block space-y-2 text-sm font-semibold text-foreground" htmlFor="contract-monthly-rent">
             <span>Tiền thuê hằng tháng *</span>
             <Input
+              id="contract-monthly-rent"
               type="number"
               min={0}
               required
               value={monthlyRent}
-              onChange={(event) => setMonthlyRent(event.target.value)}
+              onChange={(event) => updateField('monthlyRent', event.target.value)}
               className="h-11 border border-primary/10 px-3 text-sm shadow-none"
             />
           </label>
-          <label className="block space-y-2 text-sm font-semibold text-foreground">
+          <label className="block space-y-2 text-sm font-semibold text-foreground" htmlFor="contract-deposit-amount">
             <span>Tiền cọc</span>
             <Input
+              id="contract-deposit-amount"
               type="number"
               min={0}
               value={depositAmount}
-              onChange={(event) => setDepositAmount(event.target.value)}
+              onChange={(event) => updateField('depositAmount', event.target.value)}
               className="h-11 border border-primary/10 px-3 text-sm shadow-none"
             />
           </label>
-          <label className="block space-y-2 text-sm font-semibold text-foreground">
+          <label className="block space-y-2 text-sm font-semibold text-foreground" htmlFor="contract-start-date">
             <span>Ngày bắt đầu {mode === 'renew' ? '*' : ''}</span>
             <Input
+              id="contract-start-date"
               type="date"
               required={mode === 'renew'}
               value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
+              onChange={(event) => updateField('startDate', event.target.value)}
               className="h-11 border border-primary/10 px-3 text-sm shadow-none"
             />
           </label>
-          <label className="block space-y-2 text-sm font-semibold text-foreground">
+          <label className="block space-y-2 text-sm font-semibold text-foreground" htmlFor="contract-end-date">
             <span>Ngày kết thúc</span>
             <Input
+              id="contract-end-date"
               type="date"
               min={startDate || undefined}
               value={endDate}
-              onChange={(event) => setEndDate(event.target.value)}
+              onChange={(event) => updateField('endDate', event.target.value)}
               className="h-11 border border-primary/10 px-3 text-sm shadow-none"
             />
           </label>
         </div>
 
-        <label className="block space-y-2 text-sm font-semibold text-foreground">
+        <label className="block space-y-2 text-sm font-semibold text-foreground" htmlFor="contract-file-url">
           <span>Link file hợp đồng</span>
           <Input
+            id="contract-file-url"
             type="url"
             value={contractFileUrl}
-            onChange={(event) => setContractFileUrl(event.target.value)}
+            onChange={(event) => updateField('contractFileUrl', event.target.value)}
             className="h-11 border border-primary/10 px-3 text-sm shadow-none"
             placeholder="https://example.com/contracts/contract-001.pdf"
           />
         </label>
 
-        <label className="block space-y-2 text-sm font-semibold text-foreground">
+        <label className="block space-y-2 text-sm font-semibold text-foreground" htmlFor="contract-terms">
           <span>Điều khoản</span>
           <textarea
+            id="contract-terms"
             value={terms}
-            onChange={(event) => setTerms(event.target.value)}
+            onChange={(event) => updateField('terms', event.target.value)}
             rows={4}
             className="w-full rounded-lg border border-primary/10 bg-white px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           />

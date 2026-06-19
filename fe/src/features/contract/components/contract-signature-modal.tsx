@@ -39,6 +39,15 @@ export function ContractSignatureModal({
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const isDrawingRef = useRef(false)
   const [hasSignature, setHasSignature] = useState(false)
+  const signatureResetKey = open ? `open:${contract?._id ?? 'none'}` : 'closed'
+  const [prevSignatureResetKey, setPrevSignatureResetKey] = useState(signatureResetKey)
+
+  if (signatureResetKey !== prevSignatureResetKey) {
+    setPrevSignatureResetKey(signatureResetKey)
+    if (hasSignature) {
+      setHasSignature(false)
+    }
+  }
 
   useEffect(() => {
     if (!open) return
@@ -61,7 +70,6 @@ export function ContractSignatureModal({
     context.lineWidth = 2.4
     context.strokeStyle = '#0f172a'
     context.clearRect(0, 0, width, height)
-    setHasSignature(false)
   }, [open, contract?._id])
 
   function clearSignature() {
