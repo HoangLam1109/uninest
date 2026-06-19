@@ -24,6 +24,7 @@ import type { RoomImage } from '../types/room.type'
 import { RoomLocationMap } from '../components/room-location-map'
 import { RoomFavoriteButton } from '../components/room-favorite-button'
 import { RoomReviewsSection } from '../components/room-reviews-section'
+import { toast } from 'sonner'
 
 function sortImages(images: RoomImage[]) {
   return [...images].sort((first, second) => {
@@ -57,6 +58,15 @@ export function RoomDetailPage() {
     navigate(`/cu-dan/tin-nhan?conversationId=${conversation._id}`)
   }
 
+  function handleOpenBookingModal() {
+    if (user?.role !== USER_ROLES.TENANT) {
+      toast.error('Chỉ người thuê mới có thể đặt phòng. Vui lòng đăng nhập bằng tài khoản người thuê để sử dụng tính năng này.')
+      return
+    }
+
+    setIsBookingModalOpen(true)
+  }
+
   return (
     <MainLayout>
       <section className="bg-surface px-6 py-10 lg:px-20 lg:py-14">
@@ -64,7 +74,7 @@ export function RoomDetailPage() {
           <Button asChild variant="ghost" className="mb-6">
             <Link to="/phong">
               <ArrowLeft className="size-4" />
-              Quay lai danh sách
+              Quay lại danh sách
             </Link>
           </Button>
 
@@ -255,7 +265,7 @@ export function RoomDetailPage() {
                 <Button
                   type="button"
                   className="mt-6 w-full"
-                  onClick={() => setIsBookingModalOpen(true)}
+                  onClick={handleOpenBookingModal}
                 >
                   Đặt phòng
                 </Button>

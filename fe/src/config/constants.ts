@@ -10,6 +10,8 @@ export const paths = {
   tenantDashboard: '/cu-dan',
   adminDashboard: '/quan-tri',
   staffDashboard: '/nhan-vien',
+  paymentSuccess: '/payment/success',
+  paymentCancel: '/payment/cancel',
 } as const
 
 export const APP_NAME = 'UniNest'

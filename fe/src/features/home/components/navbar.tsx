@@ -1,7 +1,10 @@
+import type { MouseEvent } from 'react'
 import { Link, NavLink } from 'react-router-dom'
+import { toast } from 'sonner'
 import { images } from '@/assets/images'
 import { paths } from '@/config/constants'
 import { Button } from '@/components/ui/button'
+import { USER_ROLES } from '@/constants/roles'
 import { navLinks } from '@/features/home/data'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
@@ -9,6 +12,13 @@ import { NavbarUserMenu } from './navbar-user-menu'
 
 export function Navbar() {
   const { user, isLoggedIn } = useAuth()
+
+  function handleNavClick(event: MouseEvent<HTMLAnchorElement>, href: string) {
+    if (href !== paths.ai || user?.role === USER_ROLES.TENANT) return
+
+    event.preventDefault()
+    toast.info('Vui lòng nâng cấp gói Tenant để sử dụng tính năng AI tìm phòng')
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-surface/95 backdrop-blur-md">
@@ -34,6 +44,7 @@ export function Navbar() {
             <NavLink
               key={link.label}
               to={link.href}
+              onClick={(event) => handleNavClick(event, link.href)}
               className={({ isActive }) =>
                 cn(
                   'border-b-2 pb-1 text-sm font-semibold transition-colors hover:text-primary',

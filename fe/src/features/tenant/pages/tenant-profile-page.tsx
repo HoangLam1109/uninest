@@ -29,7 +29,7 @@ export function TenantProfilePage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8 2xl:mx-0 2xl:max-w-none">
       <header>
         <h1 className="text-2xl font-bold text-slate-950 md:text-3xl">Hồ sơ cá nhân</h1>
         <p className="mt-1 text-sm text-slate-500">
@@ -38,8 +38,9 @@ export function TenantProfilePage() {
       </header>
 
       {/* ── User info card ─────────────────────────────────────────────── */}
+      <div className="grid gap-6 2xl:grid-cols-[28rem_minmax(0,1fr)] 2xl:items-start">
       <div className="rounded-xl border border-primary/10 bg-white p-6 shadow-sm">
-        <div className="flex items-start gap-4">
+        <div className="flex items-start gap-4 2xl:flex-col">
           <AvatarUpload
             name={user?.fullName ?? ''}
             src={user?.avatarUrl}
@@ -47,7 +48,7 @@ export function TenantProfilePage() {
           />
           <div className="min-w-0 pt-1">
             <h2 className="text-lg font-bold text-slate-950">{user?.fullName}</h2>
-            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
+            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500 2xl:flex-col">
               {user?.email ? (
                 <span className="inline-flex items-center gap-1.5">
                   <Mail className="size-3.5" />
@@ -156,6 +157,8 @@ export function TenantProfilePage() {
       </div>
 
       {/* ── Modals ──────────────────────────────────────────────────────── */}
+      </div>
+
       <IdentityFormModal
         open={showCreateForm}
         onClose={() => setShowCreateForm(false)}

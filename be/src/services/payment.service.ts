@@ -5,6 +5,12 @@ import { ServicePackageRepository } from "../repositories/service-package.repo.j
 import { ServiceSubscriptionRepository } from "../repositories/service-subscription.repo.js";
 import { SUBSCRIPTION_STATUS } from "../models/ServiceSubscription.model.js";
 import { PayOSService } from "./payos.service.js";
+import { USER_ROLES, type UserRole } from "../constants/role.constant.js";
+import {
+  buildRoleUpgradeNote,
+  isPaidUpgradeRole,
+  ROLE_UPGRADE_PRICES,
+} from "./role-upgrade.service.js";
 import {
   PAYMENT_STATUS,
   PAYMENT_METHOD,
@@ -33,9 +39,16 @@ export class PaymentService {
       type: params.type,
       method: params.method,
       status: PAYMENT_STATUS.PENDING,
-      invoiceId: params.invoiceId || null,
       note: params.description,
     };
+
+    if (params.bookingId) {
+      paymentData.bookingId = params.bookingId;
+    }
+
+    if (params.invoiceId) {
+      paymentData.invoiceId = params.invoiceId;
+    }
 
     const payment: any = await PaymentRepository.create(paymentData);
     if (!payment) {
@@ -170,6 +183,57 @@ export class PaymentService {
       description: `Deposit for room: ${room.title}`,
       method,
       bookingId,
+    });
+  }
+
+  static async payRoleUpgrade(
+    userId: string,
+    currentRole: UserRole | undefined,
+    targetRole: UserRole,
+  ) {
+    if (currentRole !== USER_ROLES.GUEST) {
+      throw new Error("Only GUEST users can upgrade role via payment");
+    }
+
+    if (!isPaidUpgradeRole(targetRole)) {
+      throw new Error("Target role must be TENANT or LANDLORD");
+    }
+
+    const existingPayments = await PaymentRepository.findByPayerId(
+      userId,
+      0,
+      20,
+    );
+    const existingPendingUpgrade = existingPayments.find(
+      (payment: any) =>
+        payment.status === PAYMENT_STATUS.PENDING &&
+        payment.note === buildRoleUpgradeNote(targetRole),
+    );
+    if (existingPendingUpgrade) {
+      const orderCode = existingPendingUpgrade.transactionRef?.toString();
+      if (!orderCode) {
+        await PaymentRepository.update(existingPendingUpgrade._id.toString(), {
+          status: PAYMENT_STATUS.CANCELLED,
+        });
+      } else {
+        const synced = await PayOSService.syncPaymentStatus(orderCode);
+        if (synced.payment.status === PAYMENT_STATUS.COMPLETED) {
+          throw new Error("This role upgrade payment has already been completed");
+        }
+
+        if (synced.payment.status === PAYMENT_STATUS.PENDING) {
+          await PayOSService.cancelPayment(orderCode);
+        }
+      }
+    }
+
+    return this.processPayment({
+      payerId: userId,
+      receiverId: userId,
+      amount: ROLE_UPGRADE_PRICES[targetRole],
+      type: PAYMENT_TYPE.SERVICE_FEE,
+      description: buildRoleUpgradeNote(targetRole),
+      method: PAYMENT_METHOD.PAYOS,
     });
   }
 

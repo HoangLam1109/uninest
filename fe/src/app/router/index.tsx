@@ -39,6 +39,16 @@ const LandlordBookingsPage = lazy(() =>
     default: module.LandlordBookingsPage,
   })),
 )
+const AdminIdentityModerationPage = lazy(() =>
+  import('@/features/identity/pages/admin-identity-moderation-page').then((module) => ({
+    default: module.AdminIdentityModerationPage,
+  })),
+)
+const AdminUserManagementPage = lazy(() =>
+  import('@/features/admin/pages/admin-user-management-page').then((module) => ({
+    default: module.AdminUserManagementPage,
+  })),
+)
 const LandlordPlaceholderPage = lazy(() =>
   import('@/features/landlord/components/landlord-placeholder').then((module) => ({
     default: module.LandlordPlaceholderPage,
@@ -72,6 +82,11 @@ const NotFoundPage = lazy(() =>
 const RegisterPage = lazy(() =>
   import('@/features/auth/pages/register-page').then((module) => ({
     default: module.RegisterPage,
+  })),
+)
+const PaymentResultPage = lazy(() =>
+  import('@/features/payment/pages/payment-result-page').then((module) => ({
+    default: module.PaymentResultPage,
   })),
 )
 const RoomDetailPage = lazy(() =>
@@ -136,14 +151,25 @@ export function AppRouter() {
     <Suspense fallback={<Loading />}>
       <Routes>
         <Route path={paths.home} element={<HomePage />} />
-        <Route path={paths.ai} element={<AiRoomFinderPage />} />
         <Route path={paths.rooms} element={<RoomListPage />} />
         <Route path={paths.roomDetail} element={<RoomDetailPage />} />
         <Route path={paths.login} element={<LoginPage />} />
         <Route path={paths.register} element={<RegisterPage />} />
         <Route path={paths.dashboard} element={<DashboardRedirectPage />} />
+        <Route
+          path={paths.paymentSuccess}
+          element={<PaymentResultPage result="success" />}
+        />
+        <Route
+          path={paths.paymentCancel}
+          element={<PaymentResultPage result="cancel" />}
+        />
 
         <Route element={<ProtectedRoute />}>
+          <Route element={<RoleRoute allowedRoles={[USER_ROLES.TENANT]} />}>
+            <Route path={paths.ai} element={<AiRoomFinderPage />} />
+          </Route>
+
           <Route element={<RoleRoute allowedRoles={[USER_ROLES.LANDLORD]} />}>
             <Route path={paths.landlordDashboard} element={<LandlordLayout />}>
               <Route index element={<RoomManagementPage />} />
@@ -186,8 +212,8 @@ export function AppRouter() {
               }
             >
               <Route index element={<AdminDashboardPage />} />
-              <Route path="nguoi-dung" element={<AdminDashboardPage />} />
-              <Route path="kiem-duyet" element={<AdminDashboardPage />} />
+              <Route path="nguoi-dung" element={<AdminUserManagementPage />} />
+              <Route path="kiem-duyet" element={<AdminIdentityModerationPage />} />
               <Route path="bao-cao" element={<AdminDashboardPage />} />
               <Route path="ticket" element={<AdminDashboardPage />} />
             </Route>

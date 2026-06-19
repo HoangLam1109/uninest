@@ -26,7 +26,7 @@ export const BookingService = {
       );
     }
 
-    // Verify all identities exist and are valid.
+    // Verify all identities exist and are verified.
     // At least one identity must belong to the booking tenant.
     let hasOwnIdentity = false;
     for (const id of identityIds) {
@@ -37,8 +37,8 @@ export const BookingService = {
       if (identity.userId._id.toString() === tenantId) {
         hasOwnIdentity = true;
       }
-      if (identity.status === IDENTITY_STATUS.REJECTED) {
-        throw new Error(`Identity profile ${id} has been rejected. Please create a new one.`);
+      if (identity.status !== IDENTITY_STATUS.VERIFIED) {
+        throw new Error(`Identity profile ${id} must be verified before booking.`);
       }
     }
 
@@ -155,17 +155,6 @@ export const BookingService = {
       { status: ROOM_STATUS.DEPOSITED }
     );
 
-    // Verify all tenant's identities
-    const identities = (booking as any).identityIds || [];
-    for (const identity of identities) {
-      const identityId = identity._id || identity;
-      await IdentityRepository.update(identityId.toString(), {
-        status: IDENTITY_STATUS.VERIFIED,
-        verifiedAt: new Date(),
-        verifiedBy: landlordId,
-      });
-    }
-
     return updatedBooking;
   },
 
@@ -192,16 +181,6 @@ export const BookingService = {
     const updated = await BookingRepository.update(bookingId, {
       status: BOOKING_STATUS.REJECTED,
     });
-
-    // Reject all identities
-    const identities = (booking as any).identityIds || [];
-    for (const identity of identities) {
-      const identityId = identity._id || identity;
-      await IdentityRepository.update(identityId.toString(), {
-        status: IDENTITY_STATUS.REJECTED,
-        verifiedBy: landlordId,
-      });
-    }
 
     return updated;
   },

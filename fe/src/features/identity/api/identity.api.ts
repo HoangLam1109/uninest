@@ -1,6 +1,7 @@
 import { api } from '@/lib/axios'
 import type {
   CreateIdentityPayload,
+  IdentityStatus,
   IdentityListResponse,
   IdentityResponse,
   UpdateIdentityPayload,
@@ -37,6 +38,17 @@ export const identityApi = {
 
   getById: (id: string) =>
     api.get<IdentityResponse>(`/identities/${id}`),
+
+  adminList: (status?: IdentityStatus) =>
+    api.get<IdentityListResponse>('/identities/admin', {
+      params: status ? { status } : undefined,
+    }),
+
+  adminVerify: (id: string) =>
+    api.patch<IdentityResponse>(`/identities/admin/${id}/verify`),
+
+  adminReject: (id: string) =>
+    api.patch<IdentityResponse>(`/identities/admin/${id}/reject`),
 
   /** Get identities for a specific user (for landlord/staff creating booking) */
   getByUserId: (userId: string) =>

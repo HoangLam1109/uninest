@@ -58,6 +58,15 @@ export const IdentityService = {
     return IdentityRepository.findByUserId(userId);
   },
 
+  getIdentitiesForAdmin: async (status?: string) => {
+    const filter =
+      status && Object.values(IDENTITY_STATUS).includes(status as IDENTITY_STATUS)
+        ? { status }
+        : {};
+
+    return IdentityRepository.findAll(filter);
+  },
+
   /**
    * Search identity by CCCD number for booking purposes.
    * Only returns non-rejected identities with limited info.
@@ -94,9 +103,9 @@ export const IdentityService = {
   },
 
   /**
-   * Verify identity (called internally when booking is approved)
+   * Verify identity from the admin moderation queue.
    */
-  verifyIdentity: async (identityId: string, landlordId: string) => {
+  verifyIdentity: async (identityId: string, verifierId: string) => {
     const identity = await IdentityRepository.findById(identityId);
     if (!identity) throw new Error("Identity not found");
 
@@ -107,20 +116,20 @@ export const IdentityService = {
     return IdentityRepository.update(identityId, {
       status: IDENTITY_STATUS.VERIFIED,
       verifiedAt: new Date(),
-      verifiedBy: landlordId,
+      verifiedBy: verifierId,
     });
   },
 
   /**
-   * Reject identity (called internally when booking is rejected)
+   * Reject identity from the admin moderation queue.
    */
-  rejectIdentity: async (identityId: string, landlordId: string) => {
+  rejectIdentity: async (identityId: string, verifierId: string) => {
     const identity = await IdentityRepository.findById(identityId);
     if (!identity) throw new Error("Identity not found");
 
     return IdentityRepository.update(identityId, {
       status: IDENTITY_STATUS.REJECTED,
-      verifiedBy: landlordId,
+      verifiedBy: verifierId,
     });
   },
 };

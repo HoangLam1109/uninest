@@ -4,6 +4,7 @@ export enum PAYMENT_STATUS {
   PENDING = "PENDING",
   COMPLETED = "COMPLETED",
   FAILED = "FAILED",
+  CANCELLED = "CANCELLED",
   REFUNDED = "REFUNDED",
 }
 
@@ -22,7 +23,7 @@ export enum PAYMENT_TYPE {
 }
 
 export interface IPayment extends Document {
-  bookingId: Types.ObjectId;
+  bookingId?: Types.ObjectId;
   payerId: Types.ObjectId;
   receiverId: Types.ObjectId;
   invoiceId?: Types.ObjectId;
@@ -43,7 +44,6 @@ const PaymentSchema = new Schema<IPayment>(
     bookingId: {
       type: Schema.Types.ObjectId,
       ref: "Booking",
-      default: null,
       index: true,
     },
     payerId: {
@@ -61,7 +61,6 @@ const PaymentSchema = new Schema<IPayment>(
     invoiceId: {
       type: Schema.Types.ObjectId,
       ref: "Invoice",
-      default: null,
       index: true,
     },
     amount: {
@@ -113,7 +112,15 @@ const PaymentSchema = new Schema<IPayment>(
   }
 );
 
-PaymentSchema.index({ bookingId: 1, payer: 1 }, { unique: true, sparse: true });
+PaymentSchema.index(
+  { bookingId: 1, payerId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      bookingId: { $type: "objectId" },
+    },
+  },
+);
 PaymentSchema.index({ receiverId: 1, status: 1 });
 PaymentSchema.index({ bookingId: 1, status: 1 });
 PaymentSchema.index({ paidAt: 1 });

@@ -3,6 +3,7 @@ import authenticateMiddleware from "../middlewares/authenticate.middleware.js";
 import {
   payInvoice,
   payDeposit,
+  payRoleUpgrade,
   getPaymentById,
   getMyPayments,
   getReceivedPayments,
@@ -24,6 +25,9 @@ router.post("/pay-invoice/:invoiceId", payInvoice);
 
 // Pay deposit
 router.post("/pay-deposit/:bookingId", payDeposit);
+
+// Upgrade GUEST role to TENANT or LANDLORD via PayOS
+router.post("/upgrade-role", payRoleUpgrade);
 
 // Payment stats
 router.get("/stats", getPaymentStats);

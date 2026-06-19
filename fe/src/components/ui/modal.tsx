@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
@@ -16,9 +17,9 @@ export function Modal({
 }) {
   if (!open) return null
 
-  return (
+  return createPortal(
     <dialog
-      className="fixed inset-0 z-50 flex h-auto max-h-none w-auto max-w-none items-center justify-center bg-transparent p-4"
+      className="fixed inset-0 z-50 flex h-dvh max-h-none w-dvw max-w-none items-center justify-center bg-transparent p-4"
       open
       aria-modal="true"
       aria-labelledby={title ? 'modal-title' : undefined}
@@ -42,6 +43,7 @@ export function Modal({
         ) : null}
         {children}
       </div>
-    </dialog>
+    </dialog>,
+    document.body,
   )
 }
