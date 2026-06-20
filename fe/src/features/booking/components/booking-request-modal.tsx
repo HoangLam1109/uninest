@@ -1,14 +1,16 @@
 import { useEffect, useReducer, type ComponentProps } from 'react'
 import { CalendarDays, ChevronDown, ChevronUp, FileText } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
-import { useAuth } from '@/hooks/use-auth'
-import { cn } from '@/lib/utils'
 import { identityApi } from '@/features/identity/api/identity.api'
 import type { Identity } from '@/features/identity/types/identity.type'
+import { useAuth } from '@/hooks/use-auth'
+import { cn } from '@/lib/utils'
+import { getSchemaErrorMessage } from '@/lib/zod-error'
 import { useCreateBooking } from '../hooks/use-bookings'
-import { toast } from 'sonner'
+import { bookingRequestSchema } from '../schemas/booking.schema'
 
 type BookingRequestModalProps = {
   open: boolean
@@ -23,7 +25,6 @@ type BookingRequestState = {
   identitiesExpanded: boolean
   selectedIdentityIds: string[]
   checkInDate: string
-  checkOutDate: string
   notes: string
 }
 
@@ -38,7 +39,6 @@ function createBookingRequestState(): BookingRequestState {
     identitiesExpanded: true,
     selectedIdentityIds: [],
     checkInDate: '',
-    checkOutDate: '',
     notes: '',
   }
 }
@@ -78,7 +78,6 @@ export function BookingRequestModal({
     identitiesExpanded,
     selectedIdentityIds,
     checkInDate,
-    checkOutDate,
     notes,
   } = state
 
@@ -142,17 +141,30 @@ export function BookingRequestModal({
     event.preventDefault()
     if (!canSubmit) return
 
+    const validationResult = bookingRequestSchema.safeParse({
+      roomId,
+      identityIds: selectedIdentityIds,
+      checkInDate,
+      notes,
+    })
+
+    if (!validationResult.success) {
+      toast.error(getSchemaErrorMessage(validationResult.error))
+      return
+    }
+
+    const values = validationResult.data
+
     createBooking.mutate(
       {
-        roomId,
-        identityIds: selectedIdentityIds,
-        checkInDate: toIsoDate(checkInDate),
-        checkOutDate: checkOutDate ? toIsoDate(checkOutDate) : undefined,
-        notes: notes.trim() || undefined,
+        roomId: values.roomId,
+        identityIds: values.identityIds,
+        checkInDate: toIsoDate(values.checkInDate),
+        notes: values.notes || undefined,
       },
       {
         onSuccess: () => {
-          toast.success('Đã gửi yêu cầu đặt phòng đến chủ trọ')
+          toast.success('Đã gửi yêu cầu đặt phòng')
           handleClose()
         },
       },
@@ -160,7 +172,7 @@ export function BookingRequestModal({
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="Đặt phòng" className="max-w-lg">
+    <Modal open={open} onClose={handleClose} title="Dat phong" className="max-w-lg">
       <form className="space-y-5" onSubmit={handleSubmit}>
         <div className="rounded-xl bg-primary/10 p-4">
           <p className="text-sm font-semibold text-primary">Phòng đang đặt</p>
@@ -192,17 +204,17 @@ export function BookingRequestModal({
               </button>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold text-foreground">
-                  {user?.fullName ?? 'Người thuê'}
+                  {user?.fullName ?? 'Nguoi thue'}
                 </p>
                 <p className="truncate text-xs text-slate-500">
-                  {user?.phone ? `${user.phone} • ` : ''}
+                  {user?.phone ? `${user.phone} - ` : ''}
                   {user?.email ?? ''}
                 </p>
               </div>
               <span className="text-xs text-slate-400">
                 {loadingIdentities
                   ? '...'
-                  : `${selectedIdentityIds.length}/${identities.length} hồ sơ`}
+                  : `${selectedIdentityIds.length}/${identities.length} ho so`}
               </span>
             </div>
 
@@ -239,7 +251,7 @@ export function BookingRequestModal({
                               {identity.fullName}
                             </p>
                             <p className="truncate text-xs text-slate-500">
-                              CCCD: {identity.cccdNumber} • {identity.phone}
+                              CCCD: {identity.cccdNumber} - {identity.phone}
                             </p>
                           </div>
                           <span
@@ -262,10 +274,10 @@ export function BookingRequestModal({
                   <div className="rounded-lg border border-dashed border-border bg-surface p-3 text-center">
                     <FileText className="mx-auto size-6 text-slate-300" />
                     <p className="mt-1 text-sm text-slate-500">
-                      Bạn chưa có hồ sơ định danh.
+                      ạn chưa có hồ sơ định danh.
                     </p>
                     <p className="text-xs text-slate-400">
-                      Vui lòng tạo hồ sơ định danh trước khi đặt phòng.
+                      Vui lòng tạo hồ sơ định danh và chờ xác minh để có thể đặt phòng.
                     </p>
                   </div>
                 )}
@@ -284,46 +296,26 @@ export function BookingRequestModal({
           ) : null}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label
-            className="space-y-1.5 text-sm font-semibold text-foreground"
-            htmlFor="booking-check-in-date"
-          >
-            <span>
-              Ngày nhận phòng <span className="text-red-500">*</span>
-            </span>
-            <Input
-              id="booking-check-in-date"
-              type="date"
-              required
-              value={checkInDate}
-              onChange={(event) =>
-                dispatch({
-                  type: 'patch',
-                  value: { checkInDate: event.target.value },
-                })
-              }
-            />
-          </label>
-          <label
-            className="space-y-1.5 text-sm font-semibold text-foreground"
-            htmlFor="booking-check-out-date"
-          >
-            <span>Ngày trả phòng dự kiến</span>
-            <Input
-              id="booking-check-out-date"
-              type="date"
-              min={checkInDate || undefined}
-              value={checkOutDate}
-              onChange={(event) =>
-                dispatch({
-                  type: 'patch',
-                  value: { checkOutDate: event.target.value },
-                })
-              }
-            />
-          </label>
-        </div>
+        <label
+          className="block space-y-1.5 text-sm font-semibold text-foreground"
+          htmlFor="booking-check-in-date"
+        >
+          <span>
+            Ngày đến xem phòng <span className="text-red-500">*</span>
+          </span>
+          <Input
+            id="booking-check-in-date"
+            type="date"
+            required
+            value={checkInDate}
+            onChange={(event) =>
+              dispatch({
+                type: 'patch',
+                value: { checkInDate: event.target.value },
+              })
+            }
+          />
+        </label>
 
         <label
           className="block space-y-1.5 text-sm font-semibold text-foreground"

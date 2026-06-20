@@ -1312,12 +1312,11 @@ Authorization: Bearer <accessToken>
 {
   "roomId": "665a1b2c3d4e5f6a7b8c9d0e",
   "checkInDate": "2026-07-01T00:00:00.000Z",
-  "checkOutDate": "2026-12-31T00:00:00.000Z",
   "notes": "Tôi muốn thuê dài hạn"
 }
 ```
 
-> `checkOutDate` và `notes` là optional. `checkInDate` là bắt buộc.
+> `notes` là optional. `checkInDate` là bắt buộc.
 
 **Headers:**
 ```

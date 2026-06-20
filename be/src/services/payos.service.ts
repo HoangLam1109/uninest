@@ -13,6 +13,8 @@ export class PayOSService {
     paymentId: string;
     amount: number;
     description: string;
+    returnUrl: string | undefined;
+    cancelUrl: string | undefined;
   }) {
     const orderCode = Number(String(Date.now()).slice(-8));
 
@@ -20,8 +22,8 @@ export class PayOSService {
       orderCode,
       amount: params.amount,
       description: params.description.slice(0, 25),
-      returnUrl: PAYOS_CONFIG.returnUrl,
-      cancelUrl: PAYOS_CONFIG.cancelUrl,
+      returnUrl: params.returnUrl || PAYOS_CONFIG.returnUrl,
+      cancelUrl: params.cancelUrl || PAYOS_CONFIG.cancelUrl,
     });
 
     await PaymentRepository.update(params.paymentId, {

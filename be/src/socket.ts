@@ -30,11 +30,11 @@ function getHandshakeToken(socket: Socket) {
 
 export function initializeChatSocket(
   httpServer: HttpServer,
-  frontendOrigin: string,
+  frontendOrigins: string[],
 ) {
   const io = new Server(httpServer, {
     cors: {
-      origin: frontendOrigin,
+      origin: frontendOrigins,
       methods: ["GET", "POST"],
     },
   });

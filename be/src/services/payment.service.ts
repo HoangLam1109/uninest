@@ -29,6 +29,8 @@ export class PaymentService {
     invoiceId?: string;
     bookingId?: string;
     subscriptionPackageId?: string;
+    returnUrl?: string;
+    cancelUrl?: string;
   }) {
     const paymentData: any = {
       bookingId: params.bookingId || null,
@@ -60,6 +62,8 @@ export class PaymentService {
         paymentId: payment._id.toString(),
         amount: params.amount,
         description: params.description,
+        returnUrl: params.returnUrl,
+        cancelUrl: params.cancelUrl,
       });
 
       return {
@@ -102,6 +106,7 @@ export class PaymentService {
     invoiceId: string,
     payerId: string,
     method: PAYMENT_METHOD,
+    frontendUrls: { returnUrl: string; cancelUrl: string },
   ) {
     const invoice = await InvoiceRepository.findById(invoiceId);
     if (!invoice) {
@@ -143,6 +148,8 @@ export class PaymentService {
       method,
       invoiceId,
       bookingId,
+      returnUrl: frontendUrls.returnUrl,
+      cancelUrl: frontendUrls.cancelUrl,
     });
   }
 
@@ -150,6 +157,7 @@ export class PaymentService {
     bookingId: string,
     tenantId: string,
     method: PAYMENT_METHOD,
+    frontendUrls: { returnUrl: string; cancelUrl: string },
   ) {
     const booking = await BookingRepository.findById(bookingId);
     if (!booking) {
@@ -183,6 +191,8 @@ export class PaymentService {
       description: `Deposit for room: ${room.title}`,
       method,
       bookingId,
+      returnUrl: frontendUrls.returnUrl,
+      cancelUrl: frontendUrls.cancelUrl,
     });
   }
 
@@ -190,6 +200,7 @@ export class PaymentService {
     userId: string,
     currentRole: UserRole | undefined,
     targetRole: UserRole,
+    frontendUrls: { returnUrl: string; cancelUrl: string },
   ) {
     if (currentRole !== USER_ROLES.GUEST) {
       throw new Error("Only GUEST users can upgrade role via payment");
@@ -239,6 +250,8 @@ export class PaymentService {
       type: paymentType,
       description: buildRoleUpgradeNote(targetRole),
       method: PAYMENT_METHOD.PAYOS,
+      returnUrl: frontendUrls.returnUrl,
+      cancelUrl: frontendUrls.cancelUrl,
     });
   }
 
@@ -393,6 +406,8 @@ export class PaymentService {
       paymentId: payment._id.toString(),
       amount: payment.amount,
       description: `Refund for payment ${payment._id.toString()}`,
+      returnUrl: "http://localhost:5173/payment/success",
+      cancelUrl: "http://localhost:5173/payment/cancel",
     });
 
     return await PaymentRepository.update(paymentId, {

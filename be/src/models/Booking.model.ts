@@ -13,7 +13,6 @@ export interface IBooking extends Document {
   identityIds: Types.ObjectId[];
   contractId?: Types.ObjectId;
   checkInDate: Date;
-  checkOutDate?: Date;
   status: BOOKING_STATUS;
   totalPrice?: number;
   movedInAt?: Date;
@@ -58,9 +57,6 @@ const BookingSchema = new Schema<IBooking>(
     checkInDate: {
       type: Date,
       required: [true, "Check-in date is required"],
-    },
-    checkOutDate: {
-      type: Date,
     },
     status: {
       type: String,

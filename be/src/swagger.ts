@@ -126,11 +126,6 @@ const options: swaggerJsDoc.Options = {
             tenantId: { type: "string" },
             contractId: { type: "string", nullable: true },
             checkInDate: { type: "string", format: "date-time" },
-            checkOutDate: {
-              type: "string",
-              format: "date-time",
-              nullable: true,
-            },
             status: {
               type: "string",
               enum: ["PENDING", "APPROVED", "REJECTED", "CANCELLED"],
@@ -1352,11 +1347,6 @@ const options: swaggerJsDoc.Options = {
                       format: "date-time",
                       example: "2026-07-01T00:00:00.000Z",
                     },
-                    checkOutDate: {
-                      type: "string",
-                      format: "date-time",
-                      example: "2027-06-30T00:00:00.000Z",
-                    },
                     notes: { type: "string" },
                   },
                 },
@@ -1365,7 +1355,7 @@ const options: swaggerJsDoc.Options = {
           },
           responses: {
             201: { description: "Booking created successfully" },
-            400: { description: "Room ID and check-in date are required" },
+            400: { description: "Room ID and viewing date are required" },
           },
         },
       },

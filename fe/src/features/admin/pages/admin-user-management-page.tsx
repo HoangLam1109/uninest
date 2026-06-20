@@ -14,13 +14,19 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { cn } from '@/lib/utils'
+import { getSchemaErrorMessage } from '@/lib/zod-error'
 import {
   useCreateUser,
   useDeleteUser,
   useGetUsers,
   useUpdateUser,
 } from '@/features/user/hooks/use-users'
+import {
+  createUserSchema,
+  updateUserSchema,
+} from '@/features/user/schemas/user.schema'
 import type { User, UserPayload } from '@/features/user/types/user.type'
+import { toast } from 'sonner'
 
 type RoleFilter = 'ALL' | UserRole
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE'
@@ -73,7 +79,10 @@ function toFormState(user: User): UserFormState {
   }
 }
 
-function buildPayload(form: UserFormState, editingUser: User | null) {
+function buildPayload(
+  form: Omit<UserFormState, 'password'> & { password?: string },
+  editingUser: User | null,
+) {
   const payload: Partial<UserPayload> = {
     email: form.email.trim(),
     fullName: form.fullName.trim(),
@@ -82,7 +91,7 @@ function buildPayload(form: UserFormState, editingUser: User | null) {
     isActive: form.isActive,
   }
 
-  if (form.password.trim()) {
+  if (form.password?.trim()) {
     payload.password = form.password
   }
 
@@ -151,7 +160,16 @@ export function AdminUserManagementPage() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const payload = buildPayload(form, editingUser)
+    const validationResult = editingUser
+      ? updateUserSchema.safeParse(form)
+      : createUserSchema.safeParse(form)
+
+    if (!validationResult.success) {
+      toast.error(getSchemaErrorMessage(validationResult.error))
+      return
+    }
+
+    const payload = buildPayload(validationResult.data, editingUser)
 
     if (editingUser) {
       updateUser.mutate(
