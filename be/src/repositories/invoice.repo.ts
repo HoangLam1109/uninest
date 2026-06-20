@@ -56,7 +56,7 @@ export const InvoiceRepository = {
       { deletedAt: new Date() }
     ),
 
-  findByStatus: (status: string, skip: number, limit: number) =>
+  findByStatus: (status: INVOICE_STATUS, skip: number, limit: number) =>
     InvoiceModel.find({ status, deletedAt: null })
       .populate("tenantId", "fullName email phone")
       .populate("landlordId", "fullName email phone")
@@ -64,12 +64,12 @@ export const InvoiceRepository = {
       .skip(skip)
       .limit(limit),
 
-  countByStatus: (status: string) =>
+  countByStatus: (status: INVOICE_STATUS) =>
     InvoiceModel.countDocuments({ status, deletedAt: null }),
 
   findOverdueInvoices: (skip: number, limit: number) =>
     InvoiceModel.find({
-      status: { $in: ["SENT", "DRAFT"] },
+      status: { $in: [INVOICE_STATUS.SENT, INVOICE_STATUS.DRAFT] },
       dueDate: { $lt: new Date() },
       deletedAt: null,
     })
@@ -81,7 +81,7 @@ export const InvoiceRepository = {
 
   countOverdueInvoices: () =>
     InvoiceModel.countDocuments({
-      status: { $in: ["SENT", "DRAFT"] },
+      status: { $in: [INVOICE_STATUS.SENT, INVOICE_STATUS.DRAFT] },
       dueDate: { $lt: new Date() },
       deletedAt: null,
     }),
@@ -98,16 +98,16 @@ export const InvoiceRepository = {
     const invoices = await InvoiceModel.find({
       contractId,
       billingMonth: { $lt: billingMonth },
-      status: { $ne: "CANCELLED" },
+      status: { $ne: INVOICE_STATUS.CANCELLED },
       deletedAt: null,
     })
       .sort({ billingMonth: -1 })
       .limit(1)
       .lean();
 
-    if (!invoices.length) return null;
+    const [invoice] = invoices;
+    if (!invoice) return null;
 
-    const invoice = invoices[0];
     const detail = await InvoiceDetailModel.findOne({
       invoiceId: invoice._id,
     }).lean();
@@ -126,16 +126,16 @@ export const InvoiceRepository = {
     const invoices = await InvoiceModel.find({
       bookingId,
       billingMonth: { $lt: billingMonth },
-      status: { $ne: "CANCELLED" },
+      status: { $ne: INVOICE_STATUS.CANCELLED },
       deletedAt: null,
     })
       .sort({ billingMonth: -1 })
       .limit(1)
       .lean();
 
-    if (!invoices.length) return null;
+    const [invoice] = invoices;
+    if (!invoice) return null;
 
-    const invoice = invoices[0];
     const detail = await InvoiceDetailModel.findOne({
       invoiceId: invoice._id,
     }).lean();
