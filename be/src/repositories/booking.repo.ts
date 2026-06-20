@@ -1,4 +1,4 @@
-import { BookingModel } from "../models/Booking.model.js";
+import { BOOKING_STATUS, BookingModel } from "../models/Booking.model.js";
 import mongoose from "mongoose";
 
 export const BookingRepository = {
@@ -75,7 +75,7 @@ export const BookingRepository = {
   countByLandlordRoomIds: (roomIds: string[]) =>
     BookingModel.countDocuments({ roomId: { $in: roomIds }, deletedAt: null }),
 
-  findByRoomIdAndStatus: (roomId: string, status: string) =>
+  findByRoomIdAndStatus: (roomId: string, status: BOOKING_STATUS) =>
     BookingModel.findOne({ roomId, status, deletedAt: null }),
 
   findCurrentBookingByRoom: (roomId: string) =>
@@ -99,14 +99,14 @@ export const BookingRepository = {
     BookingModel.findOne({
       roomId,
       tenantId,
-      status: { $in: ["PENDING", "APPROVED"] },
+      status: { $in: [BOOKING_STATUS.PENDING, BOOKING_STATUS.APPROVED] },
       deletedAt: null,
     }),
 
   countActiveBookingsByRoom: (roomId: string) =>
     BookingModel.countDocuments({
       roomId,
-      status: "APPROVED",
+      status: BOOKING_STATUS.APPROVED,
       isCurrent: true,
       deletedAt: null,
     }),

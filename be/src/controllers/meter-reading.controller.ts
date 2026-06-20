@@ -5,6 +5,10 @@ import { ContractRepository } from "../repositories/contract.repo.js";
 import { BookingRepository } from "../repositories/booking.repo.js";
 import { METER_TYPE } from "../models/MeterReading.model.js";
 
+function getParamId(value: string | string[] | undefined) {
+  return typeof value === "string" ? value : undefined;
+}
+
 /**
  * GET /api/meter-readings/my
  * Tenant xem lịch sử chỉ số công tơ của chính mình.
@@ -102,7 +106,7 @@ export const getMeterReadingsByContract = async (req: Request, res: Response) =>
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const { contractId } = req.params;
+    const contractId = getParamId(req.params.contractId);
     if (!contractId || !mongoose.Types.ObjectId.isValid(contractId)) {
       return res.status(400).json({ success: false, message: "Invalid contractId" });
     }
@@ -159,7 +163,7 @@ export const getMeterReadingsByContract = async (req: Request, res: Response) =>
  */
 export const getMeterReadingsByInvoice = async (req: Request, res: Response) => {
   try {
-    const { invoiceId } = req.params;
+    const invoiceId = getParamId(req.params.invoiceId);
     if (!invoiceId || !mongoose.Types.ObjectId.isValid(invoiceId)) {
       return res.status(400).json({ success: false, message: "Invalid invoiceId" });
     }

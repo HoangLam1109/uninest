@@ -5,6 +5,7 @@ export enum INVOICE_STATUS {
   SENT = "SENT",
   PAID = "PAID",
   OVERDUE = "OVERDUE",
+  CANCELLED = "CANCELLED",
 }
 
 export interface IInvoice extends Document {
