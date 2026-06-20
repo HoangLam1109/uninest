@@ -21,10 +21,18 @@ export type Booking = {
   _id: string
   roomId: string | BookingRoom
   tenantId: string | BookingUser
-  identityIds?: Array<string | { _id: string; fullName: string; cccdNumber: string; phone: string; status: string }>
+  identityIds?: Array<
+    | string
+    | {
+        _id: string
+        fullName: string
+        cccdNumber: string
+        phone: string
+        status: string
+      }
+  >
   contractId?: string | unknown
   checkInDate: string
-  checkOutDate?: string
   status: BookingStatus
   totalPrice?: number
   movedInAt?: string
@@ -44,7 +52,6 @@ export type BookingListParams = {
 export type CreateBookingPayload = {
   roomId: string
   checkInDate: string
-  checkOutDate?: string
   notes?: string
   identityIds: string[]
 }

@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import mongoose from "mongoose";
+import { buildFrontendPaymentUrls } from "../config/frontend.config.js";
 import { PaymentService } from "../services/payment.service.js";
 import { PAYMENT_METHOD } from "../models/Payment.model.js";
 import { isValidUserRole } from "../constants/role.constant.js";
@@ -13,6 +14,7 @@ export const payInvoice = async (req: Request, res: Response) => {
 
     const invoiceId = req.params.invoiceId as string;
     const { method } = req.body;
+    const frontendUrls = buildFrontendPaymentUrls(req.get("origin"));
 
     if (!invoiceId || !mongoose.Types.ObjectId.isValid(invoiceId)) {
       return res
@@ -33,6 +35,7 @@ export const payInvoice = async (req: Request, res: Response) => {
       invoiceId,
       userId,
       method,
+      frontendUrls,
     );
 
     return res.json({
@@ -62,6 +65,7 @@ export const payDeposit = async (req: Request, res: Response) => {
 
     const bookingId = req.params.bookingId as string;
     const { method } = req.body;
+    const frontendUrls = buildFrontendPaymentUrls(req.get("origin"));
 
     if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
       return res
@@ -78,7 +82,12 @@ export const payDeposit = async (req: Request, res: Response) => {
       });
     }
 
-    const payment = await PaymentService.payDeposit(bookingId, userId, method);
+    const payment = await PaymentService.payDeposit(
+      bookingId,
+      userId,
+      method,
+      frontendUrls,
+    );
 
     return res.json({
       success: true,
@@ -101,6 +110,7 @@ export const payRoleUpgrade = async (req: Request, res: Response) => {
     }
 
     const { targetRole, method } = req.body;
+    const frontendUrls = buildFrontendPaymentUrls(req.get("origin"));
 
     if (!targetRole || !isValidUserRole(targetRole)) {
       return res.status(400).json({
@@ -120,6 +130,7 @@ export const payRoleUpgrade = async (req: Request, res: Response) => {
       userId,
       req.user?.role,
       targetRole,
+      frontendUrls,
     );
 
     return res.status(201).json({

@@ -1,9 +1,11 @@
 import { useMemo, useReducer, type ComponentProps } from 'react'
 import { FileText } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { useGetLandlordBookings } from '@/features/booking/hooks/use-bookings'
+import { getSchemaErrorMessage } from '@/lib/zod-error'
 import {
   formatBookingDate,
   getBookingRoom,
@@ -16,6 +18,11 @@ import type {
   RenewContractPayload,
   UpdateContractPayload,
 } from '../types/contract.type'
+import {
+  createContractSchema,
+  renewContractSchema,
+  updateContractSchema,
+} from '../schemas/contract.schema'
 
 type ContractFormMode = 'create' | 'edit' | 'renew'
 
@@ -201,17 +208,43 @@ function ContractFormFields({
     }
 
     if (mode === 'create') {
-      if (!bookingId) return
-      onSubmit({ ...payload, bookingId: bookingId.trim() })
+      const validationResult = createContractSchema.safeParse({
+        ...payload,
+        bookingId: bookingId.trim(),
+      })
+
+      if (!validationResult.success) {
+        toast.error(getSchemaErrorMessage(validationResult.error))
+        return
+      }
+
+      onSubmit(validationResult.data)
       return
     }
 
     if (mode === 'renew') {
-      onSubmit({ ...payload, startDate: toIsoDate(startDate) })
+      const validationResult = renewContractSchema.safeParse({
+        ...payload,
+        startDate: toIsoDate(startDate),
+      })
+
+      if (!validationResult.success) {
+        toast.error(getSchemaErrorMessage(validationResult.error))
+        return
+      }
+
+      onSubmit(validationResult.data)
       return
     }
 
-    onSubmit(payload)
+    const validationResult = updateContractSchema.safeParse(payload)
+
+    if (!validationResult.success) {
+      toast.error(getSchemaErrorMessage(validationResult.error))
+      return
+    }
+
+    onSubmit(validationResult.data)
   }
 
   return (
@@ -256,7 +289,7 @@ function ContractFormFields({
                   {getBookingRoom(selectedBooking)?.title ??
                     'Phòng chưa có thông tin'}
                   {selectedBooking.checkInDate
-                    ? ` - ${formatBookingDate(selectedBooking.checkInDate)}`
+                    ? ` - Xem phong ${formatBookingDate(selectedBooking.checkInDate)}`
                     : ''}
                 </p>
               </div>

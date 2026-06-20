@@ -63,7 +63,7 @@ export const selectedRoomImagesSubmitSchema = selectedRoomImagesDraftSchema
   .superRefine((images, context) => {
     if (images.length > 0 && !images.some((image) => image.isPrimary)) {
       context.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'Vui long chon anh dai dien',
       })
     }

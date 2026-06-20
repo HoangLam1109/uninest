@@ -12,12 +12,12 @@ export const createBooking = async (req: Request, res: Response) => {
     if (!tenantId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
-    const { roomId, checkInDate, checkOutDate, identityIds, notes } = req.body;
+    const { roomId, checkInDate, identityIds, notes } = req.body;
     
     if (!roomId || !checkInDate) {
       return res.status(400).json({
         success: false,
-        message: "Room ID and check-in date are required",
+        message: "Room ID and viewing date are required",
       });
     }
 
@@ -41,7 +41,6 @@ export const createBooking = async (req: Request, res: Response) => {
       tenantId,
       identityIds,
       new Date(checkInDate),
-      checkOutDate ? new Date(checkOutDate) : undefined,
       notes
     );
 
