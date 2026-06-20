@@ -1,12 +1,18 @@
 import { useReducer } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import type { Booking } from '@/features/booking/types/booking.type'
+import { getSchemaErrorMessage } from '@/lib/zod-error'
 import {
   getBookingRoom,
   getBookingTenant,
 } from '@/features/booking/lib/booking-display'
+import {
+  manualInvoiceFormSchema,
+  utilityInvoiceFormSchema,
+} from '../schemas/invoice.schema'
 
 type InvoiceFormMode = 'manual' | 'utility'
 
@@ -96,11 +102,6 @@ function invoiceFormReducer(
   }
 }
 
-function parseFloatSafe(value: string) {
-  const n = Number(value)
-  return Number.isFinite(n) ? n : undefined
-}
-
 export function InvoiceFormModal({
   open,
   isPending,
@@ -135,27 +136,41 @@ export function InvoiceFormModal({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const base = {
+    const payload = {
       bookingId,
-      billingMonth: billingMonth.trim(),
-      dueDate: new Date(dueDate).toISOString(),
-      rentAmount: Number(rentAmount),
-      additionalFees: parseFloatSafe(additionalFees),
-      notes: notes.trim() || undefined,
+      billingMonth,
+      dueDate,
+      rentAmount,
+      additionalFees,
+      notes,
     }
 
     if (mode === 'utility') {
-      onSubmitUtility({
-        ...base,
-        electricityNewIndex: parseFloatSafe(electricityNewIndex),
-        waterNewIndex: parseFloatSafe(waterNewIndex),
+      const validationResult = utilityInvoiceFormSchema.safeParse({
+        ...payload,
+        electricityNewIndex,
+        waterNewIndex,
       })
+
+      if (!validationResult.success) {
+        toast.error(getSchemaErrorMessage(validationResult.error))
+        return
+      }
+
+      onSubmitUtility(validationResult.data)
     } else {
-      onSubmitManual({
-        ...base,
-        electricityAmount: parseFloatSafe(electricityAmount),
-        waterAmount: parseFloatSafe(waterAmount),
+      const validationResult = manualInvoiceFormSchema.safeParse({
+        ...payload,
+        electricityAmount,
+        waterAmount,
       })
+
+      if (!validationResult.success) {
+        toast.error(getSchemaErrorMessage(validationResult.error))
+        return
+      }
+
+      onSubmitManual(validationResult.data)
     }
   }
 

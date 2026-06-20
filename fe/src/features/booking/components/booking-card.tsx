@@ -78,25 +78,25 @@ export function BookingCard({
               </span>
               {booking.createdAt ? (
                 <span className="text-xs font-semibold text-slate-400">
-                  Tạo ngày {formatBookingDate(booking.createdAt)}
+                  Tao ngay {formatBookingDate(booking.createdAt)}
                 </span>
               ) : null}
             </div>
 
             <h2 className="mt-3 line-clamp-2 text-xl font-bold text-slate-950">
-              {room?.title ?? 'Phòng không khả dụng'}
+              {room?.title ?? 'Phong khong kha dung'}
             </h2>
             <p className="mt-2 flex min-w-0 items-start gap-2 text-sm text-slate-500">
               <Home className="mt-0.5 size-4 shrink-0" />
               {room
                 ? [room.address, room.district, room.city].filter(Boolean).join(', ')
-                : 'Chưa có thông tin phòng'}
+                : 'Chua co thong tin phong'}
             </p>
           </div>
 
           {room?.pricePerMonth ? (
             <div className="w-full rounded-xl bg-primary/10 px-4 py-3 text-left sm:w-fit sm:min-w-44 lg:text-right">
-              <p className="text-xs font-bold uppercase text-primary">Giá phòng</p>
+              <p className="text-xs font-bold uppercase text-primary">Gia phong</p>
               <p className="mt-1 whitespace-nowrap text-lg font-bold text-primary">
                 {formatBookingCurrency(room.pricePerMonth)}
               </p>
@@ -104,33 +104,27 @@ export function BookingCard({
           ) : null}
         </div>
 
-        <div className="mt-5 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-5 grid gap-3 text-sm md:grid-cols-2">
           <div className="rounded-lg bg-surface p-3">
-            <p className="text-slate-500">Ngày nhận phòng</p>
+            <p className="text-slate-500">Ngay den xem phong</p>
             <p className="mt-1 flex items-center gap-2 font-bold text-slate-950">
               <CalendarDays className="size-4 text-primary" />
               {formatBookingDate(booking.checkInDate)}
             </p>
           </div>
           <div className="rounded-lg bg-surface p-3">
-            <p className="text-slate-500">Ngày trả phòng</p>
-            <p className="mt-1 font-bold text-slate-950">
-              {formatBookingDate(booking.checkOutDate)}
-            </p>
-          </div>
-          <div className="rounded-lg bg-surface p-3">
             <p className="text-slate-500">
-              {mode === 'landlord' ? 'Người thuê' : 'Trạng thái hiện tại'}
+              {mode === 'landlord' ? 'Nguoi thue' : 'Trang thai hien tai'}
             </p>
             <p className="mt-1 font-bold text-slate-950">
               {mode === 'landlord'
-                ? tenant?.fullName ?? tenant?.email ?? 'Chưa có thông tin'
+                ? tenant?.fullName ?? tenant?.email ?? 'Chua co thong tin'
                 : bookingStatusLabels[booking.status]}
             </p>
           </div>
         </div>
 
-      {mode === 'landlord' && tenant ? (
+        {mode === 'landlord' && tenant ? (
           <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-500">
             {tenant.email ? (
               <span className="inline-flex items-center gap-2">
@@ -150,14 +144,16 @@ export function BookingCard({
         {identityIds.length > 0 ? (
           <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3">
             <p className="mb-2 text-xs font-bold uppercase text-primary">
-              Hồ sơ định danh ({identityIds.length})
+              Ho so dinh danh ({identityIds.length})
             </p>
             <div className="space-y-2">
               {identities.map((identity, index) => {
                 const id = typeof identity === 'string' ? identity : identity._id
-                const name = typeof identity === 'object' ? identity.fullName : `Người ${index + 1}`
+                const name =
+                  typeof identity === 'object' ? identity.fullName : `Nguoi ${index + 1}`
                 const cccd = typeof identity === 'object' ? identity.cccdNumber : ''
                 const phone = typeof identity === 'object' ? identity.phone : ''
+
                 return (
                   <div
                     key={id}
@@ -167,7 +163,7 @@ export function BookingCard({
                       <p className="truncate font-bold text-foreground">{name}</p>
                       <p className="truncate text-xs text-slate-500">
                         {cccd ? `CCCD: ${cccd}` : ''}
-                        {cccd && phone ? ' • ' : ''}
+                        {cccd && phone ? ' - ' : ''}
                         {phone}
                       </p>
                     </div>
@@ -200,7 +196,7 @@ export function BookingCard({
                 onClick={() => onCancel?.(booking._id)}
               >
                 <XCircle className="size-4" />
-                  Hủy booking
+                Huy booking
               </Button>
             ) : null}
 
@@ -213,7 +209,7 @@ export function BookingCard({
                   onClick={() => onReject?.(booking._id)}
                 >
                   <XCircle className="size-4" />
-                  Từ chối
+                  Tu choi
                 </Button>
                 <Button
                   type="button"
@@ -221,7 +217,7 @@ export function BookingCard({
                   onClick={() => onApprove?.(booking._id)}
                 >
                   <CheckCircle2 className="size-4" />
-                  Phê duyệt
+                  Phe duyet
                 </Button>
               </>
             ) : null}
@@ -238,7 +234,7 @@ export function BookingCard({
               onClick={() => onDelete?.(booking._id)}
             >
               <Trash2 className="size-3.5" />
-              Xóa
+              Xoa
             </Button>
           </div>
         ) : null}
@@ -250,18 +246,16 @@ export function BookingCard({
           setShowIdentity(false)
           setViewingIdentityId(null)
         }}
-        title="Hồ sơ định danh người thuê"
+        title="Ho so dinh danh nguoi thue"
         className="max-w-lg"
       >
         {viewingIdentityQuery.data ? (
           <IdentityDetail identity={viewingIdentityQuery.data} />
         ) : viewingIdentityQuery.isLoading ? (
-          <p className="py-8 text-center text-sm text-slate-500">
-            Đang tải hồ sơ...
-          </p>
+          <p className="py-8 text-center text-sm text-slate-500">Dang tai ho so...</p>
         ) : (
           <p className="py-8 text-center text-sm text-slate-500">
-            Không thể tải hồ sơ
+            Khong the tai ho so
           </p>
         )}
       </Modal>

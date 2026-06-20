@@ -128,9 +128,9 @@ export function useCreateRoomConversation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: chatKeys.conversations() })
     },
-    onError: (error) => {
+    onError: () => {
       toast.error('Không thể mở cuộc trò chuyện', {
-        description: getApiErrorMessage(error, 'Vui lòng đăng nhập bằng tài khoản người thuê.'),
+        description: 'Vui lòng đăng nhập bằng tài khoản người thuê.',
       })
     },
   })

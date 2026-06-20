@@ -4,8 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --exec tsx src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "npm run dev:local",
+    "dev:local": "node scripts/run-dev.mjs local",
+    "dev:production": "node scripts/run-dev.mjs production",
+    "start": "npm run start:local",
+    "start:local": "node scripts/run-app.mjs local",
+    "start:production": "node scripts/run-app.mjs production",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",

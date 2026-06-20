@@ -11,7 +11,6 @@ export const BookingService = {
     tenantId: string,
     identityIds: string[],
     checkInDate: Date,
-    checkOutDate?: Date,
     notes?: string
   ) => {
     // Verify room exists and is AVAILABLE
@@ -65,22 +64,11 @@ export const BookingService = {
       throw new Error("Room is already booked");
     }
 
-    // Calculate total price if checkout date provided
-    let totalPrice: number | undefined;
-    if (checkOutDate) {
-      const days = Math.ceil(
-        (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      totalPrice = room.pricePerMonth * days;
-    }
-
     const booking = await BookingRepository.create({
       roomId,
       tenantId,
       identityIds,
       checkInDate,
-      checkOutDate,
-      totalPrice,
       notes,
       status: BOOKING_STATUS.PENDING,
       isCurrent: true,

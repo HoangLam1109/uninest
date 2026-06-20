@@ -1,4 +1,4 @@
-import dotenv from "dotenv";
+import "./config/env.js";
 import express from "express";
 import cors from "cors";
 import { createServer } from "http";
@@ -22,25 +22,21 @@ import servicePackageRouter from "./routes/service-package.route.js";
 import serviceSubscriptionRouter from "./routes/service-subscription.route.js";
 import payosRouter from "./routes/payos.route.js";
 import connectDB from "./config/database.config.js";
+import {
+  allowedFrontendOrigins,
+  defaultFrontendOrigin,
+  isAllowedFrontendOrigin,
+} from "./config/frontend.config.js";
 import { setupSwagger } from "./swagger.js";
 import { initializeChatSocket } from "./socket.js";
-
-dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
 
-const frontendOrigin = process.env.FRONTEND_URL ?? "http://localhost:5173";
-const allowedOrigins = new Set([
-  frontendOrigin,
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-]);
-
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.has(origin)) {
+      if (!origin || isAllowedFrontendOrigin(origin)) {
         callback(null, true);
         return;
       }
@@ -81,8 +77,9 @@ app.get("/", (_req, res) => {
   res.send("JWT Authentication System is running!");
 });
 
-initializeChatSocket(httpServer, frontendOrigin);
+initializeChatSocket(httpServer, allowedFrontendOrigins);
 
 httpServer.listen(process.env.PORT, () => {
   console.log(`Server is running on http://localhost:${process.env.PORT}`);
+  console.log(`Default frontend origin: ${defaultFrontendOrigin}`);
 });

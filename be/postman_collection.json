@@ -541,7 +541,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"roomId\": \"665a1b2c3d4e5f6a7b8c9d0e\",\n  \"checkInDate\": \"2026-07-01T00:00:00.000Z\",\n  \"checkOutDate\": \"2027-06-30T00:00:00.000Z\",\n  \"notes\": \"Looking forward to moving in!\"\n}"
+              "raw": "{\n  \"roomId\": \"665a1b2c3d4e5f6a7b8c9d0e\",\n  \"checkInDate\": \"2026-07-01T00:00:00.000Z\",\n  \"notes\": \"Looking forward to moving in!\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/api/bookings/", "host": ["{{baseUrl}}"], "path": ["api", "bookings", ""] }
           }
