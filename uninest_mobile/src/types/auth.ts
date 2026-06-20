@@ -4,6 +4,8 @@ export type AuthUser = {
   fullName: string;
   phone?: string;
   role?: string;
+  roleExpiresAt?: string | null;
+  avatarUrl?: string;
 };
 
 export type RegisterPayload = {
@@ -11,6 +13,15 @@ export type RegisterPayload = {
   fullName: string;
   phone: string;
   password: string;
+  otp: string;
+};
+
+export type SendRegisterOtpPayload = {
+  email: string;
+};
+
+export type SendRegisterOtpResponse = {
+  message: string;
 };
 
 export type LoginPayload = {

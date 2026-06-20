@@ -48,6 +48,10 @@ export const bookingApi = {
   reject: (bookingId: string) =>
     api.patch<BookingResponse>(`/bookings/${bookingId}/reject`),
 
+  /** PATCH /api/bookings/:id/cancel */
+  cancel: (bookingId: string) =>
+    api.patch<BookingResponse>(`/bookings/${bookingId}/cancel`),
+
   /** DELETE /api/bookings/:id */
   delete: (bookingId: string) =>
     api.delete<BookingResponse>(`/bookings/${bookingId}`),

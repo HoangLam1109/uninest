@@ -21,6 +21,7 @@ import { authApi } from "@/api/auth.api";
 import { ThemedText } from "@/components/themed-text";
 import { useAuth } from "@/context/auth-context";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { isLandlordRole } from "@/utils/landlord-access";
 
 function validateLogin(email: string, password: string): string | null {
   const trimmedEmail = email.trim().toLowerCase();
@@ -66,7 +67,7 @@ export default function LoginPage() {
       });
 
       const role = response.data.user.role;
-      if (role === "LANDLORD") {
+      if (isLandlordRole(role)) {
         router.replace("/landlord/home_page" as any);
       } else {
         router.replace("/" as any);

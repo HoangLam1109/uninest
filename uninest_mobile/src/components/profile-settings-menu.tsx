@@ -7,6 +7,10 @@ export type ProfileSettingsItemId =
   | "personal"
   | "rooms"
   | "invoices"
+  | "contracts"
+  | "meter"
+  | "identity"
+  | "upgrade"
   | "landlord"
   | "logout";
 
@@ -19,8 +23,12 @@ type MenuItem = {
 
 const MENU_ITEMS: MenuItem[] = [
   { id: "personal", label: "Thông tin cá nhân", icon: "👤" },
-  { id: "rooms", label: "Phòng", icon: "🏠" },
+  { id: "rooms", label: "Đặt phòng", icon: "🏠" },
   { id: "invoices", label: "Hóa đơn", icon: "🧾" },
+  { id: "contracts", label: "Hợp đồng", icon: "📄" },
+  { id: "meter", label: "Chỉ số điện nước", icon: "⚡" },
+  { id: "identity", label: "Xác minh danh tính", icon: "🪪" },
+  { id: "upgrade", label: "Nâng cấp gói", icon: "⭐" },
   { id: "landlord", label: "Làm chủ nhà", icon: "🏢" },
   { id: "logout", label: "Đăng xuất", icon: "↪", danger: true },
 ];
@@ -105,7 +113,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   backdropPress: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(47, 38, 26, 0.45)",
   },
   sheet: {

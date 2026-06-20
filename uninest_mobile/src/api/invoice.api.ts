@@ -1,11 +1,14 @@
 import { api } from "@/lib/api-client";
 import type {
+  CreateInitialReadingPayload,
   CreateInvoicePayload,
   CreateUtilityInvoicePayload,
   InvoiceDetailResponse,
   InvoiceListResponse,
   InvoiceMutationResponse,
   InvoiceResponse,
+  MeterReadingMutationResponse,
+  UpdateInvoiceDetailPayload,
   UpdateInvoicePayload,
   UtilityInvoiceMutationResponse,
 } from "@/types/invoice";
@@ -60,4 +63,30 @@ export const invoiceApi = {
   /** GET /api/invoices/:id/detail */
   getDetail: (id: string) =>
     api.get<InvoiceDetailResponse>(`/invoices/${id}/detail`),
+
+  /** PUT /api/invoices/:id/detail */
+  updateDetail: (id: string, payload: UpdateInvoiceDetailPayload) =>
+    api.put<InvoiceDetailResponse>(`/invoices/${id}/detail`, payload),
+
+  /** POST /api/invoices/initial-reading */
+  createInitialReading: (payload: CreateInitialReadingPayload) =>
+    api.post<MeterReadingMutationResponse>(
+      "/invoices/initial-reading",
+      payload,
+    ),
+
+  /** GET /api/meter-readings/my */
+  getMyMeterReadings: (params?: {
+    meterType?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const query = new URLSearchParams();
+    query.set("page", String(params?.page ?? 1));
+    query.set("limit", String(params?.limit ?? 100));
+    if (params?.meterType) query.set("meterType", params.meterType);
+    return api.get<import("@/types/meter").MeterReadingListResponse>(
+      `/meter-readings/my?${query.toString()}`,
+    );
+  },
 };

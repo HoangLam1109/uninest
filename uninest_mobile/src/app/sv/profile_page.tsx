@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +20,7 @@ import { bookingApi } from "@/api/booking.api";
 import { roomApi } from "@/api/room.api";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { FavoriteHeartButton } from "@/components/favorite-heart-button";
+import { MembershipPlanCard } from "@/components/membership-plan-card";
 import {
   ProfileSettingsMenu,
   type ProfileSettingsItemId,
@@ -28,7 +29,10 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/auth-context";
 import { useFavorites } from "@/context/favorites-context";
+import { useTenantGate } from "@/hooks/use-tenant-gate";
+import type { UpgradeFeatureKey } from "@/constants/upgrade-features";
 import { isLandlordRole } from "@/utils/landlord-access";
+import { getMembershipPlanDisplay } from "@/utils/membership-display";
 import { formatPrice } from "@/utils/room-display";
 import type { AuthUser } from "@/types/auth";
 import type { Booking, BookingRoomRef, BookingStatus } from "@/types/booking";
@@ -86,31 +90,52 @@ function bookingStatusStyle(status: BookingStatus) {
   return styles.statusMuted;
 }
 
+const TENANT_SETTINGS_FEATURES: Partial<
+  Record<ProfileSettingsItemId, UpgradeFeatureKey>
+> = {
+  rooms: "rooms",
+  invoices: "invoices",
+  contracts: "contracts",
+  meter: "meter",
+  identity: "identity",
+};
+
 export default function ProfilePage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { isAuthenticated, user: sessionUser, signOut } = useAuth();
+  const { isAuthenticated, user: sessionUser, signOut, updateUser } = useAuth();
+  const { requireTenant, TenantGatePrompt } = useTenantGate();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { favoriteRooms, refreshFavorites } = useFavorites();
+  const { favoriteRooms } = useFavorites();
 
   const [profileUser, setProfileUser] = useState<AuthUser | null>(sessionUser);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [bookingTotal, setBookingTotal] = useState(0);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingBookings, setLoadingBookings] = useState(true);
+  const hasLoadedOnceRef = useRef(false);
 
   const displayUser = profileUser ?? sessionUser;
+  const membershipPlan = getMembershipPlanDisplay(
+    displayUser?.role,
+    displayUser?.roleExpiresAt,
+  );
   const savedCount = favoriteRooms.length;
   const suggestedCount = 0;
 
   const loadData = useCallback(async () => {
-    setLoadingProfile(true);
-    setLoadingBookings(true);
+    const showLoading = !hasLoadedOnceRef.current;
+    if (showLoading) {
+      setLoadingProfile(true);
+      setLoadingBookings(true);
+    }
+
     try {
       const me = await authApi.getMe();
       setProfileUser(me.data.user);
+      updateUser(me.data.user);
     } catch {
-      setProfileUser(sessionUser);
+      // Giữ dữ liệu profile hiện có khi refresh thất bại
     } finally {
       setLoadingProfile(false);
     }
@@ -124,10 +149,12 @@ export default function ProfilePage() {
       setBookingTotal(0);
     } finally {
       setLoadingBookings(false);
+      hasLoadedOnceRef.current = true;
     }
+  }, [updateUser]);
 
-    void refreshFavorites();
-  }, [refreshFavorites, sessionUser]);
+  const loadDataRef = useRef(loadData);
+  loadDataRef.current = loadData;
 
   useFocusEffect(
     useCallback(() => {
@@ -135,8 +162,8 @@ export default function ProfilePage() {
         router.replace("/sv/login_page" as any);
         return;
       }
-      void loadData();
-    }, [isAuthenticated, loadData, router]),
+      void loadDataRef.current();
+    }, [isAuthenticated, router]),
   );
 
   if (!isAuthenticated) {
@@ -174,13 +201,25 @@ export default function ProfilePage() {
       return;
     }
 
+    const tenantFeature = TENANT_SETTINGS_FEATURES[id];
+    if (tenantFeature && !requireTenant(tenantFeature)) {
+      return;
+    }
+
     const routes: Record<
-      Exclude<ProfileSettingsItemId, "logout" | "landlord">,
+      Exclude<
+        ProfileSettingsItemId,
+        "logout" | "landlord"
+      >,
       string
     > = {
       personal: "/sv/profile_personal_page",
       rooms: "/sv/profile_rooms_page",
       invoices: "/sv/profile_invoices_page",
+      contracts: "/sv/profile_contracts_page",
+      meter: "/sv/profile_meter_readings_page",
+      identity: "/sv/profile_identity_page",
+      upgrade: "/sv/upgrade_package_page",
     };
     router.push(routes[id] as any);
   };
@@ -241,10 +280,27 @@ export default function ProfilePage() {
               </>
             )}
 
-            <View style={styles.aiBadge}>
-              <Text style={styles.aiBadgeText}>GHÉP ĐÔI ĐÃ XÁC THỰC AI</Text>
-            </View>
+            {!loadingProfile ? (
+              <View
+                style={[
+                  styles.planPill,
+                  { backgroundColor: membershipPlan.accent },
+                ]}
+              >
+                <Text style={styles.planPillText}>
+                  {membershipPlan.title.toUpperCase()}
+                </Text>
+              </View>
+            ) : null}
           </View>
+
+          {!loadingProfile ? (
+            <MembershipPlanCard
+              role={displayUser?.role}
+              roleExpiresAt={displayUser?.roleExpiresAt}
+              onPress={() => router.push("/sv/upgrade_package_page" as any)}
+            />
+          ) : null}
 
           <View style={styles.statsRow}>
             <StatCard value={String(bookingTotal)} label="ĐÃ NỘP" />
@@ -296,14 +352,12 @@ export default function ProfilePage() {
             </View>
             <Pressable
               style={styles.updateButton}
-              onPress={() =>
-                Alert.alert(
-                  "Ghép đôi thông minh",
-                  "Cập nhật sở thích ghép phòng sẽ có trong phiên bản tiếp theo.",
-                )
-              }
+              onPress={() => {
+                if (!requireTenant("ai_search")) return;
+                router.push("/sv/ai_search_page" as any);
+              }}
             >
-              <Text style={styles.updateButtonText}>Cập nhật cài đặt</Text>
+              <Text style={styles.updateButtonText}>Mở AI tìm phòng</Text>
             </Pressable>
           </View>
 
@@ -342,6 +396,7 @@ export default function ProfilePage() {
         </ScrollView>
 
         <BottomNavigation activeTab="profile" />
+        <TenantGatePrompt />
       </SafeAreaView>
     </ThemedView>
   );
@@ -575,14 +630,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 18,
   },
-  aiBadge: {
+  planPill: {
     marginTop: 12,
-    backgroundColor: "#F28C1B",
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
-  aiBadgeText: {
+  planPillText: {
     color: "#FFFFFF",
     fontSize: 10,
     fontWeight: "800",

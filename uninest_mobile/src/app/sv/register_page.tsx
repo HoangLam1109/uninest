@@ -27,6 +27,7 @@ type RegisterForm = {
   phone: string;
   password: string;
   confirmPassword: string;
+  otp: string;
   terms: boolean;
 };
 
@@ -50,8 +51,20 @@ function validateRegister(form: RegisterForm): string | null {
   if (form.password !== form.confirmPassword) {
     return "Mật khẩu xác nhận không khớp.";
   }
+  if (!/^\d{6}$/.test(form.otp.trim())) {
+    return "Mã OTP phải gồm 6 chữ số. Nhấn Gửi OTP để nhận mã qua email.";
+  }
   if (!form.terms) {
     return "Bạn cần đồng ý điều khoản sử dụng.";
+  }
+  return null;
+}
+
+function validateEmailForOtp(email: string): string | null {
+  const trimmed = email.trim().toLowerCase();
+  if (!trimmed) return "Vui lòng nhập email trước khi gửi OTP.";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    return "Email không hợp lệ.";
   }
   return null;
 }
@@ -66,8 +79,36 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const [otp, setOtp] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+
+  const handleSendOtp = async () => {
+    const emailError = validateEmailForOtp(email);
+    if (emailError) {
+      Alert.alert("Gửi OTP thất bại", emailError);
+      return;
+    }
+
+    setIsSendingOtp(true);
+    try {
+      const response = await authApi.sendRegisterOtp({
+        email: email.trim().toLowerCase(),
+      });
+      Alert.alert(
+        "Đã gửi OTP",
+        response.message || "Vui lòng kiểm tra hộp thư email của bạn.",
+      );
+    } catch (err) {
+      Alert.alert(
+        "Gửi OTP thất bại",
+        getApiErrorMessage(err, "Không gửi được mã OTP. Kiểm tra email và thử lại."),
+      );
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
 
   const handleRegister = async () => {
     const error = validateRegister({
@@ -76,6 +117,7 @@ export default function RegisterPage() {
       phone,
       password,
       confirmPassword,
+      otp,
       terms: termsAccepted,
     });
 
@@ -91,6 +133,7 @@ export default function RegisterPage() {
         email: email.trim().toLowerCase(),
         phone: phone.trim(),
         password,
+        otp: otp.trim(),
       });
 
       Alert.alert(
@@ -248,6 +291,44 @@ export default function RegisterPage() {
                 </Pressable>
               </View>
 
+              <ThemedText type="smallBold" style={styles.fieldLabel}>
+                Mã OTP
+              </ThemedText>
+              <ThemedText type="small" style={styles.otpHint}>
+                Nhập mã 6 số được gửi đến email
+              </ThemedText>
+              <View style={styles.otpRow}>
+                <View style={[styles.inputBox, styles.otpInputBox]}>
+                  <ThemedText style={styles.inputIcon}>🔢</ThemedText>
+                  <TextInput
+                    placeholder="123456"
+                    placeholderTextColor="#7E8694"
+                    value={otp}
+                    onChangeText={setOtp}
+                    style={styles.input}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    autoComplete="one-time-code"
+                  />
+                </View>
+                <Pressable
+                  style={[
+                    styles.otpButton,
+                    isSendingOtp && styles.primaryButtonDisabled,
+                  ]}
+                  onPress={() => void handleSendOtp()}
+                  disabled={isSendingOtp}
+                >
+                  {isSendingOtp ? (
+                    <ActivityIndicator color="#F28C1B" />
+                  ) : (
+                    <ThemedText type="smallBold" style={styles.otpButtonText}>
+                      Gửi OTP
+                    </ThemedText>
+                  )}
+                </Pressable>
+              </View>
+
               <Pressable
                 style={styles.termsRow}
                 onPress={() => setTermsAccepted((current) => !current)}
@@ -280,7 +361,7 @@ export default function RegisterPage() {
                   isSubmitting && styles.primaryButtonDisabled,
                 ]}
                 onPress={handleRegister}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isSendingOtp}
               >
                 {isSubmitting ? (
                   <ActivityIndicator color="#FFFFFF" />
@@ -403,6 +484,34 @@ const styles = StyleSheet.create({
   eyeIcon: {
     fontSize: 18,
     marginLeft: 10,
+  },
+  otpHint: {
+    color: "#7E8694",
+    marginBottom: 8,
+    marginTop: -4,
+  },
+  otpRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
+  otpInputBox: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  otpButton: {
+    minHeight: 52,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#F28C1B",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  otpButtonText: {
+    color: "#F28C1B",
   },
   termsRow: {
     flexDirection: "row",

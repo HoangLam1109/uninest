@@ -17,6 +17,14 @@ export type BookingRoomRef = {
   landlordId?: string;
 };
 
+export type BookingIdentityRef = {
+  _id: string;
+  fullName?: string;
+  cccdNumber?: string;
+  phone?: string;
+  status?: string;
+};
+
 export type Booking = {
   _id: string;
   roomId: string | BookingRoomRef;
@@ -27,6 +35,7 @@ export type Booking = {
   checkOutDate?: string;
   notes?: string;
   totalPrice?: number;
+  identityIds?: Array<string | BookingIdentityRef>;
 };
 
 export type BookingListResponse = {
@@ -45,6 +54,7 @@ export type CreateBookingPayload = {
   checkInDate: string;
   checkOutDate?: string;
   notes?: string;
+  identityIds?: string[];
 };
 
 export type CreateBookingResponse = {

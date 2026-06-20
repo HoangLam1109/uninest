@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,6 +17,7 @@ import {
 import { bookingApi } from "@/api/booking.api";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { Booking, BookingRoomRef, BookingStatus } from "@/types/booking";
 
 function getRoomTitle(booking: Booking) {
@@ -50,6 +52,7 @@ export default function ProfileRoomsPage() {
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const loadBookings = useCallback(async () => {
     setLoading(true);
@@ -66,6 +69,27 @@ export default function ProfileRoomsPage() {
   useEffect(() => {
     void loadBookings();
   }, [loadBookings]);
+
+  const handleCancel = (booking: Booking) => {
+    if (booking.status !== "PENDING") return;
+    Alert.alert("Hủy đặt phòng", "Bạn có chắc muốn hủy đơn này?", [
+      { text: "Không", style: "cancel" },
+      {
+        text: "Hủy đơn",
+        style: "destructive",
+        onPress: () => {
+          setCancellingId(booking._id);
+          bookingApi
+            .cancel(booking._id)
+            .then(() => loadBookings())
+            .catch((err) =>
+              Alert.alert("Lỗi", getApiErrorMessage(err, "Không hủy được đơn.")),
+            )
+            .finally(() => setCancellingId(null));
+        },
+      },
+    ]);
+  };
 
   return (
     <ThemedView style={styles.screen}>
@@ -123,6 +147,19 @@ export default function ProfileRoomsPage() {
                       {statusLabel(booking.status)}
                     </Text>
                   </View>
+                  {booking.status === "PENDING" ? (
+                    <Pressable
+                      style={styles.cancelButton}
+                      onPress={() => handleCancel(booking)}
+                      disabled={cancellingId === booking._id}
+                    >
+                      {cancellingId === booking._id ? (
+                        <ActivityIndicator color="#D14343" size="small" />
+                      ) : (
+                        <Text style={styles.cancelText}>Hủy đặt phòng</Text>
+                      )}
+                    </Pressable>
+                  ) : null}
                 </Pressable>
               );
             })
@@ -180,5 +217,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     color: "#C47A10",
+  },
+  cancelButton: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: "#FDECEC",
+  },
+  cancelText: {
+    color: "#D14343",
+    fontSize: 12,
+    fontWeight: "700",
   },
 });

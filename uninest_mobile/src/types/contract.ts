@@ -55,10 +55,28 @@ export type CreateContractPayload = {
   endDate?: string;
 };
 
+export type UpdateContractPayload = Partial<
+  Omit<CreateContractPayload, "bookingId">
+>;
+
+export type RenewContractPayload = UpdateContractPayload & {
+  startDate: string;
+};
+
 export type ContractMutationResponse = {
   success: boolean;
   message?: string;
   data: Contract | CreateContractResult;
+};
+
+export type ConfirmContractPayload = {
+  tenantSignatureDataUrl: string;
+};
+
+export type ContractResponse = {
+  success: boolean;
+  message?: string;
+  data: Contract;
 };
 
 export type CreateContractResult = {

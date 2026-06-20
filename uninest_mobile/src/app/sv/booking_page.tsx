@@ -16,12 +16,15 @@ import {
 } from "react-native-safe-area-context";
 
 import { bookingApi } from "@/api/booking.api";
+import { identityApi } from "@/api/identity.api";
 import { roomApi } from "@/api/room.api";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/auth-context";
+import { useTenantGate } from "@/hooks/use-tenant-gate";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { Room } from "@/types/room";
+import type { Identity } from "@/types/identity";
 import { formatPrice, formatRoomLocation, sortRoomImages } from "@/utils/room-display";
 
 const WEEKDAYS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
@@ -80,6 +83,7 @@ export default function BookingPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const { requireTenant, handleTenantApiError, TenantGatePrompt } = useTenantGate();
   const params = useLocalSearchParams<{ roomId?: string; title?: string }>();
   const roomId =
     typeof params.roomId === "string"
@@ -98,6 +102,9 @@ export default function BookingPage() {
   const [selectedDate, setSelectedDate] = useState(getDefaultCheckIn);
   const [termMonths, setTermMonths] = useState<number>(6);
   const [submitting, setSubmitting] = useState(false);
+  const [identities, setIdentities] = useState<Identity[]>([]);
+  const [loadingIdentities, setLoadingIdentities] = useState(true);
+  const [selectedIdentityIds, setSelectedIdentityIds] = useState<string[]>([]);
 
   const today = useMemo(() => startOfDay(new Date()), []);
   const calendarCells = useMemo(() => buildCalendarCells(viewMonth), [viewMonth]);
@@ -135,6 +142,24 @@ export default function BookingPage() {
     }
   }, [roomId, router]);
 
+  const loadIdentities = useCallback(async () => {
+    setLoadingIdentities(true);
+    try {
+      const res = await identityApi.getMy();
+      const verified = (res.data ?? []).filter(
+        (identity) => identity.status === "VERIFIED",
+      );
+      setIdentities(verified);
+      if (verified.length === 1) {
+        setSelectedIdentityIds([String(verified[0]._id)]);
+      }
+    } catch {
+      setIdentities([]);
+    } finally {
+      setLoadingIdentities(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isAuthenticated) {
       router.replace("/sv/login_page" as any);
@@ -147,13 +172,40 @@ export default function BookingPage() {
       return;
     }
     void loadRoom();
-  }, [isAuthenticated, loadRoom, roomId, router]);
+    void loadIdentities();
+  }, [isAuthenticated, loadIdentities, loadRoom, roomId, router]);
+
+  const toggleIdentity = (id: string) => {
+    setSelectedIdentityIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
 
   const handleConfirm = async () => {
     if (!roomId || !room || submitting) return;
+    if (!requireTenant("booking")) return;
 
     if (startOfDay(selectedDate) < today) {
       Alert.alert("Ngày không hợp lệ", "Vui lòng chọn ngày nhận phòng từ hôm nay trở đi.");
+      return;
+    }
+
+    if (selectedIdentityIds.length === 0) {
+      Alert.alert(
+        "Thiếu hồ sơ định danh",
+        identities.length === 0
+          ? "Bạn cần xác minh CCCD trước khi đặt phòng. Vào Hồ sơ → Xác minh danh tính."
+          : "Vui lòng chọn ít nhất một hồ sơ định danh đã xác minh.",
+        identities.length === 0
+          ? [
+              { text: "Để sau", style: "cancel" },
+              {
+                text: "Xác minh ngay",
+                onPress: () => router.push("/sv/profile_identity_page" as any),
+              },
+            ]
+          : [{ text: "OK" }],
+      );
       return;
     }
 
@@ -164,6 +216,7 @@ export default function BookingPage() {
         roomId,
         checkInDate: selectedDate.toISOString(),
         checkOutDate: checkOutDate.toISOString(),
+        identityIds: selectedIdentityIds,
         notes: `Thời hạn thuê ${termMonths} tháng`,
       });
 
@@ -175,10 +228,12 @@ export default function BookingPage() {
         },
       } as any);
     } catch (error) {
-      Alert.alert(
-        "Không đặt được phòng",
-        getApiErrorMessage(error, "Vui lòng thử lại sau."),
-      );
+      if (!handleTenantApiError(error, "booking")) {
+        Alert.alert(
+          "Không đặt được phòng",
+          getApiErrorMessage(error, "Vui lòng thử lại sau."),
+        );
+      }
     } finally {
       setSubmitting(false);
     }
@@ -355,6 +410,71 @@ export default function BookingPage() {
 
               <View style={styles.section}>
                 <ThemedText type="title" style={styles.sectionTitle}>
+                  Hồ sơ định danh
+                </ThemedText>
+                {loadingIdentities ? (
+                  <View style={styles.identityLoading}>
+                    <ActivityIndicator color="#F28C1B" />
+                    <ThemedText type="small" style={styles.identityHint}>
+                      Đang tải hồ sơ...
+                    </ThemedText>
+                  </View>
+                ) : identities.length === 0 ? (
+                  <View style={styles.identityEmptyCard}>
+                    <ThemedText type="small" style={styles.identityHint}>
+                      Bạn chưa có hồ sơ CCCD đã xác minh. Cần xác minh danh tính
+                      trước khi đặt phòng.
+                    </ThemedText>
+                    <Pressable
+                      style={styles.identityLinkButton}
+                      onPress={() =>
+                        router.push("/sv/profile_identity_page" as any)
+                      }
+                    >
+                      <ThemedText type="smallBold" style={styles.identityLinkText}>
+                        Xác minh danh tính →
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View style={styles.identityList}>
+                    {identities.map((identity) => {
+                      const id = String(identity._id);
+                      const selected = selectedIdentityIds.includes(id);
+                      return (
+                        <Pressable
+                          key={id}
+                          style={[
+                            styles.identityCard,
+                            selected && styles.identityCardSelected,
+                          ]}
+                          onPress={() => toggleIdentity(id)}
+                        >
+                          <View
+                            style={[
+                              styles.radio,
+                              selected && styles.radioActive,
+                            ]}
+                          >
+                            {selected ? <View style={styles.radioDot} /> : null}
+                          </View>
+                          <View style={styles.identityMeta}>
+                            <ThemedText type="smallBold" style={styles.identityName}>
+                              {identity.fullName}
+                            </ThemedText>
+                            <ThemedText type="small" style={styles.identitySub}>
+                              CCCD: {identity.cccdNumber}
+                            </ThemedText>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.section}>
+                <ThemedText type="title" style={styles.sectionTitle}>
                   Phương thức thanh toán
                 </ThemedText>
 
@@ -411,9 +531,18 @@ export default function BookingPage() {
               <Pressable
                 style={[
                   styles.confirmButton,
-                  (submitting || !room) && styles.confirmButtonDisabled,
+                  (submitting ||
+                    !room ||
+                    loadingIdentities ||
+                    selectedIdentityIds.length === 0) &&
+                    styles.confirmButtonDisabled,
                 ]}
-                disabled={submitting || !room}
+                disabled={
+                  submitting ||
+                  !room ||
+                  loadingIdentities ||
+                  selectedIdentityIds.length === 0
+                }
                 onPress={() => void handleConfirm()}
               >
                 {submitting ? (
@@ -427,6 +556,7 @@ export default function BookingPage() {
             </View>
           </>
         )}
+        <TenantGatePrompt />
       </SafeAreaView>
     </ThemedView>
   );
@@ -744,6 +874,57 @@ const styles = StyleSheet.create({
   totalValue: {
     color: "#F28C1B",
     fontSize: 20,
+  },
+  identityLoading: {
+    alignItems: "center",
+    paddingVertical: 20,
+    gap: 8,
+  },
+  identityHint: {
+    color: "#8A7B68",
+    lineHeight: 20,
+  },
+  identityEmptyCard: {
+    backgroundColor: "#FFF8EF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#EBCFA6",
+    padding: 14,
+    gap: 12,
+  },
+  identityLinkButton: {
+    alignSelf: "flex-start",
+  },
+  identityLinkText: {
+    color: "#F28C1B",
+  },
+  identityList: {
+    gap: 10,
+  },
+  identityCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E8E1D8",
+    padding: 14,
+  },
+  identityCardSelected: {
+    borderColor: "#F28C1B",
+    backgroundColor: "#FFF9F1",
+  },
+  identityMeta: {
+    flex: 1,
+    gap: 4,
+  },
+  identityName: {
+    color: "#3F2F22",
+    fontSize: 16,
+  },
+  identitySub: {
+    color: "#8E95A3",
   },
   paymentCard: {
     flexDirection: "row",

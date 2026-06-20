@@ -1,7 +1,9 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import * as WebBrowser from "expo-web-browser";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,6 +16,7 @@ import {
 } from "react-native-safe-area-context";
 
 import { invoiceApi } from "@/api/invoice.api";
+import { paymentApi } from "@/api/payment.api";
 import { roomApi } from "@/api/room.api";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -27,7 +30,9 @@ import {
   getLandlordName,
   invoiceStatusLabel,
   invoiceStatusStyle,
+  isInvoiceUnpaid,
 } from "@/utils/invoice-display";
+import { verifyPayOSPayment } from "@/utils/payos-verify";
 
 function LineRow({
   label,
@@ -61,14 +66,26 @@ function amountOrDash(value?: number) {
 export default function ProfileInvoiceDetailPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const invoiceId = typeof id === "string" ? id : Array.isArray(id) ? id[0] : "";
+  const params = useLocalSearchParams<{
+    id: string;
+    result?: string;
+    orderCode?: string;
+  }>();
+  const invoiceId =
+    typeof params.id === "string"
+      ? params.id
+      : Array.isArray(params.id)
+        ? params.id[0]
+        : "";
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
   const [roomTitle, setRoomTitle] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const handledOrdersRef = useRef<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     if (!invoiceId) {
@@ -114,6 +131,82 @@ export default function ProfileInvoiceDetailPage() {
     void load();
   }, [load]);
 
+  const handleVerifyPayment = useCallback(
+    async (orderCode: string, result: "success" | "cancel") => {
+      if (handledOrdersRef.current.has(orderCode)) return;
+
+      setVerifying(true);
+      try {
+        const verifyResult = await verifyPayOSPayment(orderCode, result);
+        handledOrdersRef.current.add(orderCode);
+
+        if (verifyResult === "cancelled") {
+          Alert.alert("Đã hủy", "Thanh toán đã bị hủy.");
+          return;
+        }
+
+        if (verifyResult === "pending") {
+          Alert.alert(
+            "Đang xử lý",
+            "Thanh toán đang được xác minh. Thử lại sau vài phút.",
+          );
+          return;
+        }
+
+        await load();
+        Alert.alert(
+          "Thanh toán thành công",
+          "Hóa đơn đã được thanh toán thành công.",
+        );
+      } catch (err) {
+        Alert.alert(
+          "Lỗi",
+          getApiErrorMessage(err, "Không xác minh được thanh toán."),
+        );
+      } finally {
+        setVerifying(false);
+      }
+    },
+    [load],
+  );
+
+  useEffect(() => {
+    const orderCode = params.orderCode ? String(params.orderCode) : "";
+    if (!orderCode) return;
+
+    void handleVerifyPayment(
+      orderCode,
+      params.result === "cancel" ? "cancel" : "success",
+    );
+  }, [params.orderCode, params.result, handleVerifyPayment]);
+
+  const handlePay = async () => {
+    if (!invoice || !isInvoiceUnpaid(invoice.status)) return;
+
+    setPaying(true);
+    try {
+      const res = await paymentApi.payInvoice(invoice._id);
+      const checkoutUrl = res.data.checkoutUrl;
+      const orderCode = String(res.data.orderCode);
+      if (!checkoutUrl) {
+        throw new Error("Không nhận được link thanh toán.");
+      }
+
+      await WebBrowser.openBrowserAsync(checkoutUrl);
+
+      if (!handledOrdersRef.current.has(orderCode)) {
+        await handleVerifyPayment(orderCode, "success");
+      }
+    } catch (err) {
+      Alert.alert(
+        "Lỗi",
+        getApiErrorMessage(err, "Không tạo được thanh toán."),
+      );
+    } finally {
+      setPaying(false);
+    }
+  };
+
   const statusStyle = invoice
     ? invoiceStatusStyle(invoice.status)
     : invoiceStatusStyle("DRAFT");
@@ -131,9 +224,14 @@ export default function ProfileInvoiceDetailPage() {
           <View style={styles.iconButton} />
         </View>
 
-        {loading ? (
+        {loading || verifying ? (
           <View style={styles.centerBox}>
             <ActivityIndicator size="large" color="#F28C1B" />
+            {verifying ? (
+              <ThemedText type="small" style={styles.hintText}>
+                Đang xác minh thanh toán...
+              </ThemedText>
+            ) : null}
           </View>
         ) : error || !invoice ? (
           <View style={styles.centerBox}>
@@ -147,11 +245,14 @@ export default function ProfileInvoiceDetailPage() {
             </Pressable>
           </View>
         ) : (
+          <>
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
               padding: 16,
-              paddingBottom: 32 + insets.bottom,
+              paddingBottom: isInvoiceUnpaid(invoice.status)
+                ? 100 + insets.bottom
+                : 32 + insets.bottom,
             }}
           >
             <View style={styles.heroCard}>
@@ -273,12 +374,42 @@ export default function ProfileInvoiceDetailPage() {
               <View style={styles.payHintCard}>
                 <Text style={styles.payHintIcon}>💳</Text>
                 <ThemedText type="small" style={styles.payHintText}>
-                  Vui lòng thanh toán trước hạn. Liên hệ chủ nhà nếu cần xác
-                  nhận đã chuyển khoản.
+                  Bấm &quot;Thanh toán PayOS&quot; bên dưới để thanh toán trực
+                  tuyến qua PayOS.
                 </ThemedText>
               </View>
             ) : null}
           </ScrollView>
+
+          {isInvoiceUnpaid(invoice.status) ? (
+            <View
+              style={[
+                styles.payFooter,
+                { paddingBottom: Math.max(insets.bottom, 12) },
+              ]}
+            >
+              <Pressable
+                style={[
+                  styles.payButton,
+                  (paying || verifying) && styles.payButtonDisabled,
+                ]}
+                disabled={paying || verifying}
+                onPress={() => void handlePay()}
+              >
+                {paying ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Text style={styles.payButtonText}>Thanh toán PayOS</Text>
+                    <Text style={styles.payButtonAmount}>
+                      {formatPrice(invoice.totalAmount)}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          ) : null}
+          </>
         )}
       </SafeAreaView>
     </ThemedView>
@@ -330,6 +461,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   errorText: { color: "#D14343", textAlign: "center" },
+  hintText: { color: "#8A7B68", marginTop: 8 },
   retryButton: {
     backgroundColor: "#F28C1B",
     borderRadius: 10,
@@ -418,4 +550,37 @@ const styles = StyleSheet.create({
   },
   payHintIcon: { fontSize: 20 },
   payHintText: { flex: 1, color: "#7A6B58", lineHeight: 20 },
+  payFooter: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    backgroundColor: "#F5EFE6",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(63,47,34,0.08)",
+  },
+  payButton: {
+    backgroundColor: "#F28C1B",
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  payButtonDisabled: {
+    opacity: 0.7,
+  },
+  payButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  payButtonAmount: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
+  },
 });

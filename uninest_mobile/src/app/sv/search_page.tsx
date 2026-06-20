@@ -22,6 +22,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/auth-context";
 import { useFavorites } from "@/context/favorites-context";
+import { useTenantGate } from "@/hooks/use-tenant-gate";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { Room } from "@/types/room";
 
@@ -65,6 +66,7 @@ export default function SearchPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const { requireTenant, TenantGatePrompt } = useTenantGate();
   const { refreshFavorites } = useFavorites();
   const [keyword, setKeyword] = useState("");
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -121,8 +123,14 @@ export default function SearchPage() {
               Tìm UniNest của bạn
             </ThemedText>
 
-            <Pressable style={styles.iconButton}>
-              <Text style={styles.iconText}>🔔</Text>
+            <Pressable
+              style={styles.iconButton}
+              onPress={() => {
+                if (!requireTenant("ai_search", { requireAuth: true })) return;
+                router.push("/sv/ai_search_page" as any);
+              }}
+            >
+              <Text style={styles.iconText}>✨</Text>
             </Pressable>
           </View>
         </View>
@@ -226,6 +234,7 @@ export default function SearchPage() {
         </ScrollView>
 
         {isAuthenticated ? <BottomNavigation activeTab="explore" /> : null}
+        <TenantGatePrompt />
       </SafeAreaView>
     </ThemedView>
   );

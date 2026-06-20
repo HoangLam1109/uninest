@@ -18,6 +18,12 @@ function resolveApiBaseUrl(): string {
   return fromEnv || "http://localhost:3000/api";
 }
 
+function resolveSocketUrl(): string {
+  const apiBase = resolveApiBaseUrl();
+  return apiBase.replace(/\/api\/?$/, "");
+}
+
 export const env = {
   apiBaseUrl: resolveApiBaseUrl(),
+  socketUrl: resolveSocketUrl(),
 } as const;
