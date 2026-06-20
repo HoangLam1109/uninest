@@ -1,6 +1,5 @@
 import { api } from '@/lib/axios'
 import type {
-  ServicePackageResponse,
   ServicePackageListResponse,
 } from '../types/service-package.type'
 
