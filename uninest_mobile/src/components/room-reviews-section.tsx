@@ -1,6 +1,9 @@
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useState } from "react";
 
+import { reviewApi } from "@/api/review.api";
 import { ThemedText } from "@/components/themed-text";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { Review, ReviewStatistics } from "@/types/review";
 
 function getReviewerName(review: Review) {
@@ -64,7 +67,26 @@ function RatingBars({
   );
 }
 
-function ReviewCard({ review }: { review: Review }) {
+function ReviewCard({
+  review,
+  canReply,
+  isReplying,
+  onSubmitReply,
+}: {
+  review: Review;
+  canReply?: boolean;
+  isReplying?: boolean;
+  onSubmitReply?: (reply: string) => Promise<void>;
+}) {
+  const [reply, setReply] = useState("");
+
+  const handleReply = async () => {
+    const trimmed = reply.trim();
+    if (!trimmed || !onSubmitReply) return;
+    await onSubmitReply(trimmed);
+    setReply("");
+  };
+
   return (
     <View style={styles.reviewCard}>
       <View style={styles.reviewHeader}>
@@ -99,24 +121,85 @@ function ReviewCard({ review }: { review: Review }) {
             {review.landlordReply}
           </ThemedText>
         </View>
+      ) : canReply ? (
+        <View style={styles.replyForm}>
+          <TextInput
+            value={reply}
+            onChangeText={setReply}
+            placeholder="Phản hồi đánh giá..."
+            placeholderTextColor="#A89888"
+            style={styles.replyInput}
+            multiline
+            maxLength={1000}
+          />
+          <Pressable
+            style={[
+              styles.replySubmit,
+              (!reply.trim() || isReplying) && styles.replySubmitDisabled,
+            ]}
+            onPress={() => void handleReply()}
+            disabled={!reply.trim() || isReplying}
+          >
+            {isReplying ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.replySubmitText}>Trả lời</Text>
+            )}
+          </Pressable>
+        </View>
       ) : null}
     </View>
   );
 }
 
 type RoomReviewsSectionProps = {
+  roomId?: string;
   reviews: Review[];
   statistics: ReviewStatistics | null;
   isLoading?: boolean;
+  canReview?: boolean;
+  canReply?: boolean;
+  onReviewSubmitted?: () => void;
+  onReplySubmitted?: () => void;
 };
 
 export function RoomReviewsSection({
+  roomId,
   reviews,
   statistics,
   isLoading = false,
+  canReview = false,
+  canReply = false,
+  onReviewSubmitted,
+  onReplySubmitted,
 }: RoomReviewsSectionProps) {
   const count = statistics?.reviewCount ?? reviews.length;
   const average = statistics?.averageRating ?? 0;
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [replyingReviewId, setReplyingReviewId] = useState<string | null>(null);
+
+  const handleSubmitReview = async () => {
+    if (!roomId) return;
+    const trimmed = comment.trim();
+    if (trimmed.length < 10) {
+      Alert.alert("Lỗi", "Nội dung đánh giá cần ít nhất 10 ký tự.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await reviewApi.create({ roomId, rating, comment: trimmed });
+      setComment("");
+      setRating(5);
+      Alert.alert("Thành công", "Đánh giá đã được gửi.");
+      onReviewSubmitted?.();
+    } catch (err) {
+      Alert.alert("Lỗi", getApiErrorMessage(err, "Không gửi được đánh giá."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <View style={styles.section}>
@@ -182,8 +265,63 @@ export function RoomReviewsSection({
             Bình luận gần đây
           </ThemedText>
           {reviews.map((review) => (
-            <ReviewCard key={review._id} review={review} />
+            <ReviewCard
+              key={review._id}
+              review={review}
+              canReply={canReply}
+              isReplying={replyingReviewId === review._id}
+              onSubmitReply={async (reply) => {
+                setReplyingReviewId(review._id);
+                try {
+                  await reviewApi.reply(review._id, { reply });
+                  Alert.alert("Thành công", "Đã gửi phản hồi.");
+                  onReplySubmitted?.();
+                } catch (err) {
+                  Alert.alert("Lỗi", getApiErrorMessage(err, "Không gửi được phản hồi."));
+                } finally {
+                  setReplyingReviewId(null);
+                }
+              }}
+            />
           ))}
+        </View>
+      ) : null}
+
+      {!isLoading && canReview && roomId ? (
+        <View style={styles.formCard}>
+          <ThemedText type="smallBold" style={styles.formTitle}>
+            Viết đánh giá
+          </ThemedText>
+          <View style={styles.starPicker}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Pressable key={star} onPress={() => setRating(star)}>
+                <Text style={[styles.starPick, star <= rating && styles.starPickActive]}>
+                  ★
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <TextInput
+            value={comment}
+            onChangeText={setComment}
+            placeholder="Chia sẻ trải nghiệm của bạn..."
+            placeholderTextColor="#A89888"
+            style={styles.commentInput}
+            multiline
+          />
+          <Pressable
+            style={styles.submitButton}
+            onPress={() => void handleSubmitReview()}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <ThemedText type="smallBold" style={styles.submitText}>
+                Gửi đánh giá
+              </ThemedText>
+            )}
+          </Pressable>
         </View>
       ) : null}
     </View>
@@ -404,4 +542,64 @@ const styles = StyleSheet.create({
     color: "#5A4938",
     lineHeight: 18,
   },
+  replyForm: {
+    marginTop: 10,
+    gap: 8,
+  },
+  replyInput: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E8E1D8",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 72,
+    color: "#2F261A",
+    textAlignVertical: "top",
+  },
+  replySubmit: {
+    alignSelf: "flex-end",
+    backgroundColor: "#2F261A",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  replySubmitDisabled: {
+    opacity: 0.6,
+  },
+  replySubmitText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  formCard: {
+    marginTop: 12,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#E8E0D5",
+    gap: 10,
+  },
+  formTitle: { color: "#3F2F22" },
+  starPicker: { flexDirection: "row", gap: 6 },
+  starPick: { fontSize: 28, color: "#D4C4B0" },
+  starPickActive: { color: "#F28C1B" },
+  commentInput: {
+    minHeight: 90,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E8E0D5",
+    padding: 12,
+    color: "#2F261A",
+    textAlignVertical: "top",
+    backgroundColor: "#FAF7F2",
+  },
+  submitButton: {
+    backgroundColor: "#F28C1B",
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  submitText: { color: "#FFFFFF" },
 });

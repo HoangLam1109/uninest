@@ -1,67 +1,31 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import {
-  BadgeCheck,
-  Building2,
   Check,
   Crown,
-  Home,
-  KeyRound,
   ShieldCheck,
   Sparkles,
   X,
+  Loader2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
-import { USER_ROLES } from '@/constants/roles'
 import { paths } from '@/config/constants'
 import { useAuth } from '@/hooks/use-auth'
-import { cn } from '@/lib/utils'
-import { useRoleUpgradePayment } from '../hooks/use-role-upgrade-payment'
-import type { RoleUpgradeTarget } from '../types/payment.type'
+import { servicePackageApi } from '../api/service-package.api'
+import { serviceSubscriptionApi } from '../api/service-subscription.api'
+import type { ServicePackage } from '../types/service-package.type'
 
-const packages: Array<{
-  role: RoleUpgradeTarget
-  title: string
-  eyebrow: string
-  price: string
-  icon: typeof Home
-  tone: 'light' | 'warm'
-  features: string[]
-}> = [
-  {
-    role: USER_ROLES.TENANT,
-    title: 'Gói Tenant',
-    eyebrow: 'Dành cho người thuê',
-    price: '30.000đ',
-    icon: KeyRound,
-    tone: 'light',
-    features: [
-      'Có hiệu lực trong 1 tháng',
-      'Đặt phòng và theo dõi lịch hẹn',
-      'Quản lý hợp đồng thuê',
-      'Nhận và thanh toán hóa đơn',
-      'Lưu phòng yêu thích',
-    ],
-  },
-  {
-    role: USER_ROLES.LANDLORD,
-    title: 'Gói Landlord',
-    eyebrow: 'Dành cho chủ nhà',
-    price: '99.000đ',
-    icon: Building2,
-    tone: 'warm',
-    features: [
-      'Có hiệu lực trong 1 tháng',
-      'Đăng và quản lý phòng cho thuê',
-      'Duyệt yêu cầu đặt phòng',
-      'Tạo hợp đồng và hóa đơn',
-      'Theo dõi khách thuê và doanh thu',
-    ],
-  },
-]
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(value)
+}
 
 export function UpgradePackageButton() {
   const [open, setOpen] = useState(false)
@@ -91,25 +55,18 @@ function UpgradePackageModal({
   open: boolean
   onClose: () => void
 }) {
-  const navigate = useNavigate()
-  const { user, isLoggedIn } = useAuth()
-  const roleUpgradePayment = useRoleUpgradePayment()
+  const { isLoggedIn } = useAuth()
 
-  function handleUpgrade(targetRole: RoleUpgradeTarget) {
-    if (!isLoggedIn) {
-      toast.info('Vui lòng đăng nhập để nâng cấp gói')
-      navigate(paths.login)
-      onClose()
-      return
-    }
+  const packagesQuery = useQuery({
+    queryKey: ['active-service-packages'],
+    queryFn: async () => {
+      const { data } = await servicePackageApi.listActive({ limit: 50 })
+      return data.data
+    },
+    enabled: open,
+  })
 
-    if (user?.role && user.role !== USER_ROLES.GUEST) {
-      toast.info('Tài khoản của bạn đã được nâng cấp')
-      return
-    }
-
-    roleUpgradePayment.mutate({ targetRole })
-  }
+  const servicePackages = packagesQuery.data ?? []
 
   return (
     <Modal
@@ -136,118 +93,130 @@ function UpgradePackageModal({
         </button>
       </div>
 
-      <div className="grid gap-4 p-4 md:grid-cols-2 sm:p-6">
-        {packages.map((pkg) => (
-          <UpgradePackageCard
-            key={pkg.role}
-            packageInfo={pkg}
-            loading={roleUpgradePayment.isPending}
-            onUpgrade={() => handleUpgrade(pkg.role)}
-          />
-        ))}
-      </div>
+      {packagesQuery.isLoading ? (
+        <div className="flex min-h-40 items-center justify-center gap-2 text-sm font-semibold text-slate-500">
+          <Loader2 className="size-4 animate-spin text-primary" />
+          Đang tải gói dịch vụ...
+        </div>
+      ) : (
+        <div className="grid gap-4 p-4 md:grid-cols-2 sm:p-6">
+          {servicePackages.map((pkg) => (
+            <ServicePackageCard
+              key={pkg._id}
+              packageInfo={pkg}
+              isLoggedIn={isLoggedIn}
+              onClose={onClose}
+            />
+          ))}
+        </div>
+      )}
     </Modal>
   )
 }
 
-function UpgradePackageCard({
+function ServicePackageCard({
   packageInfo,
-  loading,
-  onUpgrade,
+  isLoggedIn,
+  onClose,
 }: {
-  packageInfo: (typeof packages)[number]
-  loading: boolean
-  onUpgrade: () => void
+  packageInfo: ServicePackage
+  isLoggedIn: boolean
+  onClose: () => void
 }) {
-  const Icon = packageInfo.icon
+  const navigate = useNavigate()
+  const [subscribing, setSubscribing] = useState(false)
+
+  const features = packageInfo.features
+    ? Object.values(packageInfo.features)
+    : ['Truy cập đầy đủ tính năng của gói']
+
+  async function handleSubscribe() {
+    if (!isLoggedIn) {
+      toast.info('Vui lòng đăng nhập để đăng ký gói')
+      navigate(paths.login)
+      onClose()
+      return
+    }
+
+    setSubscribing(true)
+    try {
+      const { data } = await serviceSubscriptionApi.subscribe(packageInfo._id, {
+        method: 'PAYOS',
+      })
+      if (data.data?.checkoutUrl) {
+        toast.success('Đang chuyển sang PayOS để hoàn tất thanh toán...')
+        window.location.assign(data.data.checkoutUrl)
+      } else {
+        toast.success('Đăng ký gói thành công!')
+        onClose()
+      }
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message || 'Không thể đăng ký gói. Vui lòng thử lại.'
+      toast.error(message)
+    } finally {
+      setSubscribing(false)
+    }
+  }
 
   return (
-    <Card
-      className={cn(
-        'min-w-0 border-primary/10 shadow-none',
-        packageInfo.tone === 'warm'
-          ? 'bg-[#2d241a] text-white'
-          : 'bg-white text-foreground',
-      )}
-    >
+    <Card className="min-w-0 border-primary/10 bg-[#2d241a] text-white shadow-none">
       <CardContent className="flex h-full min-w-0 flex-col gap-5 p-4 sm:p-6">
         <div className="flex items-start justify-between gap-4">
-          <div
-            className={cn(
-              'flex size-12 items-center justify-center rounded-xl',
-              packageInfo.tone === 'warm'
-                ? 'bg-primary text-white'
-                : 'bg-primary/10 text-primary',
-            )}
-          >
-            <Icon className="size-6" />
+          <div className="flex size-12 items-center justify-center rounded-xl bg-primary text-white">
+            <Crown className="size-6" />
           </div>
-          <div className="shrink-0 rounded-full bg-primary/10 px-3 py-1 text-sm font-black text-primary">
-            {packageInfo.price}
+          <div className="shrink-0 rounded-full bg-white/10 px-3 py-1 text-sm font-black text-primary">
+            {formatCurrency(packageInfo.price)}
           </div>
         </div>
 
         <div className="min-w-0">
-          <p
-            className={cn(
-              'text-xs font-bold uppercase tracking-[0.12em]',
-              packageInfo.tone === 'warm' ? 'text-white/60' : 'text-muted-foreground',
-            )}
-          >
-            {packageInfo.eyebrow}
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-white/60">
+            {packageInfo.durationDays} ngày
           </p>
-          <h3 className="mt-2 text-2xl font-black leading-tight">{packageInfo.title}</h3>
+          <h3 className="mt-2 text-2xl font-black leading-tight">{packageInfo.name}</h3>
+          {packageInfo.description && (
+            <p className="mt-2 text-sm leading-relaxed text-white/70">
+              {packageInfo.description}
+            </p>
+          )}
         </div>
 
         <ul className="space-y-3 text-sm">
-          {packageInfo.features.map((feature) => (
+          {features.map((feature) => (
             <li key={feature} className="flex gap-2">
-              <span
-                className={cn(
-                  'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full',
-                  packageInfo.tone === 'warm'
-                    ? 'bg-white/10 text-primary'
-                    : 'bg-primary/10 text-primary',
-                )}
-              >
+              <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-primary">
                 <Check className="size-3.5" strokeWidth={3} />
               </span>
-              <span
-                className={cn(
-                  'leading-relaxed',
-                  packageInfo.tone === 'warm' ? 'text-white/80' : 'text-muted-foreground',
-                )}
-              >
+              <span className="leading-relaxed text-white/80">
                 {feature}
               </span>
             </li>
           ))}
         </ul>
 
+        {packageInfo.maxRooms && (
+          <p className="text-xs font-semibold text-white/60">
+            Tối đa {packageInfo.maxRooms} phòng
+          </p>
+        )}
+
         <div className="mt-auto space-y-3 pt-2">
-          <div
-            className={cn(
-              'flex items-center gap-2 text-xs font-semibold',
-              packageInfo.tone === 'warm' ? 'text-white/70' : 'text-muted-foreground',
-            )}
-          >
-            {packageInfo.role === USER_ROLES.LANDLORD ? (
-              <ShieldCheck className="size-4 text-primary" />
-            ) : (
-              <BadgeCheck className="size-4 text-primary" />
-            )}
+          <div className="flex items-center gap-2 text-xs font-semibold text-white/70">
+            <ShieldCheck className="size-4 text-primary" />
             Thanh toán qua PayOS
           </div>
           <Button
             type="button"
             size="lg"
-            variant={packageInfo.tone === 'warm' ? 'default' : 'dark'}
-            className="w-full"
-            disabled={loading}
-            onClick={onUpgrade}
+            variant="default"
+            className="w-full transition-opacity hover:opacity-90 active:opacity-80"
+            disabled={subscribing}
+            onClick={handleSubscribe}
           >
             <Sparkles className="size-4" />
-            {loading ? 'Đang tạo thanh toán...' : 'Thanh toán gói'}
+            {subscribing ? 'Đang tạo thanh toán...' : 'Đăng ký gói'}
           </Button>
         </div>
       </CardContent>

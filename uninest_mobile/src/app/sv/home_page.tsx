@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
   Image,
   Platform,
@@ -7,6 +8,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
+  Pressable,
 } from "react-native";
 import {
   SafeAreaView,
@@ -19,12 +22,37 @@ import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { useTheme } from "@/hooks/use-theme";
+import { roomApi } from "@/api/room.api";
+import type { Room } from "@/types/room";
+import { formatPrice, formatRoomLocation } from "@/utils/room-display";
 
 export default function HomePage() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const [featuredRooms, setFeaturedRooms] = useState<Room[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadFeatured = async () => {
+      setLoadingRooms(true);
+      try {
+        const res = await roomApi.list({ page: 1, limit: 4 });
+        if (!cancelled) setFeaturedRooms(res.data ?? []);
+      } catch {
+        if (!cancelled) setFeaturedRooms([]);
+      } finally {
+        if (!cancelled) setLoadingRooms(false);
+      }
+    };
+    void loadFeatured();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const goToLogin = () => {
     if (isAuthenticated) {
       router.push("/sv/search_page" as any);
@@ -217,73 +245,56 @@ export default function HomePage() {
             </ThemedText>
 
             <View style={styles.listingsContainer}>
-              <View style={styles.listingCard}>
-                <Image
-                  source={require("@/assets/images/tutorial-web.png")}
-                  style={styles.listingImage}
-                />
-                <View style={styles.listingBody}>
-                  <ThemedText type="smallBold" style={styles.listingTitle}>
-                    Căn hộ The Scholar - Quận 1
-                  </ThemedText>
-                  <View style={styles.priceRow}>
-                    <ThemedText style={styles.price}>15.000.000</ThemedText>
-                    <ThemedText type="small" style={{ marginLeft: 6 }}>
-                      /tháng
-                    </ThemedText>
-                  </View>
-                  <ThemedText type="small" style={styles.listingLocation}>
-                    5 phút đi bộ đến ĐH KHXH&NV
-                  </ThemedText>
-
-                  <View style={styles.metaRow}>
-                    <ThemedText type="small">1 PN</ThemedText>
-                    <ThemedText type="small" style={styles.metaItem}>
-                      1 PT
-                    </ThemedText>
-                    <ThemedText type="small" style={styles.metaItem}>
-                      WiFi miễn phí
-                    </ThemedText>
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.listingCard}>
-                <Image
-                  source={require("@/assets/images/tutorial-web.png")}
-                  style={styles.listingImage}
-                />
-                <View style={styles.listingBody}>
-                  <ThemedText type="smallBold" style={styles.listingTitle}>
-                    Khu tập thể Greenfield - Thủ Đức
-                  </ThemedText>
-                  <View style={styles.priceRow}>
-                    <ThemedText style={styles.price}>8.500.000</ThemedText>
-                    <ThemedText type="small" style={{ marginLeft: 6 }}>
-                      /tháng
-                    </ThemedText>
-                  </View>
-                  <ThemedText type="small" style={styles.listingLocation}>
-                    10 phút xe buýt đến ĐH Bách Khoa
-                  </ThemedText>
-
-                  <View style={styles.metaRow}>
-                    <ThemedText type="small">Ở chung</ThemedText>
-                    <ThemedText type="small" style={styles.metaItem}>
-                      Bếp chung
-                    </ThemedText>
-                    <ThemedText type="small" style={styles.metaItem}>
-                      Giặt ủi
-                    </ThemedText>
-                  </View>
-                </View>
-              </View>
+              {loadingRooms ? (
+                <ActivityIndicator color="#F28C1B" style={{ marginVertical: 16 }} />
+              ) : featuredRooms.length === 0 ? (
+                <ThemedText type="small" style={styles.listingsSubtitle}>
+                  Chưa có phòng nào. Hãy khám phá thêm sau.
+                </ThemedText>
+              ) : (
+                featuredRooms.map((room) => (
+                  <Pressable
+                    key={room._id}
+                    style={styles.listingCard}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/sv/detail_page",
+                        params: { id: String(room._id) },
+                      } as any)
+                    }
+                  >
+                    <Image
+                      source={require("@/assets/images/tutorial-web.png")}
+                      style={styles.listingImage}
+                    />
+                    <View style={styles.listingBody}>
+                      <ThemedText type="smallBold" style={styles.listingTitle}>
+                        {room.title}
+                      </ThemedText>
+                      <View style={styles.priceRow}>
+                        <ThemedText style={styles.price}>
+                          {formatPrice(room.pricePerMonth)}
+                        </ThemedText>
+                        <ThemedText type="small" style={{ marginLeft: 6 }}>
+                          /tháng
+                        </ThemedText>
+                      </View>
+                      <ThemedText type="small" style={styles.listingLocation}>
+                        {formatRoomLocation(room)}
+                      </ThemedText>
+                    </View>
+                  </Pressable>
+                ))
+              )}
             </View>
           </View>
 
-          <TouchableOpacity style={styles.viewAllLink}>
+          <TouchableOpacity
+            style={styles.viewAllLink}
+            onPress={() => router.push("/sv/search_page" as any)}
+          >
             <ThemedText type="smallBold" style={styles.viewAllText}>
-              Xem tất cả hơn 2.400 tin đăng →
+              Xem tất cả tin đăng →
             </ThemedText>
           </TouchableOpacity>
 

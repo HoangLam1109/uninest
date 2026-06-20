@@ -19,9 +19,10 @@ import { bookingApi } from "@/api/booking.api";
 import { contractApi } from "@/api/contract.api";
 import { roomApi } from "@/api/room.api";
 import { LandlordBottomNavigation } from "@/components/landlord/bottom-navigation";
+import { IdentityDetailModal } from "@/components/identity-detail-modal";
 import { ThemedText } from "@/components/themed-text";
 import { getApiErrorMessage } from "@/lib/api-error";
-import type { Booking, BookingStatus } from "@/types/booking";
+import type { Booking, BookingIdentityRef, BookingStatus } from "@/types/booking";
 import type { Contract } from "@/types/contract";
 import type { LandlordTenant } from "@/types/tenant";
 import {
@@ -73,6 +74,7 @@ export default function LandlordTenantsPage() {
     "PENDING",
   );
   const [actionTargetId, setActionTargetId] = useState<string | null>(null);
+  const [viewingIdentityId, setViewingIdentityId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -436,6 +438,7 @@ export default function LandlordTenantsPage() {
                     onCreateContract={() => handleCreateContract(booking)}
                     onActivateContract={handleActivateContract}
                     onDelete={() => handleDeleteBooking(booking)}
+                    onViewIdentity={setViewingIdentityId}
                   />
                 ))
               )}
@@ -461,6 +464,12 @@ export default function LandlordTenantsPage() {
 
         <LandlordBottomNavigation activeTab="tenants" />
       </SafeAreaView>
+
+      <IdentityDetailModal
+        visible={Boolean(viewingIdentityId)}
+        identityId={viewingIdentityId}
+        onClose={() => setViewingIdentityId(null)}
+      />
     </View>
   );
 }
@@ -506,6 +515,21 @@ function EmptyCard({
   );
 }
 
+function getBookingIdentityItems(booking: Booking) {
+  return (booking.identityIds ?? []).map((item, index) => {
+    if (typeof item === "string") {
+      return { id: item, name: `Người ${index + 1}`, cccd: "", phone: "" };
+    }
+    const identity = item as BookingIdentityRef;
+    return {
+      id: identity._id,
+      name: identity.fullName ?? `Người ${index + 1}`,
+      cccd: identity.cccdNumber ?? "",
+      phone: identity.phone ?? "",
+    };
+  });
+}
+
 function BookingCard({
   booking,
   contract,
@@ -515,6 +539,7 @@ function BookingCard({
   onCreateContract,
   onActivateContract,
   onDelete,
+  onViewIdentity,
 }: {
   booking: Booking;
   contract?: Contract;
@@ -524,9 +549,11 @@ function BookingCard({
   onCreateContract: () => void;
   onActivateContract: (contract: Contract) => void;
   onDelete: () => void;
+  onViewIdentity: (identityId: string) => void;
 }) {
   const tenant = getBookingTenant(booking);
   const room = getBookingRoom(booking);
+  const identities = getBookingIdentityItems(booking);
 
   return (
     <View style={styles.card}>
@@ -575,6 +602,36 @@ function BookingCard({
         />
         {booking.notes ? (
           <InfoRow label="Ghi chú" value={booking.notes} />
+        ) : null}
+        {identities.length > 0 ? (
+          <View style={styles.identitySection}>
+            <ThemedText type="smallBold" style={styles.identityTitle}>
+              Hồ sơ định danh ({identities.length})
+            </ThemedText>
+            {identities.map((identity) => (
+              <View key={identity.id} style={styles.identityRow}>
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="smallBold" style={styles.identityName}>
+                    {identity.name}
+                  </ThemedText>
+                  {identity.cccd ? (
+                    <ThemedText type="small" style={styles.identityMeta}>
+                      CCCD: {identity.cccd}
+                      {identity.phone ? ` • ${identity.phone}` : ""}
+                    </ThemedText>
+                  ) : null}
+                </View>
+                <Pressable
+                  style={styles.viewIdentityBtn}
+                  onPress={() => onViewIdentity(identity.id)}
+                >
+                  <ThemedText type="smallBold" style={styles.viewIdentityText}>
+                    Xem
+                  </ThemedText>
+                </Pressable>
+              </View>
+            ))}
+          </View>
         ) : null}
         {contract ? (
           <View style={styles.contractRow}>
@@ -970,5 +1027,39 @@ const styles = StyleSheet.create({
   },
   actionBtnApproveText: {
     color: "#FFFFFF",
+  },
+  identitySection: {
+    marginTop: 4,
+    gap: 8,
+  },
+  identityTitle: {
+    color: "#1F2940",
+  },
+  identityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#EDE8DF",
+  },
+  identityName: {
+    color: "#1F2940",
+  },
+  identityMeta: {
+    color: "#9AA3B2",
+    marginTop: 2,
+  },
+  viewIdentityBtn: {
+    backgroundColor: "#FFF4E8",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  viewIdentityText: {
+    color: "#E68A2E",
+    fontSize: 12,
   },
 });

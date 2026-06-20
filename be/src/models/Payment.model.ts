@@ -118,9 +118,7 @@ PaymentSchema.index(
   { bookingId: 1, payerId: 1 },
   {
     unique: true,
-    partialFilterExpression: {
-      bookingId: { $type: "objectId" },
-    },
+    sparse: true,
   },
 );
 PaymentSchema.index({ receiverId: 1, status: 1 });
