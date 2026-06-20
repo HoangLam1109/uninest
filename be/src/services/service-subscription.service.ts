@@ -1,8 +1,10 @@
 import { ServiceSubscriptionRepository } from "../repositories/service-subscription.repo.js";
 import { ServicePackageRepository } from "../repositories/service-package.repo.js";
+import { PaymentRepository } from "../repositories/payment.repo.js";
 import { PaymentService } from "./payment.service.js";
+import { PayOSService } from "./payos.service.js";
 import { SUBSCRIPTION_STATUS } from "../models/ServiceSubscription.model.js";
-import { PAYMENT_METHOD, PAYMENT_TYPE } from "../models/Payment.model.js";
+import { PAYMENT_METHOD, PAYMENT_TYPE, PAYMENT_STATUS } from "../models/Payment.model.js";
 
 export class ServiceSubscriptionService {
   static async subscribe(userId: string, packageId: string, method: PAYMENT_METHOD, autoRenew?: boolean) {
@@ -14,6 +16,36 @@ export class ServiceSubscriptionService {
     const activeSub = await ServiceSubscriptionRepository.findActiveByUserId(userId);
     if (activeSub) {
       throw new Error("You already have an active subscription");
+    }
+
+    // Cancel any existing PENDING SERVICE_FEE payments for this user before creating a new one.
+    // This handles the case where the user cancels on PayOS and tries again
+    // — the old PENDING payment would otherwise cause PayOS duplicate errors.
+    const existingPayments = await PaymentRepository.findByPayerId(userId, 0, 50);
+    const pendingServiceFee = existingPayments.find(
+      (payment: any) =>
+        payment.status === PAYMENT_STATUS.PENDING &&
+        payment.type === PAYMENT_TYPE.SERVICE_FEE,
+    );
+    if (pendingServiceFee) {
+      const orderCode = pendingServiceFee.transactionRef?.toString();
+      if (!orderCode) {
+        await PaymentRepository.update(pendingServiceFee._id.toString(), {
+          status: PAYMENT_STATUS.CANCELLED,
+        });
+      } else {
+        const synced = await PayOSService.syncPaymentStatus(orderCode);
+        if (synced.payment.status === PAYMENT_STATUS.COMPLETED) {
+          // The previous payment was actually paid — subscription should already exist
+          const freshSub = await ServiceSubscriptionRepository.findActiveByUserId(userId);
+          if (freshSub) {
+            throw new Error("You already have an active subscription");
+          }
+        }
+        if (synced.payment.status !== PAYMENT_STATUS.CANCELLED) {
+          await PayOSService.cancelPayment(orderCode);
+        }
+      }
     }
 
     return PaymentService.processPayment({

@@ -33,7 +33,6 @@ export class PaymentService {
     cancelUrl?: string;
   }) {
     const paymentData: any = {
-      bookingId: params.bookingId || null,
       payerId: params.payerId,
       receiverId: params.receiverId,
       amount: params.amount,
