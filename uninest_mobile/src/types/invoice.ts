@@ -121,3 +121,28 @@ export type InvoiceMutationResponse = {
   message?: string;
   data: Invoice;
 };
+
+export type CreateInitialReadingPayload = {
+  contractId: string;
+  roomId?: string;
+  electricityReading?: number;
+  waterReading?: number;
+  photoUrls?: { electricity?: string; water?: string };
+  notes?: string;
+};
+
+export type UpdateInvoiceDetailPayload = {
+  electricityOldIndex?: number;
+  electricityNewIndex?: number;
+  electricityRate?: number;
+  waterOldIndex?: number;
+  waterNewIndex?: number;
+  waterRate?: number;
+  otherDetails?: Record<string, unknown>;
+};
+
+export type MeterReadingMutationResponse = {
+  success: boolean;
+  message?: string;
+  data: import("@/types/meter").MeterReading | import("@/types/meter").MeterReading[];
+};

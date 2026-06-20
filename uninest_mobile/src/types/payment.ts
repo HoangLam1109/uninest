@@ -46,3 +46,9 @@ export type PayOSPaymentStatusResponse = {
   success: boolean;
   data: PayOSPaymentStatus;
 };
+
+export type InvoicePaymentResponse = {
+  success: boolean;
+  message: string;
+  data: RoleUpgradePayment;
+};
