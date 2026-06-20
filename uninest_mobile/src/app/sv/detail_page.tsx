@@ -3,6 +3,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +17,7 @@ import {
 } from "react-native-safe-area-context";
 
 import { bookingApi } from "@/api/booking.api";
+import { chatApi } from "@/api/chat.api";
 import { reviewApi } from "@/api/review.api";
 import { roomApi } from "@/api/room.api";
 import { FavoriteHeartButton } from "@/components/favorite-heart-button";
@@ -22,6 +25,8 @@ import { RoomReviewsSection } from "@/components/room-reviews-section";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/auth-context";
+import { isLandlordRole } from "@/utils/landlord-access";
+import { useTenantGate } from "@/hooks/use-tenant-gate";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { Booking } from "@/types/booking";
 import type { Review, ReviewStatistics } from "@/types/review";
@@ -42,7 +47,8 @@ export default function DetailPage() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const roomId = typeof id === "string" ? id : Array.isArray(id) ? id[0] : "";
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const { requireTenant, handleTenantApiError, TenantGatePrompt } = useTenantGate();
 
   const [room, setRoom] = useState<Room | null>(null);
   const [images, setImages] = useState<RoomImage[]>([]);
@@ -52,6 +58,53 @@ export default function DetailPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewStats, setReviewStats] = useState<ReviewStatistics | null>(null);
   const [approvedBooking, setApprovedBooking] = useState<Booking | null>(null);
+  const [contacting, setContacting] = useState(false);
+
+  const reloadReviews = useCallback(async () => {
+    if (!roomId) return;
+    const reviewsRes = await reviewApi.listByRoom(roomId, { limit: 20 });
+    setReviews(reviewsRes.data ?? []);
+    setReviewStats(reviewsRes.statistics ?? null);
+  }, [roomId]);
+
+  const handleContactLandlord = async () => {
+    if (!roomId || !room) return;
+    if (!requireTenant("chat")) return;
+
+    setContacting(true);
+    try {
+      const res = await chatApi.createRoomConversation({ roomId });
+      const conversation = res.data;
+      router.push({
+        pathname: "/sv/chat_thread_page",
+        params: {
+          conversationId: conversation._id,
+          title: `${getLandlordName(room)} • ${room.title}`,
+        },
+      } as any);
+    } catch (err) {
+      if (!handleTenantApiError(err, "chat")) {
+        Alert.alert("Lỗi", getApiErrorMessage(err, "Không mở được chat."));
+      }
+    } finally {
+      setContacting(false);
+    }
+  };
+
+  const handleBookNow = () => {
+    if (!room) return;
+    if (!requireTenant("booking")) return;
+    router.push({
+      pathname: "/sv/booking_page",
+      params: { roomId: room._id, title: room.title },
+    } as any);
+  };
+
+  const openMap = () => {
+    if (!room) return;
+    const query = encodeURIComponent(formatRoomLocation(room));
+    void Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
+  };
 
   const loadRoom = useCallback(async () => {
     if (!roomId) {
@@ -269,9 +322,14 @@ export default function DetailPage() {
           ) : null}
 
           <RoomReviewsSection
+            roomId={roomId}
             reviews={reviews}
             statistics={reviewStats}
             isLoading={isLoading}
+            canReview={Boolean(approvedBooking)}
+            canReply={isLandlordRole(user?.role)}
+            onReviewSubmitted={() => void reloadReviews()}
+            onReplySubmitted={() => void reloadReviews()}
           />
 
           <View style={styles.ownerCard}>
@@ -296,11 +354,16 @@ export default function DetailPage() {
 
             <Pressable
               style={styles.contactButton}
-              onPress={() => router.push("/sv/messages_page" as any)}
+              onPress={() => void handleContactLandlord()}
+              disabled={contacting}
             >
-              <ThemedText type="smallBold" style={styles.contactText}>
-                Liên hệ chủ nhà
-              </ThemedText>
+              {contacting ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <ThemedText type="smallBold" style={styles.contactText}>
+                  Liên hệ chủ nhà
+                </ThemedText>
+              )}
             </Pressable>
           </View>
             </>
@@ -310,27 +373,16 @@ export default function DetailPage() {
             <ThemedText type="smallBold" style={styles.sectionTitle}>
               Vị trí
             </ThemedText>
-            <View style={styles.mapCard}>
+            <Pressable style={styles.mapCard} onPress={openMap}>
               <View style={styles.mapBlob} />
               <View style={styles.mapMarker}>
                 <Text style={styles.mapMarkerText}>⌂</Text>
               </View>
-            </View>
+            </Pressable>
 
-            <View style={styles.accessRow}>
-              <View style={styles.accessItem}>
-                <Text style={styles.accessIcon}>🚶</Text>
-                <ThemedText type="small" style={styles.accessText}>
-                  5 phút đến Cơ sở chính
-                </ThemedText>
-              </View>
-              <View style={styles.accessItem}>
-                <Text style={styles.accessIcon}>🚌</Text>
-                <ThemedText type="small" style={styles.accessText}>
-                  2 phút đến Trạm xe buýt
-                </ThemedText>
-              </View>
-            </View>
+            <ThemedText type="small" style={styles.mapHint}>
+              {room ? formatRoomLocation(room) : ""} — Chạm để mở Google Maps
+            </ThemedText>
           </View>
 
           {!isLoading && !error && room ? (
@@ -379,15 +431,7 @@ export default function DetailPage() {
               </View>
             ) : (
               <>
-                <Pressable
-                  style={styles.bookButton}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/sv/booking_page",
-                      params: { roomId: room._id, title: room.title },
-                    } as any)
-                  }
-                >
+                <Pressable style={styles.bookButton} onPress={handleBookNow}>
                   <Text style={styles.bookButtonText}>Đặt ngay →</Text>
                 </Pressable>
 
@@ -400,6 +444,7 @@ export default function DetailPage() {
           </View>
           ) : null}
         </ScrollView>
+        <TenantGatePrompt />
       </SafeAreaView>
     </ThemedView>
   );
@@ -687,6 +732,11 @@ const styles = StyleSheet.create({
     borderColor: "#E8E1D6",
     alignItems: "center",
     justifyContent: "center",
+  },
+  mapHint: {
+    color: "#8A7B68",
+    marginTop: 10,
+    lineHeight: 18,
   },
   mapBlob: {
     width: 240,

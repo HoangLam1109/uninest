@@ -101,15 +101,23 @@ export const api = {
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 
   /** Multipart upload — do not set Content-Type; fetch adds boundary. */
-  postForm: <T>(path: string, formData: FormData) => requestForm<T>(path, formData),
+  postForm: <T>(path: string, formData: FormData) =>
+    requestForm<T>(path, formData, "POST"),
+
+  patchForm: <T>(path: string, formData: FormData) =>
+    requestForm<T>(path, formData, "PATCH"),
 };
 
-async function requestForm<T>(path: string, formData: FormData): Promise<T> {
+async function requestForm<T>(
+  path: string,
+  formData: FormData,
+  method: "POST" | "PATCH" = "POST",
+): Promise<T> {
   let response: Response;
   try {
     const token = getAccessToken();
     response = await fetch(`${env.apiBaseUrl}${path}`, {
-      method: "POST",
+      method,
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },

@@ -60,4 +60,19 @@ export const invoiceApi = {
   /** GET /api/invoices/:id/detail */
   getDetail: (id: string) =>
     api.get<InvoiceDetailResponse>(`/invoices/${id}/detail`),
+
+  /** GET /api/meter-readings/my */
+  getMyMeterReadings: (params?: {
+    meterType?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const query = new URLSearchParams();
+    query.set("page", String(params?.page ?? 1));
+    query.set("limit", String(params?.limit ?? 100));
+    if (params?.meterType) query.set("meterType", params.meterType);
+    return api.get<import("@/types/meter").MeterReadingListResponse>(
+      `/meter-readings/my?${query.toString()}`,
+    );
+  },
 };

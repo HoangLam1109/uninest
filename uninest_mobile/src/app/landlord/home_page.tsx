@@ -500,6 +500,27 @@ export default function LandlordHomePage() {
             )}
           </View>
 
+          <View style={styles.quickActions}>
+            <Pressable
+              style={styles.quickActionBtn}
+              onPress={() => router.push("/landlord/contracts_page" as any)}
+            >
+              <Text style={styles.quickActionIcon}>📄</Text>
+              <ThemedText type="smallBold" style={styles.quickActionText}>
+                Hợp đồng
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              style={styles.quickActionBtn}
+              onPress={() => router.push("/landlord/messages_page" as any)}
+            >
+              <Text style={styles.quickActionIcon}>💬</Text>
+              <ThemedText type="smallBold" style={styles.quickActionText}>
+                Tin nhắn
+              </ThemedText>
+            </Pressable>
+          </View>
+
           <Pressable
             style={styles.primaryButton}
             onPress={() => router.push("/landlord/tenants_page" as any)}
@@ -823,6 +844,28 @@ const styles = StyleSheet.create({
   },
   emptyPaymentsSub: {
     color: "#C47A10",
+  },
+  quickActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 12,
+  },
+  quickActionBtn: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#EDE8DF",
+    paddingVertical: 14,
+    alignItems: "center",
+    gap: 6,
+  },
+  quickActionIcon: {
+    fontSize: 22,
+  },
+  quickActionText: {
+    color: "#1F2940",
+    fontSize: 13,
   },
   primaryButton: {
     backgroundColor: "#E68A2E",

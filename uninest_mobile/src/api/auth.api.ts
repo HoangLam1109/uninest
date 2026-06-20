@@ -5,9 +5,14 @@ import type {
   MeResponse,
   RegisterPayload,
   RegisterResponse,
+  SendRegisterOtpPayload,
+  SendRegisterOtpResponse,
 } from "@/types/auth";
 
 export const authApi = {
+  sendRegisterOtp: (payload: SendRegisterOtpPayload) =>
+    api.post<SendRegisterOtpResponse>("/auth/register/send-otp", payload),
+
   register: (payload: RegisterPayload) =>
     api.post<RegisterResponse>("/auth/register", payload),
 

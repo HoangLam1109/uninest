@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
@@ -22,9 +22,13 @@ import {
 } from "react-native-safe-area-context";
 
 import { roomApi } from "@/api/room.api";
+import { chatApi } from "@/api/chat.api";
 import { LandlordBottomNavigation } from "@/components/landlord/bottom-navigation";
 import { ThemedText } from "@/components/themed-text";
+import { getChatParticipantName } from "@/hooks/use-chat-socket";
+import { useAuth } from "@/context/auth-context";
 import { getApiErrorMessage } from "@/lib/api-error";
+import type { ChatConversation, ChatMessage } from "@/types/chat";
 import type { Room, RoomImage, RoomPayload, RoomStatus, RoomType } from "@/types/room";
 import {
   formatPrice,
@@ -129,9 +133,28 @@ function statusStyle(status?: string) {
   return styles.badgeMuted;
 }
 
+function countUnreadForUser(messages: ChatMessage[], userId: string) {
+  return messages.filter((message) => {
+    const receiverId =
+      typeof message.receiverId === "object"
+        ? message.receiverId._id
+        : message.receiverId;
+    return String(receiverId) === String(userId) && !message.readAt;
+  }).length;
+}
+
+function formatUnreadBadge(count: number) {
+  if (count <= 0) return null;
+  if (count > 5) return "5+";
+  return String(count);
+}
+
 export default function LandlordRoomsPage() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { user } = useAuth();
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [unreadByRoomId, setUnreadByRoomId] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"ALL" | RoomStatus>("ALL");
@@ -160,11 +183,51 @@ export default function LandlordRoomsPage() {
     }
   }, [statusFilter]);
 
+  const loadUnreadByRoom = useCallback(async () => {
+    if (!user?.id) {
+      setUnreadByRoomId({});
+      return;
+    }
+
+    try {
+      const convRes = await chatApi.conversations();
+      const conversations = convRes.data ?? [];
+      const counts: Record<string, number> = {};
+
+      await Promise.all(
+        conversations.map(async (conversation) => {
+          const roomId = conversation.roomId?._id;
+          if (!roomId) return;
+
+          try {
+            const msgRes = await chatApi.messages(conversation._id, {
+              page: 1,
+              limit: 80,
+            });
+            const unread = countUnreadForUser(msgRes.data ?? [], user.id);
+            if (unread > 0) {
+              const key = String(roomId);
+              counts[key] = (counts[key] ?? 0) + unread;
+            }
+          } catch {
+            // Bỏ qua cuộc trò chuyện không tải được tin nhắn
+          }
+        }),
+      );
+
+      setUnreadByRoomId(counts);
+    } catch {
+      setUnreadByRoomId({});
+    }
+  }, [user?.id]);
+
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
-      void loadRooms().finally(() => setLoading(false));
-    }, [loadRooms]),
+      void Promise.all([loadRooms(), loadUnreadByRoom()]).finally(() =>
+        setLoading(false),
+      );
+    }, [loadRooms, loadUnreadByRoom]),
   );
 
   const summary = useMemo(() => {
@@ -183,7 +246,7 @@ export default function LandlordRoomsPage() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadRooms();
+    await Promise.all([loadRooms(), loadUnreadByRoom()]);
     setRefreshing(false);
   };
 
@@ -429,6 +492,53 @@ export default function LandlordRoomsPage() {
     }
   };
 
+  const openChatThread = (conversation: ChatConversation, room: Room) => {
+    const title = `${getChatParticipantName(conversation.tenantId)} • ${room.title}`;
+    router.push({
+      pathname: "/landlord/chat_thread_page",
+      params: {
+        conversationId: conversation._id,
+        title,
+      },
+    } as any);
+  };
+
+  const handleOpenMessages = async (room: Room) => {
+    try {
+      const res = await chatApi.conversations();
+      const matches = (res.data ?? []).filter(
+        (conversation) => String(conversation.roomId?._id) === String(room._id),
+      );
+
+      if (matches.length === 0) {
+        Alert.alert(
+          "Tin nhắn",
+          "Chưa có tin nhắn từ người thuê cho phòng này.",
+        );
+        return;
+      }
+
+      if (matches.length === 1) {
+        openChatThread(matches[0]!, room);
+        return;
+      }
+
+      Alert.alert(
+        "Chọn cuộc trò chuyện",
+        "Phòng này có nhiều tin nhắn từ người thuê.",
+        [
+          ...matches.map((conversation) => ({
+            text: getChatParticipantName(conversation.tenantId),
+            onPress: () => openChatThread(conversation, room),
+          })),
+          { text: "Hủy", style: "cancel" },
+        ],
+      );
+    } catch (err) {
+      Alert.alert("Lỗi", getApiErrorMessage(err, "Không mở được tin nhắn."));
+    }
+  };
+
   const handleDelete = (room: Room) => {
     Alert.alert("Xóa phòng", `Bạn có chắc muốn xóa "${room.title}"?`, [
       { text: "Hủy", style: "cancel" },
@@ -556,7 +666,9 @@ export default function LandlordRoomsPage() {
                 key={room._id}
                 room={room}
                 busy={actionRoomId === room._id}
+                unreadCount={unreadByRoomId[room._id] ?? 0}
                 onEdit={() => openEditForm(room)}
+                onMessage={() => void handleOpenMessages(room)}
                 onTogglePublish={() => void handleTogglePublish(room)}
                 onDelete={() => handleDelete(room)}
               />
@@ -608,16 +720,21 @@ function StatCard({
 function RoomCard({
   room,
   busy,
+  unreadCount,
   onEdit,
+  onMessage,
   onTogglePublish,
   onDelete,
 }: {
   room: Room;
   busy: boolean;
+  unreadCount: number;
   onEdit: () => void;
+  onMessage: () => void;
   onTogglePublish: () => void;
   onDelete: () => void;
 }) {
+  const unreadBadge = formatUnreadBadge(unreadCount);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -699,6 +816,20 @@ function RoomCard({
             <ThemedText type="smallBold" style={styles.actionBtnText}>
               Sửa
             </ThemedText>
+          </Pressable>
+          <Pressable
+            style={[styles.actionBtn, styles.actionBtnMessage]}
+            onPress={onMessage}
+            disabled={busy}
+          >
+            <ThemedText type="smallBold" style={styles.actionBtnMessageText}>
+              Tin nhắn
+            </ThemedText>
+            {unreadBadge ? (
+              <View style={styles.messageBadge}>
+                <Text style={styles.messageBadgeText}>{unreadBadge}</Text>
+              </View>
+            ) : null}
           </Pressable>
           <Pressable
             style={[
@@ -1355,6 +1486,35 @@ const styles = StyleSheet.create({
   },
   actionBtnText: {
     color: "#4B5568",
+  },
+  actionBtnMessage: {
+    borderColor: "#D6E4FF",
+    backgroundColor: "#F0F6FF",
+    position: "relative",
+    overflow: "visible",
+  },
+  actionBtnMessageText: {
+    color: "#3B6FD4",
+  },
+  messageBadge: {
+    position: "absolute",
+    top: -6,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    backgroundColor: "#E53935",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+  },
+  messageBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "800",
+    lineHeight: 12,
   },
   actionBtnPrimary: {
     backgroundColor: "#E68A2E",

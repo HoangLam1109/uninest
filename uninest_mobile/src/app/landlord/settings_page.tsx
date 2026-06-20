@@ -18,8 +18,11 @@ type SettingsItem = {
 
 const MENU_ITEMS: SettingsItem[] = [
   { id: "profile", label: "Hồ sơ cá nhân", icon: "👤" },
+  { id: "contracts", label: "Hợp đồng", icon: "📄" },
+  { id: "messages", label: "Tin nhắn", icon: "💬" },
   { id: "invoices", label: "Hóa đơn", icon: "🧾" },
   { id: "properties", label: "Căn hộ", icon: "🏠" },
+  { id: "upgrade", label: "Nâng cấp gói Chủ nhà", icon: "👑" },
   { id: "logout", label: "Đăng xuất", icon: "↪", danger: true },
 ];
 
@@ -46,6 +49,21 @@ export default function LandlordSettingsPage() {
 
     if (item.id === "profile") {
       router.push("/landlord/profile_page" as any);
+      return;
+    }
+
+    if (item.id === "contracts") {
+      router.push("/landlord/contracts_page" as any);
+      return;
+    }
+
+    if (item.id === "messages") {
+      router.push("/landlord/messages_page" as any);
+      return;
+    }
+
+    if (item.id === "upgrade") {
+      router.push("/sv/upgrade_package_page" as any);
       return;
     }
 

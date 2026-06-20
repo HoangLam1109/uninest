@@ -20,6 +20,7 @@ import { roomApi } from "@/api/room.api";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/auth-context";
+import { useTenantGate } from "@/hooks/use-tenant-gate";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { Room } from "@/types/room";
 import { formatPrice, formatRoomLocation, sortRoomImages } from "@/utils/room-display";
@@ -80,6 +81,7 @@ export default function BookingPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const { requireTenant, handleTenantApiError, TenantGatePrompt } = useTenantGate();
   const params = useLocalSearchParams<{ roomId?: string; title?: string }>();
   const roomId =
     typeof params.roomId === "string"
@@ -151,6 +153,7 @@ export default function BookingPage() {
 
   const handleConfirm = async () => {
     if (!roomId || !room || submitting) return;
+    if (!requireTenant("booking")) return;
 
     if (startOfDay(selectedDate) < today) {
       Alert.alert("Ngày không hợp lệ", "Vui lòng chọn ngày nhận phòng từ hôm nay trở đi.");
@@ -175,10 +178,12 @@ export default function BookingPage() {
         },
       } as any);
     } catch (error) {
-      Alert.alert(
-        "Không đặt được phòng",
-        getApiErrorMessage(error, "Vui lòng thử lại sau."),
-      );
+      if (!handleTenantApiError(error, "booking")) {
+        Alert.alert(
+          "Không đặt được phòng",
+          getApiErrorMessage(error, "Vui lòng thử lại sau."),
+        );
+      }
     } finally {
       setSubmitting(false);
     }
@@ -427,6 +432,7 @@ export default function BookingPage() {
             </View>
           </>
         )}
+        <TenantGatePrompt />
       </SafeAreaView>
     </ThemedView>
   );
