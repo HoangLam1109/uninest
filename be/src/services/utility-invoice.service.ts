@@ -22,6 +22,10 @@ export interface CreateUtilityInvoiceInput {
   electricityNewIndex?: number;
   /** Chỉ số nước mới – landlord nhập từ công tơ */
   waterNewIndex?: number;
+  /** Chỉ số điện cũ – chỉ cần cho hóa đơn đầu tiên (nếu có) */
+  electricityOldIndex?: number;
+  /** Chỉ số nước cũ – chỉ cần cho hóa đơn đầu tiên (nếu có) */
+  waterOldIndex?: number;
   /** Đơn giá điện (fallback: Room.electricityRate) */
   electricityRate?: number;
   /** Đơn giá nước (fallback: Room.waterRate) */
@@ -132,7 +136,9 @@ export const UtilityInvoiceService = {
       input.bookingId,
       contractId,
       input.billingMonth,
-      room._id?.toString()
+      room._id?.toString(),
+      input.electricityOldIndex,
+      input.waterOldIndex
     );
 
     // ----- Step 6: Validate -----
@@ -210,7 +216,7 @@ export const UtilityInvoiceService = {
         invoicePayload.contractId = contractId;
       }
 
-      const [invoice] = await InvoiceModel.create([invoicePayload], { session }) as unknown as [IInvoice];
+      const [invoice] = await InvoiceModel.create([invoicePayload], { session, ordered: true }) as unknown as [IInvoice];
 
       // 8b. Create InvoiceDetail
       const detailPayload: Record<string, any> = {
@@ -236,7 +242,7 @@ export const UtilityInvoiceService = {
         detailPayload.waterNewIndex = input.waterNewIndex;
       }
 
-      const [detail] = await InvoiceDetailModel.create([detailPayload], { session }) as unknown as [IInvoiceDetail];
+      const [detail] = await InvoiceDetailModel.create([detailPayload], { session, ordered: true }) as unknown as [IInvoiceDetail];
 
       // 8c. Create MONTHLY MeterReading records (single source of truth)
       const meterReadingsToCreate: any[] = [];
@@ -270,7 +276,7 @@ export const UtilityInvoiceService = {
       }
 
       if (meterReadingsToCreate.length > 0) {
-        await MeterReadingModel.create(meterReadingsToCreate, { session });
+        await MeterReadingModel.create(meterReadingsToCreate, { session, ordered: true });
       }
 
       await session.commitTransaction();
@@ -370,8 +376,22 @@ async function determineOldIndices(
   bookingId: string,
   contractId: string | null,
   billingMonth: string,
-  roomId?: string
+  roomId?: string,
+  explicitElectricityOldIndex?: number,
+  explicitWaterOldIndex?: number
 ): Promise<ResolvedOldReading> {
+  // ---- Priority 0: Explicit old indices from landlord (first invoice) ----
+  const hasExplicitElec = explicitElectricityOldIndex !== undefined && explicitElectricityOldIndex !== null;
+  const hasExplicitWater = explicitWaterOldIndex !== undefined && explicitWaterOldIndex !== null;
+  
+  if (hasExplicitElec || hasExplicitWater) {
+    return {
+      electricityOldIndex: explicitElectricityOldIndex ?? 0,
+      waterOldIndex: explicitWaterOldIndex ?? 0,
+      source: "meter_reading",
+    };
+  }
+
   // ---- Priority 1: Previous invoice via contractId ----
   if (contractId) {
     const prevInv = await InvoiceRepository.findPreviousInvoiceByContractId(
@@ -511,9 +531,9 @@ async function determineOldIndices(
 
   // ---- No source found ----
   throw new UtilityInvoiceError(
-    "Cannot determine meter start index. " +
-      "This is the first invoice — please create an INITIAL meter reading first " +
-      "(call POST /api/meter-readings/initial with electricityReading and waterReading).",
+    "Chưa có chỉ số điện nước ban đầu. " +
+      "Vui lòng tạo chỉ số ban đầu trước khi tạo hóa đơn đầu tiên " +
+      "(POST /api/invoices/initial-reading với electricityReading và waterReading).",
     "MISSING_INITIAL_READING"
   );
 }

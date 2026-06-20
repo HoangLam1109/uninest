@@ -9,30 +9,25 @@ import {
   getBookingRoom,
   getBookingTenant,
 } from '@/features/booking/lib/booking-display'
-import {
-  manualInvoiceFormSchema,
-  utilityInvoiceFormSchema,
-} from '../schemas/invoice.schema'
-
-type InvoiceFormMode = 'manual' | 'utility'
+import { utilityInvoiceFormSchema } from '../schemas/invoice.schema'
 
 type InvoiceFormState = {
-  mode: InvoiceFormMode
   bookingId: string
   billingMonth: string
   dueDate: string
   rentAmount: string
-  electricityAmount: string
-  waterAmount: string
   electricityNewIndex: string
   waterNewIndex: string
+  electricityOldIndex: string
+  waterOldIndex: string
+  electricityRate: string
+  waterRate: string
   additionalFees: string
   notes: string
 }
 
 type InvoiceFormAction =
   | { type: 'fieldChanged'; name: keyof InvoiceFormState; value: string }
-  | { type: 'modeChanged'; mode: InvoiceFormMode }
 
 type InvoiceFormModalProps = {
   open: boolean
@@ -40,23 +35,17 @@ type InvoiceFormModalProps = {
   bookings: Booking[]
   isLoadingBookings?: boolean
   onClose: () => void
-  onSubmitManual: (payload: {
-    bookingId: string
-    billingMonth: string
-    dueDate: string
-    rentAmount: number
-    electricityAmount?: number
-    waterAmount?: number
-    additionalFees?: number
-    notes?: string
-  }) => void
-  onSubmitUtility: (payload: {
+  onSubmit: (payload: {
     bookingId: string
     billingMonth: string
     dueDate: string
     rentAmount: number
     electricityNewIndex?: number
     waterNewIndex?: number
+    electricityOldIndex?: number
+    waterOldIndex?: number
+    electricityRate?: number
+    waterRate?: number
     additionalFees?: number
     notes?: string
   }) => void
@@ -76,15 +65,16 @@ function defaultDueDate() {
 
 function createInvoiceFormState(): InvoiceFormState {
   return {
-    mode: 'manual',
     bookingId: '',
     billingMonth: currentBillingMonth(),
     dueDate: defaultDueDate(),
     rentAmount: '',
-    electricityAmount: '',
-    waterAmount: '',
     electricityNewIndex: '',
     waterNewIndex: '',
+    electricityOldIndex: '',
+    waterOldIndex: '',
+    electricityRate: '',
+    waterRate: '',
     additionalFees: '',
     notes: '',
   }
@@ -97,8 +87,6 @@ function invoiceFormReducer(
   switch (action.type) {
     case 'fieldChanged':
       return { ...state, [action.name]: action.value }
-    case 'modeChanged':
-      return { ...state, mode: action.mode }
   }
 }
 
@@ -108,8 +96,7 @@ export function InvoiceFormModal({
   bookings,
   isLoadingBookings,
   onClose,
-  onSubmitManual,
-  onSubmitUtility,
+  onSubmit,
 }: InvoiceFormModalProps) {
   const [formState, dispatch] = useReducer(
     invoiceFormReducer,
@@ -117,15 +104,16 @@ export function InvoiceFormModal({
     createInvoiceFormState,
   )
   const {
-    mode,
     bookingId,
     billingMonth,
     dueDate,
     rentAmount,
-    electricityAmount,
-    waterAmount,
     electricityNewIndex,
     waterNewIndex,
+    electricityOldIndex,
+    waterOldIndex,
+    electricityRate,
+    waterRate,
     additionalFees,
     notes,
   } = formState
@@ -145,61 +133,33 @@ export function InvoiceFormModal({
       notes,
     }
 
-    if (mode === 'utility') {
-      const validationResult = utilityInvoiceFormSchema.safeParse({
-        ...payload,
-        electricityNewIndex,
-        waterNewIndex,
-      })
+    const validationResult = utilityInvoiceFormSchema.safeParse({
+      ...payload,
+      electricityNewIndex,
+      waterNewIndex,
+    })
 
-      if (!validationResult.success) {
-        toast.error(getSchemaErrorMessage(validationResult.error))
-        return
-      }
-
-      onSubmitUtility(validationResult.data)
-    } else {
-      const validationResult = manualInvoiceFormSchema.safeParse({
-        ...payload,
-        electricityAmount,
-        waterAmount,
-      })
-
-      if (!validationResult.success) {
-        toast.error(getSchemaErrorMessage(validationResult.error))
-        return
-      }
-
-      onSubmitManual(validationResult.data)
+    if (!validationResult.success) {
+      toast.error(getSchemaErrorMessage(validationResult.error))
+      return
     }
+
+    onSubmit({
+      ...validationResult.data,
+      electricityOldIndex: electricityOldIndex.trim() ? parseFloat(electricityOldIndex) : undefined,
+      waterOldIndex: waterOldIndex.trim() ? parseFloat(waterOldIndex) : undefined,
+      electricityRate: electricityRate.trim() ? parseFloat(electricityRate) : undefined,
+      waterRate: waterRate.trim() ? parseFloat(waterRate) : undefined,
+    })
   }
 
-  return (
-    <Modal open={open} onClose={onClose} title="Tạo hóa đơn" className="max-w-xl">
-      <form className="grid gap-4" onSubmit={handleSubmit}>
-        {/* Mode Toggle */}
-        <div className="flex rounded-lg bg-slate-100 p-1">
-          <button
-            type="button"
-            className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${
-              mode === 'manual' ? 'bg-white shadow-sm text-primary' : 'text-slate-500'
-            }`}
-            onClick={() => dispatch({ type: 'modeChanged', mode: 'manual' })}
-          >
-            Nhập tiền
-          </button>
-          <button
-            type="button"
-            className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${
-              mode === 'utility' ? 'bg-white shadow-sm text-primary' : 'text-slate-500'
-            }`}
-            onClick={() => dispatch({ type: 'modeChanged', mode: 'utility' })}
-          >
-            ⚡ Nhập chỉ số
-          </button>
-        </div>
+  const hasElectricity = electricityNewIndex.trim() !== ''
+  const hasWater = waterNewIndex.trim() !== ''
 
-        {/* Booking Picker */}
+  return (
+    <Modal open={open} onClose={onClose} title="Tạo hóa đơn" className="max-w-2xl">
+      <form className="grid gap-4" onSubmit={handleSubmit}>
+        {/* Booking Picker — full width */}
         <fieldset className="space-y-2">
           <legend className="text-sm font-semibold text-foreground">
             Đơn đặt phòng *
@@ -242,7 +202,8 @@ export function InvoiceFormModal({
           )}
         </fieldset>
 
-        <div className="grid grid-cols-2 gap-3">
+        {/* 3-column: billing month, due date, rent */}
+        <div className="grid grid-cols-3 gap-3">
           <div className="space-y-2">
             <label className="text-sm font-semibold" htmlFor="invoice-billing-month">Kỳ hóa đơn (YYYY-MM) *</label>
             <Input
@@ -263,47 +224,25 @@ export function InvoiceFormModal({
               onChange={(e) => updateField('dueDate', e.target.value)}
             />
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-semibold" htmlFor="invoice-rent-amount">Tiền thuê *</label>
-          <Input
-            id="invoice-rent-amount"
-            required
-            type="number"
-            value={rentAmount}
-            onChange={(e) => updateField('rentAmount', e.target.value)}
-            placeholder="3500000"
-          />
-        </div>
-
-        {mode === 'manual' ? (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <label className="text-sm font-semibold" htmlFor="invoice-electricity-amount">Tiền điện</label>
-              <Input
-                id="invoice-electricity-amount"
-                type="number"
-                value={electricityAmount}
-                onChange={(e) => updateField('electricityAmount', e.target.value)}
-                placeholder="0"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold" htmlFor="invoice-water-amount">Tiền nước</label>
-              <Input
-                id="invoice-water-amount"
-                type="number"
-                value={waterAmount}
-                onChange={(e) => updateField('waterAmount', e.target.value)}
-                placeholder="0"
-              />
-            </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold" htmlFor="invoice-rent-amount">Tiền thuê *</label>
+            <Input
+              id="invoice-rent-amount"
+              required
+              type="number"
+              value={rentAmount}
+              onChange={(e) => updateField('rentAmount', e.target.value)}
+              placeholder="3.500.000"
+            />
           </div>
-        ) : (
+        </div>
+
+        {/* Meter readings — full width */}
+        <div className="rounded-lg border border-primary/10 bg-primary/5 p-4">
+          <p className="mb-3 text-sm font-bold text-primary">⚡ Chỉ số điện nước</p>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <label className="text-sm font-semibold" htmlFor="invoice-electricity-new-index">⚡ Chỉ số điện mới</label>
+              <label className="text-sm font-semibold" htmlFor="invoice-electricity-new-index">Chỉ số điện mới</label>
               <Input
                 id="invoice-electricity-new-index"
                 type="number"
@@ -311,10 +250,9 @@ export function InvoiceFormModal({
                 onChange={(e) => updateField('electricityNewIndex', e.target.value)}
                 placeholder="Số cuối công tơ"
               />
-              <p className="text-xs text-slate-400">Tự tính: usage × đơn giá phòng</p>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold" htmlFor="invoice-water-new-index">💧 Chỉ số nước mới</label>
+              <label className="text-sm font-semibold" htmlFor="invoice-water-new-index">Chỉ số nước mới</label>
               <Input
                 id="invoice-water-new-index"
                 type="number"
@@ -322,30 +260,87 @@ export function InvoiceFormModal({
                 onChange={(e) => updateField('waterNewIndex', e.target.value)}
                 placeholder="Số cuối đồng hồ"
               />
-              <p className="text-xs text-slate-400">Tự tính: usage × đơn giá phòng</p>
             </div>
           </div>
-        )}
 
-        <div className="space-y-2">
-          <label className="text-sm font-semibold" htmlFor="invoice-additional-fees">Phí khác</label>
-          <Input
-            id="invoice-additional-fees"
-            type="number"
-            value={additionalFees}
-            onChange={(e) => updateField('additionalFees', e.target.value)}
-            placeholder="0"
-          />
+          {/* Old indices + rates — clearly visible section */}
+          {(hasElectricity || hasWater) ? (
+            <div className="mt-4 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50/60 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-bold text-amber-700">
+                  📐 Chỉ số cũ & đơn giá
+                </p>
+                <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                  Cần cho hóa đơn đầu tiên
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold" htmlFor="invoice-elec-old-idx">⚡ Chỉ số điện cũ</label>
+                  <Input
+                    id="invoice-elec-old-idx"
+                    type="number"
+                    value={electricityOldIndex}
+                    onChange={(e) => updateField('electricityOldIndex', e.target.value)}
+                    placeholder="vd: 1000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold" htmlFor="invoice-elec-rate">⚡ Đơn giá điện</label>
+                  <Input
+                    id="invoice-elec-rate"
+                    type="number"
+                    value={electricityRate}
+                    onChange={(e) => updateField('electricityRate', e.target.value)}
+                    placeholder="vd: 3.500 đ/kWh"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold" htmlFor="invoice-water-old-idx">💧 Chỉ số nước cũ</label>
+                  <Input
+                    id="invoice-water-old-idx"
+                    type="number"
+                    value={waterOldIndex}
+                    onChange={(e) => updateField('waterOldIndex', e.target.value)}
+                    placeholder="vd: 50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold" htmlFor="invoice-water-rate">💧 Đơn giá nước</label>
+                  <Input
+                    id="invoice-water-rate"
+                    type="number"
+                    value={waterRate}
+                    onChange={(e) => updateField('waterRate', e.target.value)}
+                    placeholder="vd: 15.000 đ/m³"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-semibold" htmlFor="invoice-notes">Ghi chú</label>
-          <Input
-            id="invoice-notes"
-            value={notes}
-            onChange={(e) => updateField('notes', e.target.value)}
-            placeholder="Ghi chú cho người thuê..."
-          />
+        {/* Extras — 2-column */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold" htmlFor="invoice-additional-fees">Phí khác</label>
+            <Input
+              id="invoice-additional-fees"
+              type="number"
+              value={additionalFees}
+              onChange={(e) => updateField('additionalFees', e.target.value)}
+              placeholder="0"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold" htmlFor="invoice-notes">Ghi chú</label>
+            <Input
+              id="invoice-notes"
+              value={notes}
+              onChange={(e) => updateField('notes', e.target.value)}
+              placeholder="Ghi chú cho người thuê..."
+            />
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 pt-2">
