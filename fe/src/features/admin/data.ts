@@ -1,8 +1,8 @@
 import {
   BarChart3,
-  ClipboardCheck,
   CreditCard,
   LayoutGrid,
+  PackagePlus,
   ShieldCheck,
   UserPlus,
   Users,
@@ -13,7 +13,7 @@ export const adminNavItems = [
   { label: 'Người dùng', href: '/quan-tri/nguoi-dung', icon: Users },
   { label: 'Kiểm duyệt', href: '/quan-tri/kiem-duyet', icon: ShieldCheck },
   { label: 'Thanh toán', href: '/quan-tri/thanh-toan', icon: CreditCard },
-  { label: 'Ticket', href: '/quan-tri/ticket', icon: ClipboardCheck },
+  { label: 'Gói dịch vụ', href: '/quan-tri/goi-dich-vu', icon: PackagePlus },
 ] as const
 
 export const adminSidebarConfig = {
@@ -45,10 +45,10 @@ export const adminStats = [
     icon: BarChart3,
   },
   {
-    label: 'Ticket quá hạn',
-    value: '9',
-    change: '3 khẩn cấp',
-    icon: ClipboardCheck,
+    label: 'Gói đang kích hoạt',
+    value: '4',
+    change: '2 gói mới',
+    icon: PackagePlus,
   },
 ] as const
 

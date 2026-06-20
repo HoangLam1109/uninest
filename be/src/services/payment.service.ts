@@ -31,7 +31,6 @@ export class PaymentService {
     subscriptionPackageId?: string;
   }) {
     const paymentData: any = {
-      bookingId: params.bookingId || null,
       payerId: params.payerId,
       receiverId: params.receiverId,
       amount: params.amount,
