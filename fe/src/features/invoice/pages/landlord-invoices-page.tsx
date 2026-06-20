@@ -7,7 +7,6 @@ import { LandlordDashboardHeader } from '@/features/landlord/components/landlord
 import { InvoiceCard } from '../components/invoice-card'
 import { InvoiceFormModal } from '../components/invoice-form-modal'
 import {
-  useCreateInvoice,
   useCreateUtilityInvoice,
   useDeleteInvoice,
   useGetLandlordInvoices,
@@ -22,7 +21,6 @@ export function LandlordInvoicesPage() {
   const [modalOpen, setModalOpen] = useState(false)
 
   const invoicesQuery = useGetLandlordInvoices({ page, limit: 10 })
-  const createInvoice = useCreateInvoice()
   const createUtility = useCreateUtilityInvoice()
   const sendInvoice = useSendInvoice()
   const markPaid = useMarkInvoicePaid()
@@ -38,7 +36,6 @@ export function LandlordInvoicesPage() {
   const bookings = bookingsQuery.data?.data ?? []
 
   const isPending =
-    createInvoice.isPending ||
     createUtility.isPending ||
     sendInvoice.isPending ||
     markPaid.isPending ||
@@ -149,10 +146,7 @@ export function LandlordInvoicesPage() {
         bookings={bookings}
         isLoadingBookings={bookingsQuery.isLoading}
         onClose={() => setModalOpen(false)}
-        onSubmitManual={(payload) => {
-          createInvoice.mutate(payload, { onSuccess: () => setModalOpen(false) })
-        }}
-        onSubmitUtility={(payload) => {
+        onSubmit={(payload) => {
           createUtility.mutate(payload, { onSuccess: () => setModalOpen(false) })
         }}
       />

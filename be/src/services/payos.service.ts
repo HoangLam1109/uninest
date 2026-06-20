@@ -3,9 +3,11 @@ import { PaymentRepository } from "../repositories/payment.repo.js";
 import { InvoiceRepository } from "../repositories/invoice.repo.js";
 import { ServiceSubscriptionRepository } from "../repositories/service-subscription.repo.js";
 import { ServicePackageRepository } from "../repositories/service-package.repo.js";
+import { userRepository } from "../repositories/index.js";
 import { PAYMENT_STATUS } from "../models/Payment.model.js";
 import { SUBSCRIPTION_STATUS } from "../models/ServiceSubscription.model.js";
 import { INVOICE_STATUS } from "../models/Invoice.model.js";
+import { USER_ROLES } from "../constants/role.constant.js";
 import { applyRoleUpgradeFromPayment } from "./role-upgrade.service.js";
 
 export class PayOSService {
@@ -122,6 +124,12 @@ export class PayOSService {
             endDate,
             status: SUBSCRIPTION_STATUS.ACTIVE,
             autoRenew: false,
+          });
+
+          // Upgrade user role to TENANT with expiry matching subscription end
+          await userRepository.updateById(userId, {
+            role: USER_ROLES.TENANT,
+            roleExpiresAt: endDate,
           });
         }
       }

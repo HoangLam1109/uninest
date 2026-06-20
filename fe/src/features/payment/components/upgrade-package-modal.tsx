@@ -29,6 +29,10 @@ function formatCurrency(value: number) {
 
 export function UpgradePackageButton() {
   const [open, setOpen] = useState(false)
+  const { user } = useAuth()
+
+  // Only show for GUEST (TENANT = active sub; expired sub → back to GUEST)
+  if (!user || user.role !== 'GUEST') return null
 
   return (
     <>
@@ -48,7 +52,7 @@ export function UpgradePackageButton() {
   )
 }
 
-function UpgradePackageModal({
+export function UpgradePackageModal({
   open,
   onClose,
 }: {

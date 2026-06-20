@@ -104,6 +104,8 @@ export type CreateUtilityInvoicePayload = {
   rentAmount: number
   electricityNewIndex?: number
   waterNewIndex?: number
+  electricityOldIndex?: number
+  waterOldIndex?: number
   electricityRate?: number
   waterRate?: number
   additionalFees?: number
