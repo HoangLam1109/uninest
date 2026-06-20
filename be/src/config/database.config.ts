@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
-import dotenv from "dotenv";
+import "./env.js";
 import { PaymentModel } from "../models/Payment.model.js";
-dotenv.config();
 
 async function ensurePaymentIndexes() {
   const indexes = await PaymentModel.collection.indexes();

@@ -1,3 +1,4 @@
+import "./env.js";
 import { PayOS, type PayOSOptions } from "@payos/node";
 
 export const payosClient = new PayOS({

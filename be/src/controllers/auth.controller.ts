@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { UserService } from "../services/user.service.js";
 import type { IUser } from "../models/User.model.js";
 import bcrypt from "bcryptjs";
-import dotenv from "dotenv";
+import "../config/env.js";
 import { errorHandler } from "../utils/error.utils.js";
 import { createAccessToken, createTokenPair } from "../utils/jwt.utils.js";
 import { expireRoleUpgradeIfNeeded } from "../services/role-upgrade.service.js";
@@ -10,8 +10,6 @@ import {
   OtpRateLimitError,
   RegisterOtpService,
 } from "../services/register-otp.service.js";
-
-dotenv.config();
 
 const userService = new UserService();
 const registerOtpService = new RegisterOtpService();

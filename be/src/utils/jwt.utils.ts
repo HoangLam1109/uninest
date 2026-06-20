@@ -1,7 +1,5 @@
 import jwt, { type SignOptions } from "jsonwebtoken";
-import dotenv from "dotenv";
-
-dotenv.config();
+import "../config/env.js";
 
 export type TokenPair = {
   accessToken: string;

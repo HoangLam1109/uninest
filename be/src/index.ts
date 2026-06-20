@@ -1,4 +1,4 @@
-import dotenv from "dotenv";
+import "./config/env.js";
 import express from "express";
 import cors from "cors";
 import { createServer } from "http";
@@ -29,8 +29,6 @@ import {
 } from "./config/frontend.config.js";
 import { setupSwagger } from "./swagger.js";
 import { initializeChatSocket } from "./socket.js";
-
-dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
