@@ -468,6 +468,8 @@ export const createUtilityInvoice = async (req: Request, res: Response) => {
     };
     if (electricityNewIndex != null) input.electricityNewIndex = Number(electricityNewIndex);
     if (waterNewIndex != null) input.waterNewIndex = Number(waterNewIndex);
+    if (req.body.electricityOldIndex != null) input.electricityOldIndex = Number(req.body.electricityOldIndex);
+    if (req.body.waterOldIndex != null) input.waterOldIndex = Number(req.body.waterOldIndex);
     if (electricityRate != null) input.electricityRate = Number(electricityRate);
     if (waterRate != null) input.waterRate = Number(waterRate);
     if (additionalFees != null) input.additionalFees = Number(additionalFees);

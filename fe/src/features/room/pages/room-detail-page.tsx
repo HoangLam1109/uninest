@@ -6,6 +6,7 @@ import { USER_ROLES } from '@/constants/roles'
 import { MainLayout } from '@/layouts/main-layout'
 import { BookingRequestModal } from '@/features/booking'
 import { useCreateRoomConversation } from '@/features/chat'
+import { UpgradePackageModal } from '@/features/payment/components/upgrade-package-modal'
 import { useAuth } from '@/hooks/use-auth'
 import {
   useCreateRoomReview,
@@ -25,7 +26,6 @@ import type { RoomImage } from '../types/room.type'
 import { RoomLocationMap } from '../components/room-location-map'
 import { RoomFavoriteButton } from '../components/room-favorite-button'
 import { RoomReviewsSection } from '../components/room-reviews-section'
-import { toast } from 'sonner'
 
 function sortImages(images: RoomImage[]) {
   return [...images].sort((first, second) => {
@@ -49,19 +49,27 @@ export function RoomDetailPage() {
   const images = sortImages(imagesQuery.data ?? [])
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false)
   const selectedImage =
     images.find((image) => image._id === selectedImageId) ?? images[0]
   const amenityNames = room ? getRoomAmenityNames(room) : []
 
   async function handleOpenChat() {
     if (!room?._id) return
+    if (user?.role === USER_ROLES.GUEST) {
+      setIsUpgradeModalOpen(true)
+      return
+    }
     const conversation = await createRoomConversation.mutateAsync(room._id)
     navigate(`/cu-dan/tin-nhan?conversationId=${conversation._id}`)
   }
 
   function handleOpenBookingModal() {
+    if (user?.role === USER_ROLES.GUEST) {
+      setIsUpgradeModalOpen(true)
+      return
+    }
     if (user?.role !== USER_ROLES.TENANT) {
-      toast.error('Chỉ người thuê mới có thể đặt phòng. Vui lòng đăng nhập bằng tài khoản người thuê để sử dụng tính năng này.')
       return
     }
 
@@ -293,6 +301,10 @@ export function RoomDetailPage() {
           roomTitle={room.title}
         />
       ) : null}
+      <UpgradePackageModal
+        open={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+      />
     </MainLayout>
   )
 }
