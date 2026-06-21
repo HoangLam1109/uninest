@@ -195,7 +195,6 @@ export function AppRouter() {
               <Route path="nguoi-thue" element={<LandlordTenantsPage />} />
               <Route path="hoa-don" element={<LandlordInvoicesPage />} />
               <Route path="tin-nhan" element={<ChatPage />} />
-              <Route path="hoa-don" element={<LandlordInvoicesPage />} />
               <Route
                 path="tien-ich"
                 element={<LandlordPlaceholderPage title="Tien ich" />}

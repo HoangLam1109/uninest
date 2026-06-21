@@ -4,15 +4,12 @@ import { Pagination } from '@/components/common/pagination'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { useGetTenantFavoriteRooms } from '@/features/room/hooks/use-rooms'
+import { useFilteredRooms } from '@/features/room/hooks/use-filtered-rooms'
 import type { RoomFavorite, RoomFavoriteRoom } from '@/features/room/types/room.type'
 import {
   FavoriteRoomCard,
   type FavoriteRoomsView,
 } from '../components/favorite-room-card'
-
-function normalize(value: string) {
-  return value.trim().toLowerCase()
-}
 
 function getFavoriteRoom(favorite: RoomFavorite) {
   return typeof favorite.roomId === 'string' ? null : favorite.roomId
@@ -26,18 +23,14 @@ export function TenantFavoriteRoomsPage() {
   const favorites = favoritesQuery.data?.data
   const pagination = favoritesQuery.data?.pagination
 
-  const visibleRooms = useMemo(() => {
-    const keyword = normalize(search)
-    return (favorites ?? [])
-      .map(getFavoriteRoom)
-      .filter((room): room is RoomFavoriteRoom => Boolean(room))
-      .filter((room) => {
-        if (!keyword) return true
-        return [room.title, room.address, room.district ?? '', room.city ?? ''].some(
-          (value) => normalize(value).includes(keyword),
-        )
-      })
-  }, [favorites, search])
+  const favoriteRooms = useMemo(
+    () =>
+      (favorites ?? [])
+        .map(getFavoriteRoom)
+        .filter((room): room is RoomFavoriteRoom => Boolean(room)),
+    [favorites],
+  )
+  const visibleRooms = useFilteredRooms(favoriteRooms, search)
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8 2xl:mx-0 2xl:max-w-none">
