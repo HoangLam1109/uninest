@@ -5,12 +5,12 @@ export const ServiceSubscriptionRepository = {
 
   findById: (id: string) =>
     ServiceSubscriptionModel.findById(id)
-      .populate("packageId", "name price durationDays features")
+      .populate("packageId", "name price durationDays targetRole features")
       .populate("paymentId"),
 
   findByUserId: (userId: string, skip: number, limit: number) =>
     ServiceSubscriptionModel.find({ userId })
-      .populate("packageId", "name price durationDays features")
+      .populate("packageId", "name price durationDays targetRole features")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
@@ -23,7 +23,7 @@ export const ServiceSubscriptionRepository = {
       userId,
       status: SUBSCRIPTION_STATUS.ACTIVE,
     })
-      .populate("packageId", "name price durationDays features")
+      .populate("packageId", "name price durationDays targetRole features")
       .sort({ createdAt: -1 }),
 
   findExpiringSubscriptions: (beforeDate: Date) =>
@@ -31,7 +31,7 @@ export const ServiceSubscriptionRepository = {
       status: SUBSCRIPTION_STATUS.ACTIVE,
       endDate: { $lte: beforeDate },
     })
-      .populate("packageId", "name price durationDays"),
+      .populate("packageId", "name price durationDays targetRole"),
 
   update: (id: string, data: any) =>
     ServiceSubscriptionModel.findByIdAndUpdate(

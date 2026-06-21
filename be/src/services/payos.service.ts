@@ -9,6 +9,58 @@ import { SUBSCRIPTION_STATUS } from "../models/ServiceSubscription.model.js";
 import { INVOICE_STATUS } from "../models/Invoice.model.js";
 import { USER_ROLES } from "../constants/role.constant.js";
 import { applyRoleUpgradeFromPayment } from "./role-upgrade.service.js";
+import { isPaidUpgradeRole } from "./role-upgrade.service.js";
+
+function extractSubscriptionPackageId(note?: string | null) {
+  if (!note) return null;
+
+  const match = note.match(/package:\s*([a-fA-F0-9]{24})/);
+  return match?.[1] ?? null;
+}
+
+function normalizeVietnameseText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function resolvePackageTargetRole(pkg: {
+  targetRole?: string;
+  name?: string;
+  description?: string;
+  maxRooms?: number;
+}) {
+  if (pkg.targetRole && isPaidUpgradeRole(pkg.targetRole as any)) {
+    return pkg.targetRole;
+  }
+
+  const normalizedText = normalizeVietnameseText(
+    `${pkg.name ?? ""} ${pkg.description ?? ""}`,
+  );
+
+  if (
+    normalizedText.includes("landlord") ||
+    normalizedText.includes("chu nha") ||
+    normalizedText.includes("chu tro")
+  ) {
+    return USER_ROLES.LANDLORD;
+  }
+
+  if (
+    normalizedText.includes("tenant") ||
+    normalizedText.includes("nguoi thue") ||
+    normalizedText.includes("cu dan")
+  ) {
+    return USER_ROLES.TENANT;
+  }
+
+  if ((pkg.maxRooms ?? 0) > 0) {
+    return USER_ROLES.LANDLORD;
+  }
+
+  return USER_ROLES.TENANT;
+}
 
 export class PayOSService {
   static async createPaymentLink(params: {
@@ -106,8 +158,8 @@ export class PayOSService {
     }
 
     const note: string = payment.note || "";
-    if (note.includes("Subscription:") && note.includes("package:")) {
-      const packageId = note.split("package:")[1]?.trim();
+    if (payment.type === "SERVICE_FEE" && note.includes("Subscription:")) {
+      const packageId = extractSubscriptionPackageId(note);
       if (packageId) {
         const pkg = await ServicePackageRepository.findById(packageId);
         if (pkg) {
@@ -115,6 +167,7 @@ export class PayOSService {
           const startDate = new Date();
           const endDate = new Date(startDate);
           endDate.setDate(endDate.getDate() + pkg.durationDays);
+          const targetRole = resolvePackageTargetRole(pkg);
 
           await ServiceSubscriptionRepository.create({
             userId,
@@ -126,9 +179,9 @@ export class PayOSService {
             autoRenew: false,
           });
 
-          // Upgrade user role to TENANT with expiry matching subscription end
+          // Upgrade user role to the package target role with expiry matching subscription end
           await userRepository.updateById(userId, {
-            role: USER_ROLES.TENANT,
+            role: targetRole,
             roleExpiresAt: endDate,
           });
         }

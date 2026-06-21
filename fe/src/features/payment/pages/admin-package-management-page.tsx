@@ -40,6 +40,7 @@ const emptyForm: CreateServicePackagePayload = {
   name: '',
   price: 0,
   durationDays: 30,
+  targetRole: 'TENANT',
   description: '',
   features: {},
   maxRooms: undefined,
@@ -92,6 +93,7 @@ export function AdminPackageManagementPage() {
     return (
       normalize(pkg.name).includes(keyword) ||
       normalize(pkg.description ?? '').includes(keyword) ||
+      normalize(pkg.targetRole).includes(keyword) ||
       normalize(String(pkg.price)).includes(keyword) ||
       normalize(String(pkg.durationDays)).includes(keyword)
     )
@@ -113,6 +115,7 @@ export function AdminPackageManagementPage() {
       name: pkg.name,
       price: pkg.price,
       durationDays: pkg.durationDays,
+      targetRole: pkg.targetRole,
       description: pkg.description ?? '',
       features: pkg.features ?? {},
       maxRooms: pkg.maxRooms,
@@ -297,8 +300,9 @@ export function AdminPackageManagementPage() {
                   <col className="w-[20%]" />
                   <col className="w-[12%]" />
                   <col className="w-[12%]" />
-                  <col className="w-[16%]" />
-                  <col className="w-[15%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[9%]" />
                 </colgroup>
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                   <tr>
@@ -307,6 +311,9 @@ export function AdminPackageManagementPage() {
                     </th>
                     <th className="px-4 py-3 font-semibold xl:px-5 2xl:px-6">
                       Mô tả
+                    </th>
+                    <th className="px-4 py-3 font-semibold xl:px-5 2xl:px-6">
+                      Vai trò
                     </th>
                     <th className="px-4 py-3 font-semibold xl:px-5 2xl:px-6">
                       Giá
@@ -334,6 +341,9 @@ export function AdminPackageManagementPage() {
                         <p className="line-clamp-2 text-sm text-slate-500">
                           {pkg.description || '-'}
                         </p>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-slate-600 xl:px-5 2xl:px-6 2xl:py-5">
+                        {pkg.targetRole === 'LANDLORD' ? 'Chủ trọ' : 'Người thuê'}
                       </td>
                       <td className="px-4 py-4 text-sm font-bold text-slate-900 xl:px-5 2xl:px-6 2xl:py-5">
                         {formatCurrency(pkg.price)}
@@ -455,6 +465,28 @@ export function AdminPackageManagementPage() {
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                Vai trò nhận được <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={form.targetRole}
+                onChange={(e) =>
+                  updateField(
+                    'targetRole',
+                    e.target.value as CreateServicePackagePayload['targetRole'],
+                  )
+                }
+                className="h-10 w-full rounded-lg border border-primary/10 bg-white px-3 text-sm shadow-none outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                required
+              >
+                <option value="TENANT">Người thuê</option>
+                <option value="LANDLORD">Chủ trọ</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                 Thời hạn (ngày) <span className="text-red-500">*</span>
               </label>
               <Input
@@ -466,26 +498,25 @@ export function AdminPackageManagementPage() {
                 required
               />
             </div>
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-              Số phòng tối đa
-            </label>
-            <Input
-              type="number"
-              min={0}
-              value={form.maxRooms ?? ''}
-              onChange={(e) => {
-                const val = e.target.value
-                updateField(
-                  'maxRooms',
-                  val === '' ? undefined : Number(val),
-                )
-              }}
-              className="h-10 border border-primary/10 text-sm shadow-none"
-              placeholder="Không giới hạn"
-            />
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                Số phòng tối đa
+              </label>
+              <Input
+                type="number"
+                min={0}
+                value={form.maxRooms ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value
+                  updateField(
+                    'maxRooms',
+                    val === '' ? undefined : Number(val),
+                  )
+                }}
+                className="h-10 border border-primary/10 text-sm shadow-none"
+                placeholder="Không giới hạn"
+              />
+            </div>
           </div>
 
           <div>

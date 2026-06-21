@@ -9,6 +9,7 @@ export type ServicePackage = {
   description?: string
   price: number
   durationDays: number
+  targetRole: 'TENANT' | 'LANDLORD'
   features?: Record<string, string>
   maxRooms?: number
   isActive: boolean
@@ -20,6 +21,7 @@ export type CreateServicePackagePayload = {
   name: string
   price: number
   durationDays: number
+  targetRole: 'TENANT' | 'LANDLORD'
   description?: string
   features?: Record<string, string>
   maxRooms?: number

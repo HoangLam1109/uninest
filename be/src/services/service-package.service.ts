@@ -1,3 +1,4 @@
+import type { UserRole } from "../constants/role.constant.js";
 import { ServicePackageRepository } from "../repositories/service-package.repo.js";
 
 export class ServicePackageService {
@@ -5,6 +6,7 @@ export class ServicePackageService {
     name: string;
     price: number;
     durationDays: number;
+    targetRole: UserRole;
     description?: string;
     features?: Record<string, any>;
     maxRooms?: number;
@@ -42,6 +44,7 @@ export class ServicePackageService {
       name?: string;
       price?: number;
       durationDays?: number;
+      targetRole?: UserRole;
       description?: string;
       features?: Record<string, any>;
       maxRooms?: number;

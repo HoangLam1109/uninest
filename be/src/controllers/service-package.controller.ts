@@ -1,15 +1,34 @@
 import type { Request, Response } from "express";
 import mongoose from "mongoose";
+import { USER_ROLES } from "../constants/role.constant.js";
 import { ServicePackageService } from "../services/service-package.service.js";
 
 export const createPackage = async (req: Request, res: Response) => {
   try {
-    const { name, price, durationDays, description, features, maxRooms } = req.body;
+    const {
+      name,
+      price,
+      durationDays,
+      targetRole,
+      description,
+      features,
+      maxRooms,
+    } = req.body;
 
-    if (!name || !price || !durationDays) {
+    if (!name || !price || !durationDays || !targetRole) {
       return res.status(400).json({
         success: false,
-        message: "Name, price, and durationDays are required",
+        message: "Name, price, durationDays, and targetRole are required",
+      });
+    }
+
+    if (
+      targetRole !== USER_ROLES.TENANT &&
+      targetRole !== USER_ROLES.LANDLORD
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "targetRole must be TENANT or LANDLORD",
       });
     }
 
@@ -17,6 +36,7 @@ export const createPackage = async (req: Request, res: Response) => {
       name,
       price,
       durationDays,
+      targetRole,
       description,
       features,
       maxRooms,
