@@ -73,7 +73,7 @@ const registerUser = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    if (!registerOtpService.verifyOtp(email, otp)) {
+    if (!(await registerOtpService.verifyOtp(email, otp))) {
       res.status(400).json({ message: "Invalid or expired OTP!" });
       return;
     }
