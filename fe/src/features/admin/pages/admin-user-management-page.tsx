@@ -1,12 +1,5 @@
-import { useMemo, useState, type FormEvent } from 'react'
-import {
-  Edit3,
-  Plus,
-  Search,
-  Trash2,
-  UserCheck,
-  UserX,
-} from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Eye, Search, UserCheck, UserX } from 'lucide-react'
 import { USER_ROLES, type UserRole } from '@/constants/roles'
 import { Loading } from '@/components/common/loading'
 import { Avatar } from '@/components/ui/avatar'
@@ -14,31 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { cn } from '@/lib/utils'
-import { getSchemaErrorMessage } from '@/lib/zod-error'
-import {
-  useCreateUser,
-  useDeleteUser,
-  useGetUsers,
-  useUpdateUser,
-} from '@/features/user/hooks/use-users'
-import {
-  createUserSchema,
-  updateUserSchema,
-} from '@/features/user/schemas/user.schema'
-import type { User, UserPayload } from '@/features/user/types/user.type'
-import { toast } from 'sonner'
+import { useGetUsers } from '@/features/user/hooks/use-users'
+import type { User } from '@/features/user/types/user.type'
 
 type RoleFilter = 'ALL' | UserRole
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE'
-
-type UserFormState = {
-  email: string
-  fullName: string
-  phone: string
-  password: string
-  role: UserRole
-  isActive: boolean
-}
 
 const roleOptions = Object.values(USER_ROLES)
 
@@ -50,15 +23,6 @@ const roleLabels: Record<UserRole, string> = {
   GUEST: 'Khách hàng',
 }
 
-const initialForm: UserFormState = {
-  email: '',
-  fullName: '',
-  phone: '',
-  password: '',
-  role: USER_ROLES.GUEST,
-  isActive: true,
-}
-
 function normalize(value: string) {
   return value.trim().toLowerCase()
 }
@@ -68,52 +32,14 @@ function formatDate(value?: string) {
   return new Intl.DateTimeFormat('vi-VN').format(new Date(value))
 }
 
-function toFormState(user: User): UserFormState {
-  return {
-    email: user.email ?? '',
-    fullName: user.fullName ?? '',
-    phone: user.phone ?? '',
-    password: '',
-    role: user.role ?? USER_ROLES.GUEST,
-    isActive: user.isActive ?? true,
-  }
-}
-
-function buildPayload(
-  form: Omit<UserFormState, 'password'> & { password?: string },
-  editingUser: User | null,
-) {
-  const payload: Partial<UserPayload> = {
-    email: form.email.trim(),
-    fullName: form.fullName.trim(),
-    phone: form.phone.trim(),
-    role: form.role,
-    isActive: form.isActive,
-  }
-
-  if (form.password?.trim()) {
-    payload.password = form.password
-  }
-
-  if (!editingUser) {
-    payload.password = form.password
-  }
-
-  return payload
-}
-
 export function AdminUserManagementPage() {
   const [search, setSearch] = useState('')
   const [role, setRole] = useState<RoleFilter>('ALL')
   const [status, setStatus] = useState<StatusFilter>('ALL')
   const [modalOpen, setModalOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [form, setForm] = useState<UserFormState>(initialForm)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
 
   const usersQuery = useGetUsers()
-  const createUser = useCreateUser()
-  const updateUser = useUpdateUser()
-  const deleteUser = useDeleteUser()
 
   const users = usersQuery.data ?? []
   const activeCount = users.filter((user) => user.isActive !== false).length
@@ -139,53 +65,14 @@ export function AdminUserManagementPage() {
     })
   }, [role, search, status, users])
 
-  function openCreateModal() {
-    setEditingUser(null)
-    setForm(initialForm)
-    setModalOpen(true)
-  }
-
-  function openEditModal(user: User) {
-    setEditingUser(user)
-    setForm(toFormState(user))
+  function openDetailModal(user: User) {
+    setSelectedUser(user)
     setModalOpen(true)
   }
 
   function closeModal() {
-    if (createUser.isPending || updateUser.isPending) return
     setModalOpen(false)
-    setEditingUser(null)
-    setForm(initialForm)
-  }
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const validationResult = editingUser
-      ? updateUserSchema.safeParse(form)
-      : createUserSchema.safeParse(form)
-
-    if (!validationResult.success) {
-      toast.error(getSchemaErrorMessage(validationResult.error))
-      return
-    }
-
-    const payload = buildPayload(validationResult.data, editingUser)
-
-    if (editingUser) {
-      updateUser.mutate(
-        { id: editingUser._id, payload },
-        { onSuccess: closeModal },
-      )
-      return
-    }
-
-    createUser.mutate(payload as UserPayload, { onSuccess: closeModal })
-  }
-
-  function handleDelete(user: User) {
-    const ok = window.confirm(`Xoa tai khoan ${user.fullName}?`)
-    if (!ok) return
-    deleteUser.mutate(user._id)
+    setSelectedUser(null)
   }
 
   return (
@@ -198,14 +85,8 @@ export function AdminUserManagementPage() {
               Quản lý người dùng
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-500 md:text-base 2xl:max-w-3xl">
-              Tạo, cập nhật, khóa hoặc xóa tài khoản trên hệ thống UniNest.
+              Admin chỉ có thể xem chi tiết tài khoản trên hệ thống UniNest.
             </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={openCreateModal}>
-              <Plus className="size-4" />
-              Tạo tài khoản
-            </Button>
           </div>
         </header>
 
@@ -353,20 +234,10 @@ export function AdminUserManagementPage() {
                               type="button"
                               size="icon"
                               variant="ghost"
-                              aria-label={`Sua ${user.fullName}`}
-                              onClick={() => openEditModal(user)}
+                              aria-label={`Xem chi tiết ${user.fullName}`}
+                              onClick={() => openDetailModal(user)}
                             >
-                              <Edit3 className="size-4 text-slate-600" />
-                            </Button>
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
-                              aria-label={`Xoa ${user.fullName}`}
-                              onClick={() => handleDelete(user)}
-                              disabled={deleteUser.isPending}
-                            >
-                              <Trash2 className="size-4 text-red-600" />
+                              <Eye className="size-4 text-slate-600" />
                             </Button>
                           </div>
                         </td>
@@ -389,33 +260,24 @@ export function AdminUserManagementPage() {
       <Modal
         open={modalOpen}
         onClose={closeModal}
-        title={editingUser ? 'Cap nhat tai khoan' : 'Tao tai khoan'}
+        title="Chi tiết tài khoản"
         className="max-w-xl"
       >
-        <form className="grid gap-4" onSubmit={handleSubmit}>
+        <div className="grid gap-4">
           <div className="grid gap-3 md:grid-cols-2">
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
-              Ho ten
+              Họ tên
               <Input
-                required
-                value={form.fullName}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    fullName: event.target.value,
-                  }))
-                }
+                readOnly
+                value={selectedUser?.fullName ?? ''}
                 className="h-10 border border-primary/10 px-3 text-sm shadow-none"
               />
             </label>
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
               Số điện thoại
               <Input
-                required
-                value={form.phone}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, phone: event.target.value }))
-                }
+                readOnly
+                value={selectedUser?.phone ?? ''}
                 className="h-10 border border-primary/10 px-3 text-sm shadow-none"
               />
             </label>
@@ -424,84 +286,63 @@ export function AdminUserManagementPage() {
           <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
             Email
             <Input
-              required
+              readOnly
               type="email"
-              value={form.email}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, email: event.target.value }))
-              }
+              value={selectedUser?.email ?? ''}
               className="h-10 border border-primary/10 px-3 text-sm shadow-none"
-            />
-          </label>
-
-          <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
-            Mật khẩu
-            <Input
-              required={!editingUser}
-              type="password"
-              value={form.password}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  password: event.target.value,
-                }))
-              }
-              className="h-10 border border-primary/10 px-3 text-sm shadow-none"
-              placeholder={editingUser ? 'Để trống nếu không đổi' : undefined}
             />
           </label>
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
               Vai trò
-              <select
-                className="h-10 rounded-lg border border-primary/10 bg-white px-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={form.role}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    role: event.target.value as UserRole,
-                  }))
+              <Input
+                readOnly
+                value={
+                  selectedUser
+                    ? roleLabels[selectedUser.role ?? USER_ROLES.GUEST]
+                    : ''
                 }
-              >
-                {roleOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {roleLabels[option]}
-                  </option>
-                ))}
-              </select>
+                className="h-10 border border-primary/10 px-3 text-sm shadow-none"
+              />
             </label>
 
             <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
               Trạng thái
-              <select
-                className="h-10 rounded-lg border border-primary/10 bg-white px-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={form.isActive ? 'ACTIVE' : 'INACTIVE'}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    isActive: event.target.value === 'ACTIVE',
-                  }))
-                }
-              >
-                <option value="ACTIVE">Hoạt động</option>
-                <option value="INACTIVE">Đã khóa</option>
-              </select>
+              <Input
+                readOnly
+                value={selectedUser?.isActive === false ? 'Đã khóa' : 'Hoạt động'}
+                className="h-10 border border-primary/10 px-3 text-sm shadow-none"
+              />
             </label>
           </div>
 
-          <div className="mt-2 flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={closeModal}>
-              Hủy
-            </Button>
-            <Button
-              type="submit"
-              disabled={createUser.isPending || updateUser.isPending}
-            >
-              {editingUser ? 'Lưu thay đổi' : 'Tạo tài khoản'}
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
+              Ngày tạo
+              <Input
+                readOnly
+                value={formatDate(selectedUser?.createdAt)}
+                className="h-10 border border-primary/10 px-3 text-sm shadow-none"
+              />
+            </label>
+
+            <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
+              Cập nhật gần nhất
+              <Input
+                readOnly
+                value={formatDate(selectedUser?.updatedAt)}
+                className="h-10 border border-primary/10 px-3 text-sm shadow-none"
+              />
+            </label>
+          </div>
+
+          <div className="mt-2 flex justify-end">
+            <Button type="button" onClick={closeModal}>
+              Đóng
             </Button>
           </div>
-        </form>
+        </div>
       </Modal>
     </div>
   )

@@ -24,7 +24,6 @@ const registerOtpSchema = new mongoose.Schema<IRegisterOtp>(
     expiresAt: {
       type: Date,
       required: true,
-      index: true,
     },
     lastSentAt: {
       type: Date,

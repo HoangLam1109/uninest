@@ -35,7 +35,9 @@ export class UserRepository implements IUserRepository {
   }
 
   async updateById(id: string, userData: any): Promise<any> {
-    return await this.userModel.findByIdAndUpdate(id, userData, { new: true });
+    return await this.userModel.findByIdAndUpdate(id, userData, {
+      returnDocument: "after",
+    });
   }
 
   async deleteById(id: string): Promise<any> {
