@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import net from "net";
 import tls from "tls";
+import { RegisterOtpModel } from "../models/RegisterOtp.model.js";
 
 type RegisterOtpRecord = {
   otpHash: string;
@@ -17,9 +18,15 @@ type SmtpConfig = {
   secure: boolean;
 };
 
+type ResendConfig = {
+  apiKey: string;
+  from: string;
+  apiBaseUrl: string;
+};
+
 const OTP_TTL_MS = 5 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
-const otpStore = new Map<string, RegisterOtpRecord>();
+const SMTP_TIMEOUT_MS = 15 * 1000;
 
 export class OtpRateLimitError extends Error {
   constructor() {
@@ -59,6 +66,19 @@ function getSmtpConfig(): SmtpConfig | null {
     pass,
     from,
     secure: process.env.SMTP_SECURE === "true",
+  };
+}
+
+function getResendConfig(): ResendConfig | null {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM ?? process.env.SMTP_FROM;
+
+  if (!apiKey || !from) return null;
+
+  return {
+    apiKey,
+    from,
+    apiBaseUrl: process.env.RESEND_API_BASE_URL ?? "https://api.resend.com",
   };
 }
 
@@ -138,6 +158,10 @@ async function connectSmtp(config: SmtpConfig): Promise<net.Socket | tls.TLSSock
     ? tls.connect(config.port, config.host, { servername: config.host })
     : net.connect(config.port, config.host);
 
+  socket.setTimeout(SMTP_TIMEOUT_MS, () => {
+    socket.destroy(new Error("SMTP connection timed out"));
+  });
+
   await new Promise<void>((resolve, reject) => {
     socket.once("connect", resolve);
     socket.once("error", reject);
@@ -151,7 +175,41 @@ async function connectSmtp(config: SmtpConfig): Promise<net.Socket | tls.TLSSock
   return socket;
 }
 
+async function sendResendEmail(email: string, otp: string): Promise<boolean> {
+  const config = getResendConfig();
+  if (!config) return false;
+
+  const response = await fetch(`${config.apiBaseUrl}/emails`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: config.from,
+      to: [email],
+      subject: "Mã OTP đăng ký UniNest",
+      text: [
+        `Mã OTP đăng ký UniNest của bạn là: ${otp}`,
+        "",
+        "Mã có hiệu lực trong 5 phút. Nếu bạn không thực hiện đăng ký, vui lòng bỏ qua email này.",
+      ].join("\n"),
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Resend email failed: ${response.status} ${errorText}`);
+  }
+
+  return true;
+}
+
 async function sendOtpEmail(email: string, otp: string): Promise<void> {
+  if (await sendResendEmail(email, otp)) {
+    return;
+  }
+
   const config = getSmtpConfig();
 
   if (!config) {
@@ -186,37 +244,60 @@ async function sendOtpEmail(email: string, otp: string): Promise<void> {
 export class RegisterOtpService {
   async sendOtp(email: string): Promise<void> {
     const normalizedEmail = normalizeEmail(email);
-    const existingOtp = otpStore.get(normalizedEmail);
+    const existingOtp = await RegisterOtpModel.findOne({ email: normalizedEmail }).lean();
     const now = Date.now();
 
-    if (existingOtp && now - existingOtp.lastSentAt < RESEND_COOLDOWN_MS) {
+    if (
+      existingOtp &&
+      now - new Date(existingOtp.lastSentAt).getTime() < RESEND_COOLDOWN_MS
+    ) {
       throw new OtpRateLimitError();
     }
 
     const otp = createOtp();
-    otpStore.set(normalizedEmail, {
+    const record: RegisterOtpRecord = {
       otpHash: hashOtp(normalizedEmail, otp),
       expiresAt: now + OTP_TTL_MS,
       lastSentAt: now,
-    });
+    };
 
-    await sendOtpEmail(normalizedEmail, otp);
+    await RegisterOtpModel.findOneAndUpdate(
+      { email: normalizedEmail },
+      {
+        email: normalizedEmail,
+        otpHash: record.otpHash,
+        expiresAt: new Date(record.expiresAt),
+        lastSentAt: new Date(record.lastSentAt),
+      },
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true,
+      },
+    );
+
+    try {
+      await sendOtpEmail(normalizedEmail, otp);
+    } catch (error) {
+      await RegisterOtpModel.deleteOne({ email: normalizedEmail });
+      throw error;
+    }
   }
 
-  verifyOtp(email: string, otp: string): boolean {
+  async verifyOtp(email: string, otp: string): Promise<boolean> {
     const normalizedEmail = normalizeEmail(email);
-    const record = otpStore.get(normalizedEmail);
+    const record = await RegisterOtpModel.findOne({ email: normalizedEmail }).lean();
 
     if (!record) return false;
 
-    if (Date.now() > record.expiresAt) {
-      otpStore.delete(normalizedEmail);
+    if (Date.now() > new Date(record.expiresAt).getTime()) {
+      await RegisterOtpModel.deleteOne({ email: normalizedEmail });
       return false;
     }
 
     const isValid = record.otpHash === hashOtp(normalizedEmail, otp);
     if (isValid) {
-      otpStore.delete(normalizedEmail);
+      await RegisterOtpModel.deleteOne({ email: normalizedEmail });
     }
 
     return isValid;
