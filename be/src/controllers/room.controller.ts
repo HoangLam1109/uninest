@@ -7,6 +7,18 @@ import { configureCloudinary } from "../config/cloudinary.config.js";
 import { RoomService } from "../services/room.service.js";
 import { UserService } from "../services/user.service.js";
 
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function createContainsRegex(value: string) {
+  return { $regex: escapeRegex(value.trim()), $options: "i" };
+}
+
+function getTrimmedQueryString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
 function handleError(res: Response, err: any, context: string) {
   console.error(`[RoomController] ${context}:`, err.message ?? err);
 
@@ -320,6 +332,8 @@ export const searchRooms = async (req: Request, res: Response) => {
   try {
     const {
       q,
+      city,
+      district,
       page = 1,
       limit = 10,
       status,
@@ -328,19 +342,23 @@ export const searchRooms = async (req: Request, res: Response) => {
       roomType,
     } = req.query;
 
-    const keyword =
-      q && typeof q === "string"
-        ? {
-            $or: [
-              { title: { $regex: q, $options: "i" } },
-              { address: { $regex: q, $options: "i" } },
-              { city: { $regex: q, $options: "i" } },
-              { district: { $regex: q, $options: "i" } },
-            ],
-          }
-        : {};
-    const filter: any = { ...keyword };
+    const keyword = getTrimmedQueryString(q);
+    const cityQuery = getTrimmedQueryString(city);
+    const districtQuery = getTrimmedQueryString(district);
 
+    const filter: any = { isPublished: true };
+
+    if (keyword) {
+      filter.$or = [
+        { title: createContainsRegex(keyword) },
+        { address: createContainsRegex(keyword) },
+        { city: createContainsRegex(keyword) },
+        { district: createContainsRegex(keyword) },
+      ];
+    }
+
+    if (cityQuery) filter.city = createContainsRegex(cityQuery);
+    if (districtQuery) filter.district = createContainsRegex(districtQuery);
     if (status) filter.status = status;
     if (roomType) filter.roomType = roomType;
     if (minPrice || maxPrice) {

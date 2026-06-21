@@ -23,6 +23,7 @@ import {
   useGetRoomImages,
   useUpdateRoom,
 } from '../hooks/use-rooms'
+import { useFilteredRooms } from '../hooks/use-filtered-rooms'
 import {
   formatRoomCurrency,
   formatRoomType,
@@ -39,26 +40,6 @@ import { RoomFormModal } from './room-form-modal'
 function getRoomLandlordId(room: Room) {
   if (typeof room.landlordId === 'string') return room.landlordId
   return room.landlordId?._id
-}
-
-function searchRooms(rooms: Room[], search: string) {
-  const keyword = search.trim().toLowerCase()
-  if (!keyword) return rooms
-
-  return rooms.filter((room) =>
-    [
-      room.title,
-      room.address,
-      room.city,
-      room.district,
-      room.description,
-      room.roomType,
-      room.status,
-      ...getRoomAmenityNames(room),
-    ]
-      .filter(Boolean)
-      .some((value) => value?.toLowerCase().includes(keyword)),
-  )
 }
 
 function sortRooms(rooms: Room[], sort: RoomSortOption) {
@@ -80,7 +61,7 @@ function RoomManagementCard({
   onDelete,
 }: {
   room: Room
-  isDeleting: boolean
+  isDeleting: boolean 
   onEdit: (roomId: string) => void
   onDelete: (roomId: string) => void
 }) {
@@ -148,7 +129,7 @@ function RoomManagementCard({
             <div className="rounded-lg bg-slate-50 px-2.5 py-2">
               <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
                 <Users className="size-3.5" />
-                Sức chứa
+                Sốm người thuê
               </p>
               <p className="mt-1 font-bold text-slate-900">
                 {room.maxOccupants} người
@@ -267,9 +248,10 @@ export function RoomManagement() {
     if (!currentUserId) return []
     return data.filter((room) => getRoomLandlordId(room) === currentUserId)
   }, [currentUserId, roomsQuery.data?.data])
+  const matchedRooms = useFilteredRooms(rooms, search)
   const displayedRooms = useMemo(
-    () => sortRooms(searchRooms(rooms, search), sort),
-    [rooms, search, sort],
+    () => sortRooms(matchedRooms, sort),
+    [matchedRooms, sort],
   )
   const editingRoom =
     roomDetailQuery.data ??

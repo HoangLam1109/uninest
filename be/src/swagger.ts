@@ -927,6 +927,19 @@ const options: swaggerJsDoc.Options = {
               description: "Search keyword (title, address, city, district)",
             },
             {
+              name: "city",
+              in: "query",
+              schema: { type: "string" },
+              description: "Filter by city name (partial match, case-insensitive)",
+            },
+            {
+              name: "district",
+              in: "query",
+              schema: { type: "string" },
+              description:
+                "Filter by district name (partial match, case-insensitive)",
+            },
+            {
               name: "status",
               in: "query",
               schema: {
