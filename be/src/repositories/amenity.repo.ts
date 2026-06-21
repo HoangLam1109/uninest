@@ -10,7 +10,11 @@ export const AmenityRepository = {
   findByName: (name: string) => AmenityModel.findOne({ name }),
 
   update: (id: string, data: { name?: string }) =>
-    AmenityModel.findByIdAndUpdate(id, { $set: data }, { new: true, runValidators: true }),
+    AmenityModel.findByIdAndUpdate(
+      id,
+      { $set: data },
+      { returnDocument: "after", runValidators: true },
+    ),
 
   delete: (id: string) => AmenityModel.findByIdAndDelete(id),
 };
