@@ -1,10 +1,12 @@
 import { Schema, model, Document, Types } from "mongoose";
+import { USER_ROLES, type UserRole } from "../constants/role.constant.js";
 
 export interface IServicePackage extends Document {
   name: string;
   description?: string;
   price: number;
   durationDays: number;
+  targetRole: UserRole;
   features?: Record<string, any>;
   maxRooms?: number;
   isActive: boolean;
@@ -33,6 +35,12 @@ const ServicePackageSchema = new Schema<IServicePackage>(
       type: Number,
       required: [true, "Duration in days is required"],
       min: 1,
+    },
+    targetRole: {
+      type: String,
+      enum: [USER_ROLES.TENANT, USER_ROLES.LANDLORD],
+      required: [true, "Target role is required"],
+      index: true,
     },
     features: {
       type: Schema.Types.Mixed,
