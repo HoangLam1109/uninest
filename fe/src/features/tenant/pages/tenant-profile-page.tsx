@@ -29,35 +29,41 @@ export function TenantProfilePage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8 2xl:mx-0 2xl:max-w-none">
-      <header>
-        <h1 className="text-2xl font-bold text-slate-950 md:text-3xl">Hồ sơ cá nhân</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Quản lý thông tin cá nhân và hồ sơ định danh của bạn.
-        </p>
-      </header>
+  <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-4 sm:px-6 lg:px-8">
+    <header>
+      <h1 className="text-xl font-bold text-slate-950 sm:text-2xl md:text-3xl">
+        Hồ sơ cá nhân
+      </h1>
+      <p className="mt-1 text-sm text-slate-500">
+        Quản lý thông tin cá nhân và hồ sơ định danh của bạn.
+      </p>
+    </header>
 
-      {/* ── User info card ─────────────────────────────────────────────── */}
-      <div className="grid gap-6 2xl:grid-cols-[28rem_minmax(0,1fr)] 2xl:items-start">
-      <div className="rounded-xl border border-primary/10 bg-white p-6 shadow-sm">
-        <div className="flex items-start gap-4 2xl:flex-col">
+    <div className="grid gap-6 lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start">
+      <div className="rounded-xl border border-primary/10 bg-white p-4 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start lg:flex-col">
           <AvatarUpload
             name={user?.fullName ?? ''}
             src={user?.avatarUrl}
             onUpload={handleAvatarUpload}
           />
+
           <div className="min-w-0 pt-1">
-            <h2 className="text-lg font-bold text-slate-950">{user?.fullName}</h2>
-            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500 2xl:flex-col">
+            <h2 className="truncate text-lg font-bold text-slate-950">
+              {user?.fullName}
+            </h2>
+
+            <div className="mt-1.5 flex min-w-0 flex-col gap-1 text-sm text-slate-500">
               {user?.email ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <Mail className="size-3.5" />
-                  {user.email}
+                <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <Mail className="size-3.5 shrink-0" />
+                  <span className="truncate">{user.email}</span>
                 </span>
               ) : null}
+
               {user?.phone ? (
                 <span className="inline-flex items-center gap-1.5">
-                  <Phone className="size-3.5" />
+                  <Phone className="size-3.5 shrink-0" />
                   {user.phone}
                 </span>
               ) : null}
@@ -66,17 +72,17 @@ export function TenantProfilePage() {
         </div>
       </div>
 
-      {/* ── Identity section ────────────────────────────────────────────── */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
+      <div className="min-w-0 space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <h2 className="text-lg font-bold text-slate-950">Hồ sơ định danh</h2>
             <p className="text-sm text-slate-500">
               Hồ sơ định danh giúp chủ trọ xác minh danh tính khi bạn đặt phòng.
             </p>
           </div>
+
           <Button
-            className="shrink-0 gap-1.5"
+            className="w-full shrink-0 gap-1.5 sm:w-auto"
             onClick={() => setShowCreateForm(true)}
           >
             <Plus className="size-4" />
@@ -91,7 +97,7 @@ export function TenantProfilePage() {
             ))}
           </div>
         ) : identities.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border bg-surface p-8 text-center">
+          <div className="rounded-xl border border-dashed border-border bg-surface p-5 text-center sm:p-8">
             <Shield className="mx-auto size-10 text-slate-300" />
             <p className="mt-3 text-sm font-semibold text-slate-600">
               Bạn chưa có hồ sơ định danh nào
@@ -99,9 +105,10 @@ export function TenantProfilePage() {
             <p className="mt-1 text-sm text-slate-400">
               Tạo hồ sơ định danh để có thể đặt phòng và ký hợp đồng thuê.
             </p>
+
             <Button
               variant="outline"
-              className="mt-4 gap-1.5"
+              className="mt-4 w-full gap-1.5 sm:w-auto"
               onClick={() => setShowCreateForm(true)}
             >
               <Plus className="size-4" />
@@ -113,68 +120,71 @@ export function TenantProfilePage() {
             {identities.map((identity) => (
               <div
                 key={identity._id}
-                className="flex items-center gap-4 rounded-xl border border-primary/10 bg-white p-4 shadow-sm transition hover:border-primary/30"
+                className="flex flex-col gap-3 rounded-xl border border-primary/10 bg-white p-4 shadow-sm transition hover:border-primary/30 sm:flex-row sm:items-center"
               >
                 <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
                   <FileText className="size-6 text-primary" />
                 </div>
+
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold text-foreground">{identity.fullName}</p>
-                  <p className="text-sm text-slate-500">
+                  <p className="truncate font-bold text-foreground">
+                    {identity.fullName}
+                  </p>
+                  <p className="break-words text-sm text-slate-500">
                     CCCD: {identity.cccdNumber} • {identity.phone}
                   </p>
                 </div>
-                <span
-                  className={cn(
-                    'shrink-0 rounded-full px-3 py-1 text-xs font-bold',
-                    identity.status === 'VERIFIED'
-                      ? 'bg-green-500/10 text-green-600'
+
+                <div className="flex items-center justify-between gap-2 sm:justify-end">
+                  <span
+                    className={cn(
+                      'shrink-0 rounded-full px-3 py-1 text-xs font-bold',
+                      identity.status === 'VERIFIED'
+                        ? 'bg-green-500/10 text-green-600'
+                        : identity.status === 'REJECTED'
+                          ? 'bg-red-500/10 text-red-600'
+                          : 'bg-amber-500/10 text-amber-600',
+                    )}
+                  >
+                    {identity.status === 'VERIFIED'
+                      ? 'Đã xác minh'
                       : identity.status === 'REJECTED'
-                        ? 'bg-red-500/10 text-red-600'
-                        : 'bg-amber-500/10 text-amber-600',
-                  )}
-                >
-                  {identity.status === 'VERIFIED'
-                    ? 'Đã xác minh'
-                    : identity.status === 'REJECTED'
-                      ? 'Từ chối'
-                      : 'Chờ xác minh'}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="shrink-0 gap-1 text-xs"
-                  onClick={() => setViewingIdentity(identity)}
-                >
-                  <Eye className="size-3.5" />
-                  Xem
-                </Button>
+                        ? 'Từ chối'
+                        : 'Chờ xác minh'}
+                  </span>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0 gap-1 text-xs"
+                    onClick={() => setViewingIdentity(identity)}
+                  >
+                    <Eye className="size-3.5" />
+                    Xem
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
-
-      {/* ── Modals ──────────────────────────────────────────────────────── */}
-      </div>
-
-      <IdentityFormModal
-        open={showCreateForm}
-        onClose={() => setShowCreateForm(false)}
-        hideUserSearch
-      />
-
-      <Modal
-        open={Boolean(viewingIdentity)}
-        onClose={() => setViewingIdentity(null)}
-        title="Chi tiết hồ sơ định danh"
-        className="max-w-lg"
-      >
-        {viewingIdentity ? (
-          <IdentityDetail identity={viewingIdentity} />
-        ) : null}
-      </Modal>
     </div>
-  )
+
+    <IdentityFormModal
+      open={showCreateForm}
+      onClose={() => setShowCreateForm(false)}
+      hideUserSearch
+    />
+
+    <Modal
+      open={Boolean(viewingIdentity)}
+      onClose={() => setViewingIdentity(null)}
+      title="Chi tiết hồ sơ định danh"
+      className="max-w-lg"
+    >
+      {viewingIdentity ? <IdentityDetail identity={viewingIdentity} /> : null}
+    </Modal>
+  </div>
+)
 }
