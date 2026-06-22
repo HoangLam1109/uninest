@@ -20,7 +20,6 @@ export const adminSidebarConfig = {
   label: 'Admin Console',
   navLabel: 'Điều hướng quản trị',
   navItems: adminNavItems,
-  ctaLabel: 'Tạo tài khoản',
   ctaIcon: UserPlus,
 }
 

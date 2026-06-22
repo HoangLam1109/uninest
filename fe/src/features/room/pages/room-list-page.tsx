@@ -137,13 +137,13 @@ export function RoomListPage() {
   const activeFilterLabels = useMemo(() => {
     const labels: string[] = []
 
-    if (searchQueryParams.q) labels.push(`Tu khoa: ${searchQueryParams.q}`)
-    if (searchQueryParams.city) labels.push(`Thanh pho: ${searchQueryParams.city}`)
+    if (searchQueryParams.q) labels.push(`Từ khóa: ${searchQueryParams.q}`)
+    if (searchQueryParams.city) labels.push(`Thành phố: ${searchQueryParams.city}`)
     if (searchQueryParams.district) {
-      labels.push(`Quan/Huyen: ${searchQueryParams.district}`)
+      labels.push(`Quận/Huyện: ${searchQueryParams.district}`)
     }
     if (searchQueryParams.roomType) {
-      labels.push(`Loai phong: ${formatRoomType(searchQueryParams.roomType)}`)
+      labels.push(`Loại phòng: ${formatRoomType(searchQueryParams.roomType)}`)
     }
 
     const priceRange = formatPriceRange(

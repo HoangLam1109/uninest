@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Eye, Search, UserCheck, UserX } from 'lucide-react'
+import { Pagination } from '@/components/common/pagination'
 import { USER_ROLES, type UserRole } from '@/constants/roles'
 import { Loading } from '@/components/common/loading'
 import { Avatar } from '@/components/ui/avatar'
@@ -14,6 +15,7 @@ type RoleFilter = 'ALL' | UserRole
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE'
 
 const roleOptions = Object.values(USER_ROLES)
+const USERS_PER_PAGE = 10
 
 const roleLabels: Record<UserRole, string> = {
   ADMIN: 'Admin',
@@ -33,6 +35,7 @@ function formatDate(value?: string) {
 }
 
 export function AdminUserManagementPage() {
+  const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [role, setRole] = useState<RoleFilter>('ALL')
   const [status, setStatus] = useState<StatusFilter>('ALL')
@@ -64,6 +67,23 @@ export function AdminUserManagementPage() {
       return matchesSearch && matchesRole && matchesStatus
     })
   }, [role, search, status, users])
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / USERS_PER_PAGE))
+
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (page - 1) * USERS_PER_PAGE
+    return filteredUsers.slice(startIndex, startIndex + USERS_PER_PAGE)
+  }, [filteredUsers, page])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, role, status])
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages)
+    }
+  }, [page, totalPages])
 
   function openDetailModal(user: User) {
     setSelectedUser(user)
@@ -184,7 +204,7 @@ export function AdminUserManagementPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-primary/10">
-                  {filteredUsers.map((user) => {
+                  {paginatedUsers.map((user) => {
                     const userRole = user.role ?? USER_ROLES.GUEST
                     const isActive = user.isActive !== false
 
@@ -254,6 +274,17 @@ export function AdminUserManagementPage() {
               ) : null}
             </div>
           )}
+
+          {!usersQuery.isLoading && !usersQuery.isError && filteredUsers.length > 0 ? (
+            <div className="border-t border-primary/10 px-4 py-4 xl:px-5 2xl:px-6">
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                isDisabled={usersQuery.isFetching}
+                onPageChange={setPage}
+              />
+            </div>
+          ) : null}
         </section>
       </div>
 

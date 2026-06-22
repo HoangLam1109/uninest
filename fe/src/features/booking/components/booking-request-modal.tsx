@@ -1,6 +1,8 @@
 import { useEffect, useReducer, type ComponentProps } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { CalendarDays, ChevronDown, ChevronUp, FileText } from 'lucide-react'
 import { toast } from 'sonner'
+import { paths } from '@/config/constants'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
@@ -65,6 +67,7 @@ export function BookingRequestModal({
   roomId,
   roomTitle,
 }: BookingRequestModalProps) {
+  const navigate = useNavigate()
   const createBooking = useCreateBooking()
   const { user } = useAuth()
   const [state, dispatch] = useReducer(
@@ -84,6 +87,11 @@ export function BookingRequestModal({
   const handleClose = () => {
     dispatch({ type: 'reset' })
     onClose()
+  }
+
+  const handleNavigateToProfile = () => {
+    handleClose()
+    navigate(`${paths.tenantDashboard}/ho-so`)
   }
 
   useEffect(() => {
@@ -214,7 +222,7 @@ export function BookingRequestModal({
               <span className="text-xs text-slate-400">
                 {loadingIdentities
                   ? '...'
-                  : `${selectedIdentityIds.length}/${identities.length} ho so`}
+                  : `${selectedIdentityIds.length}/${identities.length} hồ sơ`}
               </span>
             </div>
 
@@ -279,6 +287,14 @@ export function BookingRequestModal({
                     <p className="text-xs text-slate-400">
                       Vui lòng tạo hồ sơ định danh và chờ xác minh để có thể đặt phòng.
                     </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="mt-3"
+                      onClick={handleNavigateToProfile}
+                    >
+                      Táº¡o há»“ sÆ¡ Ä‘á»‹nh danh
+                    </Button>
                   </div>
                 )}
               </div>

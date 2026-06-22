@@ -28,7 +28,7 @@ export function Pagination({
   pageClassName,
   pageLabel = 'Trang',
   pageSeparator = '/',
-  previousLabel = 'Truoc',
+  previousLabel = 'Trước',
   nextLabel = 'Sau',
   buttonVariant = 'ghost',
   buttonClassName = 'bg-white',
