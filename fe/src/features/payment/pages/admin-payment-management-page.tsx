@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   AlertCircle,
@@ -9,6 +9,7 @@ import {
   Search,
   WalletCards,
 } from 'lucide-react'
+import { Pagination } from '@/components/common/pagination'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,6 +26,7 @@ import type {
 type StatusFilter = 'ALL' | PaymentStatus
 type TypeFilter = 'ALL' | PaymentType
 type MethodFilter = 'ALL' | PaymentMethod
+const PAYMENTS_PER_PAGE = 10
 
 const statusLabels: Record<PaymentStatus, string> = {
   PENDING: 'Chờ thanh toán',
@@ -103,6 +105,7 @@ function getPaymentSearchFields(payment: AdminPayment) {
 }
 
 export function AdminPaymentManagementPage() {
+  const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<StatusFilter>('ALL')
   const [type, setType] = useState<TypeFilter>('ALL')
@@ -143,6 +146,23 @@ export function AdminPaymentManagementPage() {
       return matchesSearch && matchesStatus && matchesType && matchesMethod
     })
   }, [method, payments, search, status, type])
+
+  const totalPages = Math.max(1, Math.ceil(visiblePayments.length / PAYMENTS_PER_PAGE))
+
+  const paginatedPayments = useMemo(() => {
+    const startIndex = (page - 1) * PAYMENTS_PER_PAGE
+    return visiblePayments.slice(startIndex, startIndex + PAYMENTS_PER_PAGE)
+  }, [page, visiblePayments])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, status, type, method])
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages)
+    }
+  }, [page, totalPages])
 
   function refreshPayments() {
     paymentsQuery.refetch()
@@ -263,7 +283,6 @@ export function AdminPaymentManagementPage() {
               <table className="w-full min-w-[1040px] table-fixed text-left xl:min-w-0">
                 <colgroup>
                   <col className="w-[26%]" />
-                  <col className="w-[22%]" />
                   <col className="w-[14%]" />
                   <col className="w-[14%]" />
                   <col className="w-[14%]" />
@@ -273,9 +292,6 @@ export function AdminPaymentManagementPage() {
                   <tr>
                     <th className="px-4 py-3 font-semibold xl:px-5 2xl:px-6">
                       Người thanh toán
-                    </th>
-                    <th className="px-4 py-3 font-semibold xl:px-5 2xl:px-6">
-                      Người nhận
                     </th>
                     <th className="px-4 py-3 font-semibold xl:px-5 2xl:px-6">
                       Số tiền
@@ -292,10 +308,8 @@ export function AdminPaymentManagementPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-primary/10">
-                  {visiblePayments.map((payment) => {
+                  {paginatedPayments.map((payment) => {
                     const payer = getUser(payment.payerId)
-                    const receiver = getUser(payment.receiverId)
-
                     return (
                       <tr key={payment._id} className="align-middle">
                         <td className="px-4 py-4 xl:px-5 2xl:px-6 2xl:py-5">
@@ -313,14 +327,6 @@ export function AdminPaymentManagementPage() {
                               </p>
                             </div>
                           </div>
-                        </td>
-                        <td className="px-4 py-4 xl:px-5 2xl:px-6 2xl:py-5">
-                          <p className="truncate font-semibold text-slate-900">
-                            {receiver?.fullName ?? 'Không rõ'}
-                          </p>
-                          <p className="truncate text-sm text-slate-500">
-                            {receiver?.email ?? '-'}
-                          </p>
                         </td>
                         <td className="px-4 py-4 text-sm font-bold text-slate-900 xl:px-5 2xl:px-6 2xl:py-5">
                           {formatCurrency(payment.amount, payment.currency)}
@@ -362,6 +368,17 @@ export function AdminPaymentManagementPage() {
               </div>
             )}
           </div>
+
+          {!paymentsQuery.isLoading && !paymentsQuery.isError && visiblePayments.length > 0 ? (
+            <div className="border-t border-primary/10 px-4 py-4 xl:px-5 2xl:px-6">
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                isDisabled={paymentsQuery.isFetching}
+                onPageChange={setPage}
+              />
+            </div>
+          ) : null}
         </section>
       </div>
     </div>

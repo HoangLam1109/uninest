@@ -27,7 +27,7 @@ function FeaturedRoomCard({ room, fallbackImage }: FeaturedRoomCardProps) {
   const imageUrl = displayImage?.url ?? fallbackImage
 
   return (
-    <Card className="group flex flex-col">
+    <Card className="group flex h-full flex-col">
       <Link to={`/phong/${room._id}`} className="relative block h-48 overflow-hidden">
         <img
           src={imageUrl}
@@ -41,16 +41,16 @@ function FeaturedRoomCard({ room, fallbackImage }: FeaturedRoomCardProps) {
         ) : null}
       </Link>
       <CardContent className="flex flex-1 flex-col gap-3">
-        <div>
+        <div className="space-y-1">
           <Link
             to={`/phong/${room._id}`}
-            className="text-lg font-bold text-foreground transition-colors hover:text-primary"
+            className="line-clamp-1 text-lg font-bold text-foreground transition-colors hover:text-primary"
           >
             {room.title}
           </Link>
-          <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-            <MapPin className="size-3 shrink-0" />
-            {formatRoomLocation(room)}
+          <p className="flex min-h-10 items-start gap-1 text-sm text-muted-foreground">
+            <MapPin className="mt-0.5 size-3 shrink-0" />
+            <span className="line-clamp-2">{formatRoomLocation(room)}</span>
           </p>
         </div>
         <div className="mt-auto flex items-center justify-between">
@@ -138,7 +138,7 @@ export function FeaturedRoomsSection() {
         {!roomsQuery.isLoading && !roomsQuery.isError && rooms.length > 0 ? (
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
             {rooms.map((room, index) => (
-              <div key={room._id} data-gsap-reveal>
+              <div key={room._id} className="h-full" data-gsap-reveal>
                 <FeaturedRoomCard
                   room={room}
                   fallbackImage={images.rooms[index % images.rooms.length]}

@@ -69,9 +69,9 @@ export function SectionPanel({
   children: ReactNode
 }) {
   return (
-    <article className="rounded-3xl border border-primary/10 bg-white p-5 shadow-sm md:p-6">
+    <article className="min-w-0 overflow-hidden rounded-3xl border border-primary/10 bg-white p-5 shadow-sm md:p-6">
       <div className="mb-5 flex items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-500">{eyebrow}</p>
           <h2 className="mt-1 text-xl font-bold text-slate-950">{title}</h2>
         </div>

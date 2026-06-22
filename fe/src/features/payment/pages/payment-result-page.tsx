@@ -71,16 +71,16 @@ export function PaymentResultPage({ result }: PaymentResultPageProps) {
     if (!orderCode) {
       return {
         icon: <XCircle className="size-12 text-red-500" />,
-        title: 'Thieu ma giao dich',
-        description: 'Khong tim thay orderCode tu PayOS de xac minh thanh toan.',
+        title: 'Thất bại khi xác minh thanh toán',
+        description: 'Không tìm thấy mã giao dịch.',
       }
     }
 
     if (statusQuery.isPending || statusQuery.isFetching) {
       return {
         icon: <Loader2 className="size-12 animate-spin text-primary" />,
-        title: result === 'cancel' ? 'Dang huy thanh toan' : 'Dang xac minh thanh toan',
-        description: 'UniNest dang dong bo trang thai giao dich voi PayOS.',
+        title: result === 'cancel' ? 'Đang hủy thanh toán' : 'Đang xác minh thanh toán',
+        description: 'UniNest đang đồng bộ trạng thái giao dịch với PayOS.',
       }
     }
 
@@ -123,7 +123,7 @@ export function PaymentResultPage({ result }: PaymentResultPageProps) {
 
         {orderCode ? (
           <p className="mt-4 rounded-lg bg-surface px-3 py-2 text-xs font-semibold text-muted-foreground">
-            Ma giao dich: {orderCode}
+            Mã giao dịch: {orderCode}
           </p>
         ) : null}
 

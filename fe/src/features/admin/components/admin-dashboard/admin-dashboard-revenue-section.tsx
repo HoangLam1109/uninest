@@ -1,10 +1,9 @@
+import { useEffect, useState } from 'react'
 import { BarChart3, Loader2, Wallet } from 'lucide-react'
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  Line,
-  LineChart,
   XAxis,
   YAxis,
 } from 'recharts'
@@ -14,6 +13,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/common/chart'
+import { cn } from '@/lib/utils'
 import {
   formatCompactCurrency,
   type RevenuePoint,
@@ -35,41 +35,94 @@ const typeRevenueChartConfig = {
   },
 } satisfies ChartConfig
 
-function LineRevenueChart({ data }: { data: RevenuePoint[] }) {
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(`(max-width: ${breakpoint - 1}px)`)
+
+    const handleChange = () => setIsMobile(mediaQuery.matches)
+    handleChange()
+
+    mediaQuery.addEventListener('change', handleChange)
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange)
+    }
+  }, [breakpoint])
+
+  return isMobile
+}
+
+function truncateLabel(label: string, maxLength: number) {
+  if (label.length <= maxLength) return label
+  return `${label.slice(0, maxLength).trim()}...`
+}
+
+function RevenueBarChart({
+  data,
+  isMobile,
+}: {
+  data: RevenuePoint[]
+  isMobile: boolean
+}) {
   return (
-    <ChartContainer config={revenueChartConfig} className="h-72 w-full min-w-0">
-      <LineChart
+    <ChartContainer
+      config={revenueChartConfig}
+      className={cn(
+        'h-72 w-full min-w-0 !aspect-auto overflow-hidden',
+        isMobile && 'h-60',
+      )}
+    >
+      <BarChart
         accessibilityLayer
         data={data}
-        margin={{ left: 8, right: 8, top: 12 }}
+        margin={{
+          left: isMobile ? -20 : 8,
+          right: isMobile ? 0 : 8,
+          top: 12,
+          bottom: isMobile ? 8 : 0,
+        }}
       >
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
+        <XAxis
+          dataKey="label"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={isMobile ? 6 : 8}
+          minTickGap={isMobile ? 24 : 12}
+          tick={{ fontSize: isMobile ? 11 : 12 }}
+        />
         <YAxis
           tickLine={false}
           axisLine={false}
-          tickMargin={8}
-          width={58}
+          tickMargin={isMobile ? 6 : 8}
+          width={isMobile ? 44 : 58}
+          tick={{ fontSize: isMobile ? 11 : 12 }}
           tickFormatter={formatCompactCurrency}
         />
         <ChartTooltip
           cursor={false}
-          content={<ChartTooltipContent indicator="line" />}
+          content={<ChartTooltipContent indicator="dot" />}
         />
-        <Line
+        <Bar
           dataKey="amount"
-          type="monotone"
-          stroke="var(--color-amount)"
-          strokeWidth={3}
-          dot={{ r: 4, fill: 'var(--color-amount)' }}
-          activeDot={{ r: 6 }}
+          fill="var(--color-amount)"
+          radius={[8, 8, 0, 0]}
+          maxBarSize={isMobile ? 28 : 40}
         />
-      </LineChart>
+      </BarChart>
     </ChartContainer>
   )
 }
 
-function TypeRevenueBars({ data }: { data: TypeRevenuePoint[] }) {
+function TypeRevenueBars({
+  data,
+  isMobile,
+}: {
+  data: TypeRevenuePoint[]
+  isMobile: boolean
+}) {
   if (data.length === 0) {
     return (
       <div className="flex min-h-60 items-center justify-center rounded-2xl bg-slate-50 text-sm font-semibold text-slate-500">
@@ -81,13 +134,22 @@ function TypeRevenueBars({ data }: { data: TypeRevenuePoint[] }) {
   return (
     <ChartContainer
       config={typeRevenueChartConfig}
-      className="h-72 w-full min-w-0"
+      className={cn(
+        'h-72 w-full min-w-0 !aspect-auto overflow-hidden',
+        isMobile && 'h-64',
+      )}
     >
       <BarChart
         accessibilityLayer
         data={data}
         layout="vertical"
-        margin={{ left: 2, right: 8 }}
+        margin={{
+          left: isMobile ? -24 : 0,
+          right: isMobile ? 12 : 8,
+          top: isMobile ? 4 : 0,
+          bottom: isMobile ? 4 : 0,
+        }}
+        barCategoryGap={isMobile ? 16 : 12}
       >
         <CartesianGrid horizontal={false} />
         <YAxis
@@ -95,8 +157,12 @@ function TypeRevenueBars({ data }: { data: TypeRevenuePoint[] }) {
           type="category"
           tickLine={false}
           axisLine={false}
-          tickMargin={8}
-          width={112}
+          tickMargin={isMobile ? 6 : 8}
+          width={isMobile ? 72 : 112}
+          tick={{ fontSize: isMobile ? 11 : 12 }}
+          tickFormatter={(value: string) =>
+            isMobile ? truncateLabel(value, 8) : value
+          }
         />
         <XAxis dataKey="amount" type="number" hide />
         <ChartTooltip
@@ -120,6 +186,8 @@ export function AdminDashboardRevenueSection({
   revenueSeries,
   typeRevenue,
 }: AdminDashboardRevenueSectionProps) {
+  const isMobile = useIsMobile()
+
   return (
     <section className="grid gap-4 xl:grid-cols-[minmax(0,1.38fr)_minmax(320px,0.62fr)] 2xl:grid-cols-[minmax(0,1.5fr)_minmax(420px,0.58fr)] 2xl:gap-5">
       <SectionPanel
@@ -133,7 +201,7 @@ export function AdminDashboardRevenueSection({
             Đang tải biểu đồ...
           </div>
         ) : (
-          <LineRevenueChart data={revenueSeries} />
+          <RevenueBarChart data={revenueSeries} isMobile={isMobile} />
         )}
       </SectionPanel>
 
@@ -148,7 +216,7 @@ export function AdminDashboardRevenueSection({
             Đang tải dữ liệu...
           </div>
         ) : (
-          <TypeRevenueBars data={typeRevenue} />
+          <TypeRevenueBars data={typeRevenue} isMobile={isMobile} />
         )}
       </SectionPanel>
     </section>
