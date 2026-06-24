@@ -1,10 +1,10 @@
 import {
-  isOptionalHttpUrl,
   parseOptionalNonNegativeNumber,
   parsePositiveNumber,
   validateContractDates,
   validateOptionalTextMax,
 } from "./common";
+import type { ContractPdfUpload } from "@/utils/contract-upload";
 
 export type ContractFormMode = "create" | "edit" | "renew";
 
@@ -15,8 +15,9 @@ export type ContractFormValues = {
   depositAmount: string;
   startDate: string;
   endDate: string;
-  contractFileUrl: string;
   terms: string;
+  hasExistingContractFile?: boolean;
+  contractFile?: ContractPdfUpload | null;
 };
 
 export function validateContractForm(values: ContractFormValues): string | null {
@@ -32,10 +33,6 @@ export function validateContractForm(values: ContractFormValues): string | null 
 
   const termsError = validateOptionalTextMax(values.terms, 5000, "Điều khoản");
   if (termsError) return termsError;
-
-  if (!isOptionalHttpUrl(values.contractFileUrl)) {
-    return "Link hợp lệ phải bắt đầu bằng http:// hoặc https://";
-  }
 
   if (values.mode === "renew" && !values.startDate.trim()) {
     return "Vui lòng nhập ngày bắt đầu gia hạn.";

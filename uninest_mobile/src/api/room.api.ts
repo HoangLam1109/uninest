@@ -2,6 +2,7 @@ import { api } from "@/lib/api-client";
 import { appendImageToFormData } from "@/utils/upload-image";
 import type { LandlordTenantListResponse } from "@/types/tenant";
 import type {
+  AmenityListResponse,
   RoomImageListResponse,
   RoomImageResponse,
   RoomListResponse,
@@ -42,6 +43,8 @@ function buildRoomQuery(params?: RoomListParams) {
 }
 
 export const roomApi = {
+  listAmenities: () => api.get<AmenityListResponse>("/amenities"),
+
   list: (params?: RoomListParams) =>
     api.get<RoomListResponse>(`/rooms/getAll?${buildRoomQuery(params)}`),
 

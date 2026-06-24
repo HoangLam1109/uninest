@@ -52,9 +52,8 @@ export type BookingListResponse = {
 export type CreateBookingPayload = {
   roomId: string;
   checkInDate: string;
-  checkOutDate?: string;
   notes?: string;
-  identityIds?: string[];
+  identityIds: string[];
 };
 
 export type CreateBookingResponse = {

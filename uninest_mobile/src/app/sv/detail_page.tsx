@@ -37,10 +37,35 @@ import {
   formatPrice,
   formatRoomLocation,
   getLandlordName,
+  getRoomImageSource,
   sortRoomImages,
 } from "@/utils/room-display";
 
-const PLACEHOLDER_IMAGE = require("@/assets/images/tutorial-web.png");
+type RoomBookingState = {
+  approved: Booking | null;
+  pending: Booking | null;
+};
+
+const EMPTY_ROOM_BOOKING: RoomBookingState = {
+  approved: null,
+  pending: null,
+};
+
+function resolveRoomBookings(
+  bookings: Booking[],
+  roomId: string,
+): RoomBookingState {
+  const bookingsForRoom = bookings.filter(
+    (booking) => getBookingRoomId(booking) === roomId,
+  );
+
+  return {
+    approved:
+      bookingsForRoom.find((booking) => booking.status === "APPROVED") ?? null,
+    pending:
+      bookingsForRoom.find((booking) => booking.status === "PENDING") ?? null,
+  };
+}
 
 export default function DetailPage() {
   const insets = useSafeAreaInsets();
@@ -57,7 +82,8 @@ export default function DetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewStats, setReviewStats] = useState<ReviewStatistics | null>(null);
-  const [approvedBooking, setApprovedBooking] = useState<Booking | null>(null);
+  const [bookingForRoom, setBookingForRoom] =
+    useState<RoomBookingState>(EMPTY_ROOM_BOOKING);
   const [contacting, setContacting] = useState(false);
 
   const reloadReviews = useCallback(async () => {
@@ -140,17 +166,15 @@ export default function DetailPage() {
       setImageIndex(0);
       setReviews(reviewsRes.data ?? []);
       setReviewStats(reviewsRes.statistics ?? null);
-      const approved = (bookingsRes.data ?? []).find(
-        (booking) =>
-          getBookingRoomId(booking) === roomId && booking.status === "APPROVED",
+      setBookingForRoom(
+        resolveRoomBookings(bookingsRes.data ?? [], roomId),
       );
-      setApprovedBooking(approved ?? null);
     } catch (err) {
       setRoom(null);
       setImages([]);
       setReviews([]);
       setReviewStats(null);
-      setApprovedBooking(null);
+      setBookingForRoom(EMPTY_ROOM_BOOKING);
       setError(getApiErrorMessage(err, "Không tải được thông tin phòng."));
     } finally {
       setIsLoading(false);
@@ -231,7 +255,7 @@ export default function DetailPage() {
               source={
                 activeImage?.url
                   ? { uri: activeImage.url }
-                  : PLACEHOLDER_IMAGE
+                  : getRoomImageSource(null)
               }
               style={styles.heroImage}
               contentFit="cover"
@@ -326,7 +350,7 @@ export default function DetailPage() {
             reviews={reviews}
             statistics={reviewStats}
             isLoading={isLoading}
-            canReview={Boolean(approvedBooking)}
+            canReview={Boolean(bookingForRoom.approved)}
             canReply={isLandlordRole(user?.role)}
             onReviewSubmitted={() => void reloadReviews()}
             onReplySubmitted={() => void reloadReviews()}
@@ -422,13 +446,25 @@ export default function DetailPage() {
               </Text>
             </View>
 
-            {approvedBooking ? (
+            {bookingForRoom.approved ? (
               <View style={styles.approvedBanner}>
                 <Text style={styles.approvedIcon}>✓</Text>
                 <ThemedText type="smallBold" style={styles.approvedText}>
                   Bạn đã được chủ nhà chấp nhận thuê phòng này
                 </ThemedText>
               </View>
+            ) : bookingForRoom.pending ? (
+              <>
+                <View style={[styles.bookButton, styles.bookButtonDisabled]}>
+                  <Text style={styles.bookButtonTextDisabled}>
+                    Đang xét duyệt
+                  </Text>
+                </View>
+
+                <Text style={styles.note}>
+                  Yêu cầu đặt phòng của bạn đang chờ chủ nhà xem xét.
+                </Text>
+              </>
             ) : (
               <>
                 <Pressable style={styles.bookButton} onPress={handleBookNow}>
@@ -892,8 +928,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 16,
   },
+  bookButtonDisabled: {
+    backgroundColor: "#E5E7EB",
+  },
   bookButtonText: {
     color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  bookButtonTextDisabled: {
+    color: "#9CA3AF",
     fontSize: 18,
     fontWeight: "700",
   },

@@ -32,15 +32,12 @@ import { useLogout } from "@/hooks/use-logout";
 import { useFavorites } from "@/context/favorites-context";
 import { useTenantGate } from "@/hooks/use-tenant-gate";
 import type { UpgradeFeatureKey } from "@/constants/upgrade-features";
-import { isLandlordRole } from "@/utils/landlord-access";
 import { getMembershipPlanDisplay } from "@/utils/membership-display";
-import { formatPrice } from "@/utils/room-display";
+import { formatPrice, getRoomImageSource } from "@/utils/room-display";
+import { getUserAvatarSource } from "@/utils/user-display";
 import type { AuthUser } from "@/types/auth";
 import type { Booking, BookingRoomRef, BookingStatus } from "@/types/booking";
 import type { Room } from "@/types/room";
-
-const AVATAR_PLACEHOLDER = require("@/assets/images/icon.png");
-const ROOM_PLACEHOLDER = require("@/assets/images/tutorial-web.png");
 
 const MATCHING_PREFS = [
   { label: "NGÂN SÁCH", value: "3 – 5 triệu / tháng" },
@@ -178,16 +175,6 @@ export default function ProfilePage() {
   const handleSettingsSelect = (id: ProfileSettingsItemId) => {
     setSettingsOpen(false);
 
-    if (id === "landlord") {
-      const role = displayUser?.role ?? sessionUser?.role;
-      if (isLandlordRole(role)) {
-        router.push("/landlord/home_page" as any);
-      } else {
-        router.push("/sv/landlord_request_page" as any);
-      }
-      return;
-    }
-
     if (id === "logout") {
       logout();
       return;
@@ -198,13 +185,7 @@ export default function ProfilePage() {
       return;
     }
 
-    const routes: Record<
-      Exclude<
-        ProfileSettingsItemId,
-        "logout" | "landlord"
-      >,
-      string
-    > = {
+    const routes: Record<Exclude<ProfileSettingsItemId, "logout">, string> = {
       personal: "/sv/profile_personal_page",
       rooms: "/sv/profile_rooms_page",
       invoices: "/sv/profile_invoices_page",
@@ -249,7 +230,7 @@ export default function ProfilePage() {
           <View style={styles.heroSection}>
             <View style={styles.avatarWrap}>
               <Image
-                source={AVATAR_PLACEHOLDER}
+                source={getUserAvatarSource(displayUser?.avatarUrl)}
                 style={styles.avatar}
                 contentFit="cover"
               />
@@ -458,7 +439,7 @@ function ApplicationRow({ booking }: { booking: Booking }) {
       }}
     >
       <Image
-        source={thumbUrl ? { uri: thumbUrl } : ROOM_PLACEHOLDER}
+        source={getRoomImageSource(thumbUrl)}
         style={styles.applicationThumb}
         contentFit="cover"
       />
@@ -519,7 +500,7 @@ function SavedPreviewCard({
     <Pressable style={styles.savedCard} onPress={onPress}>
       <View style={styles.savedImageWrap}>
         <Image
-          source={imageUrl ? { uri: imageUrl } : ROOM_PLACEHOLDER}
+          source={getRoomImageSource(imageUrl)}
           style={styles.savedImage}
           contentFit="cover"
         />

@@ -19,16 +19,17 @@ import {
 import { authApi } from "@/api/auth.api";
 import { invoiceApi } from "@/api/invoice.api";
 import { roomApi } from "@/api/room.api";
+import { LandlordBottomNavigation } from "@/components/landlord/bottom-navigation";
 import { ThemedText } from "@/components/themed-text";
 import { useAuth } from "@/context/auth-context";
-import { useLogout } from "@/hooks/use-logout";
+import { ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { getAccessToken } from "@/lib/auth-session";
 import type { AuthUser } from "@/types/auth";
 import { getRoleLabel } from "@/utils/landlord-access";
 import { sumPaidAmount } from "@/utils/invoice-display";
 import { formatPrice } from "@/utils/room-display";
-
-const AVATAR_PLACEHOLDER = require("@/assets/images/icon.png");
+import { getUserAvatarSource } from "@/utils/user-display";
 
 type ProfileStats = {
   roomCount: number;
@@ -37,18 +38,26 @@ type ProfileStats = {
   paidRevenue: number;
 };
 
-const QUICK_LINKS = [
-  { id: "rooms", label: "Quản lý phòng", icon: "🛏", route: "/landlord/rooms_page" },
-  { id: "tenants", label: "Người thuê", icon: "👥", route: "/landlord/tenants_page" },
-  { id: "invoices", label: "Báo cáo hóa đơn", icon: "🧾", route: "/landlord/invoices_page" },
-  { id: "settings", label: "Cài đặt", icon: "⚙", route: "/landlord/settings_page" },
-] as const;
+type SettingsItem = {
+  id: string;
+  label: string;
+  icon: string;
+};
+
+const SETTINGS_MENU_ITEMS: SettingsItem[] = [
+  { id: "bookings", label: "Duyệt đặt phòng", icon: "📅" },
+  { id: "contracts", label: "Hợp đồng", icon: "📄" },
+  { id: "messages", label: "Tin nhắn", icon: "💬" },
+  { id: "invoices", label: "Hóa đơn", icon: "🧾" },
+  { id: "rooms", label: "Quản lý phòng", icon: "🛏" },
+  { id: "tenants", label: "Người thuê", icon: "👥" },
+  { id: "properties", label: "Căn hộ", icon: "🏠" },
+];
 
 export default function LandlordProfilePage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user: sessionUser } = useAuth();
-  const logout = useLogout();
+  const { isAuthenticated, user: sessionUser, signOut } = useAuth();
   const [user, setUser] = useState<AuthUser | null>(sessionUser);
   const [stats, setStats] = useState<ProfileStats>({
     roomCount: 0,
@@ -60,6 +69,8 @@ export default function LandlordProfilePage() {
   const [refreshing, setRefreshing] = useState(false);
 
   const loadProfile = useCallback(async () => {
+    if (!isAuthenticated || !getAccessToken()) return;
+
     try {
       const [me, roomsRes, tenantsRes, invoicesRes] = await Promise.all([
         authApi.getMe(),
@@ -67,6 +78,8 @@ export default function LandlordProfilePage() {
         roomApi.listTenants().catch(() => ({ success: true, data: [] })),
         invoiceApi.listLandlord({ page: 1, limit: 100 }),
       ]);
+
+      if (!getAccessToken()) return;
 
       const invoices = invoicesRes.data ?? [];
       setUser(me.data.user);
@@ -77,19 +90,24 @@ export default function LandlordProfilePage() {
         paidRevenue: sumPaidAmount(invoices),
       });
     } catch (err) {
+      if (!getAccessToken()) return;
+      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+        return;
+      }
       setUser(sessionUser);
       Alert.alert(
         "Không tải được hồ sơ",
         getApiErrorMessage(err, "Vui lòng thử lại."),
       );
     }
-  }, [sessionUser]);
+  }, [isAuthenticated, sessionUser]);
 
   useFocusEffect(
     useCallback(() => {
+      if (!isAuthenticated) return;
       setLoading(true);
       void loadProfile().finally(() => setLoading(false));
-    }, [loadProfile]),
+    }, [isAuthenticated, loadProfile]),
   );
 
   const handleRefresh = async () => {
@@ -98,24 +116,65 @@ export default function LandlordProfilePage() {
     setRefreshing(false);
   };
 
+  const handleLogout = () => {
+    Alert.alert("Đăng xuất", "Bạn có chắc muốn đăng xuất?", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Đăng xuất",
+        style: "destructive",
+        onPress: () => {
+          signOut();
+          router.replace("/sv/login_page" as any);
+        },
+      },
+    ]);
+  };
+
+  const handleSettingsPress = (item: SettingsItem) => {
+    if (item.id === "bookings") {
+      router.push("/landlord/bookings_page" as any);
+      return;
+    }
+    if (item.id === "contracts") {
+      router.push("/landlord/contracts_page" as any);
+      return;
+    }
+    if (item.id === "messages") {
+      router.push("/landlord/messages_page" as any);
+      return;
+    }
+    if (item.id === "invoices") {
+      router.push("/landlord/invoices_page" as any);
+      return;
+    }
+    if (item.id === "rooms") {
+      router.push("/landlord/rooms_page" as any);
+      return;
+    }
+    if (item.id === "tenants") {
+      router.push("/landlord/tenants_page" as any);
+      return;
+    }
+    if (item.id === "properties") {
+      router.push("/landlord/rooms_page" as any);
+      return;
+    }
+
+    Alert.alert(item.label, "Tính năng đang được phát triển.");
+  };
+
   const displayUser = user ?? sessionUser;
 
   return (
     <View style={styles.screen}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <View style={[styles.header, { paddingTop: insets.top > 0 ? 0 : 8 }]}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backIcon}>←</Text>
-          </Pressable>
-          <ThemedText type="smallBold" style={styles.headerTitle}>
-            Hồ sơ chủ nhà
+        <View style={styles.pageHeader}>
+          <ThemedText type="title" style={styles.pageTitle}>
+            Hồ sơ
           </ThemedText>
-          <Pressable
-            style={styles.backButton}
-            onPress={() => router.push("/landlord/profile_edit_page" as any)}
-          >
-            <Text style={styles.editIcon}>✎</Text>
-          </Pressable>
+          <ThemedText type="small" style={styles.pageSubtitle}>
+            Quản lý tài khoản & hệ thống
+          </ThemedText>
         </View>
 
         <ScrollView
@@ -129,7 +188,7 @@ export default function LandlordProfilePage() {
           }
           contentContainerStyle={{
             paddingHorizontal: 16,
-            paddingBottom: 32 + insets.bottom,
+            paddingBottom: 120 + insets.bottom,
           }}
         >
           {loading ? (
@@ -143,7 +202,7 @@ export default function LandlordProfilePage() {
               <View style={styles.heroCard}>
                 <View style={styles.avatarWrap}>
                   <Image
-                    source={AVATAR_PLACEHOLDER}
+                    source={getUserAvatarSource(displayUser?.avatarUrl)}
                     style={styles.avatar}
                     contentFit="cover"
                   />
@@ -198,14 +257,14 @@ export default function LandlordProfilePage() {
               </View>
 
               <ThemedText type="smallBold" style={styles.linksTitle}>
-                Truy cập nhanh
+                Tiện ích
               </ThemedText>
               <View style={styles.linksCard}>
-                {QUICK_LINKS.map((item, index) => (
+                {SETTINGS_MENU_ITEMS.map((item, index) => (
                   <View key={item.id}>
                     <Pressable
                       style={styles.linkRow}
-                      onPress={() => router.push(item.route as any)}
+                      onPress={() => handleSettingsPress(item)}
                     >
                       <View style={styles.linkIconWrap}>
                         <Text style={styles.linkIcon}>{item.icon}</Text>
@@ -215,14 +274,14 @@ export default function LandlordProfilePage() {
                       </ThemedText>
                       <Text style={styles.chevron}>›</Text>
                     </Pressable>
-                    {index < QUICK_LINKS.length - 1 ? (
+                    {index < SETTINGS_MENU_ITEMS.length - 1 ? (
                       <View style={styles.linkDivider} />
                     ) : null}
                   </View>
                 ))}
               </View>
 
-              <Pressable style={styles.logoutButton} onPress={logout}>
+              <Pressable style={styles.logoutButton} onPress={handleLogout}>
                 <ThemedText type="smallBold" style={styles.logoutText}>
                   Đăng xuất
                 </ThemedText>
@@ -230,6 +289,8 @@ export default function LandlordProfilePage() {
             </>
           )}
         </ScrollView>
+
+        <LandlordBottomNavigation activeTab="profile" />
       </SafeAreaView>
     </View>
   );
@@ -267,31 +328,18 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  pageHeader: {
     paddingHorizontal: 16,
     paddingBottom: 12,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backIcon: {
-    fontSize: 22,
+  pageTitle: {
+    fontSize: 24,
     color: "#1F2940",
+    marginBottom: 4,
   },
-  editIcon: {
-    fontSize: 20,
-    color: "#E68A2E",
-    fontWeight: "700",
-  },
-  headerTitle: {
-    fontSize: 18,
-    color: "#1F2940",
+  pageSubtitle: {
+    color: "#7A869A",
+    lineHeight: 18,
   },
   heroCard: {
     backgroundColor: "#FFFFFF",

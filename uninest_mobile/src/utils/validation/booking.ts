@@ -1,10 +1,19 @@
 import { getTodayDateString, isDateInputString } from "./common";
 
-export function validateCheckInDate(date: Date): string | null {
+function toDateInputString(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
-  const value = `${year}-${month}-${day}`;
+  return `${year}-${month}-${day}`;
+}
+
+/** Chuyển Date sang ISO string (00:00 local) cho API booking — khớp FE. */
+export function toBookingIsoDate(date: Date) {
+  return new Date(`${toDateInputString(date)}T00:00:00.000`).toISOString();
+}
+
+export function validateCheckInDate(date: Date): string | null {
+  const value = toDateInputString(date);
 
   if (!isDateInputString(value)) {
     return "Ngày không hợp lệ.";

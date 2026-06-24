@@ -1,41 +1,42 @@
-import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
-    SafeAreaView,
-    useSafeAreaInsets,
+  SafeAreaView,
+  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/auth-context";
+import {
+  bookingStatusLabel,
+  formatBookingDate,
+} from "@/utils/booking-display";
 
-const nextSteps = [
-  {
-    number: "1",
-    title: "Kiểm tra Email",
-    description:
-      "Chúng tôi đã gửi hợp đồng điện tử và hướng dẫn chi tiết cho bạn qua email đã đăng ký.",
-  },
-  {
-    number: "2",
-    title: "Cập nhật hồ sơ sinh viên",
-    description:
-      "Vui lòng tải lên ảnh thẻ sinh viên hoặc giấy báo nhập học để hoàn tất thủ tục.",
-  },
-  {
-    number: "3",
-    title: "Nhận phòng",
-    description:
-      "Đến quầy lễ tân UniNest vào ngày nhận phòng để nhận chìa khóa và thẻ cư dân.",
-  },
-];
+function getParam(value: string | string[] | undefined): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value[0] ?? "";
+  return "";
+}
 
 export default function BookingSuccessPage() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuth();
+  const params = useLocalSearchParams<{
+    bookingId?: string;
+    roomTitle?: string;
+    checkInDate?: string;
+    roomLocation?: string;
+    notes?: string;
+  }>();
+
+  const bookingId = getParam(params.bookingId);
+  const roomTitle = getParam(params.roomTitle) || "Phòng đã chọn";
+  const checkInDate = getParam(params.checkInDate);
+  const roomLocation = getParam(params.roomLocation);
+  const notes = getParam(params.notes);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -49,98 +50,77 @@ export default function BookingSuccessPage() {
 
   return (
     <ThemedView style={styles.screen}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.header, { top: insets.top }]}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <View style={styles.header}>
+          <Pressable style={styles.headerButton} onPress={() => router.back()}>
             <Text style={styles.backIcon}>←</Text>
           </Pressable>
           <ThemedText type="smallBold" style={styles.headerTitle}>
-            Xác nhận đặt phòng
+            Đặt phòng
           </ThemedText>
-          <View style={styles.backButton} />
+          <View style={styles.headerButton} />
         </View>
 
         <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={{
-            paddingTop: insets.top + 60,
-            paddingBottom: 126 + insets.bottom,
-          }}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingBottom: 120 + insets.bottom,
+          }}
         >
-          <View style={styles.heroWrap}>
-            <Image
-              source={require("@/assets/images/tutorial-web.png")}
-              style={styles.heroImage}
-              contentFit="cover"
-            />
-          </View>
-
           <View style={styles.centerBlock}>
             <View style={styles.successBadge}>
               <Text style={styles.successBadgeIcon}>✓</Text>
             </View>
 
             <ThemedText type="title" style={styles.successTitle}>
-              Đặt phòng thành công!
+              Đã gửi yêu cầu đặt phòng
             </ThemedText>
 
             <ThemedText type="small" style={styles.successDescription}>
-              Cảm ơn bạn đã tin tưởng UniNest. Yêu cầu đặt phòng của bạn đã được
-              xác nhận và thanh toán thành công.
+              Yêu cầu của bạn đã được gửi tới chủ nhà. Bạn có thể theo dõi trạng
+              thái duyệt trong mục Đặt phòng.
             </ThemedText>
           </View>
 
-          <View style={styles.section}>
-            <View style={styles.card}>
-              <ThemedText type="smallBold" style={styles.cardTitle}>
-                Chi tiết đặt phòng
+          <View style={styles.card}>
+            <ThemedText type="smallBold" style={styles.cardTitle}>
+              Thông tin yêu cầu
+            </ThemedText>
+            <View style={styles.divider} />
+
+            <View style={styles.roomHighlight}>
+              <ThemedText type="small" style={styles.roomHighlightLabel}>
+                Phòng đang đặt
               </ThemedText>
-
-              <View style={styles.divider} />
-
-              <DetailRow label="Mã đặt phòng" value="UN-827391-VN" />
-              <DetailRow
-                label="Chỗ ở"
-                value="Căn hộ Studio cao cấp"
-                subValue="Phân khu A, Tầng 12"
-              />
-              <DetailRow label="Ngày nhận phòng" value="01 Tháng 9, 2024" />
-              <DetailRow
-                label="Tổng thanh toán"
-                value="7.500.000đ"
-                valueStyle={styles.priceValue}
-              />
-
-              <Pressable style={styles.invoiceButton}>
-                <Text style={styles.invoiceIcon}>↓</Text>
-                <Text style={styles.invoiceText}>Tải hóa đơn thanh toán</Text>
-              </Pressable>
+              <ThemedText type="smallBold" style={styles.roomHighlightTitle}>
+                {roomTitle}
+              </ThemedText>
+              {roomLocation ? (
+                <ThemedText type="small" style={styles.roomHighlightMeta}>
+                  {roomLocation}
+                </ThemedText>
+              ) : null}
             </View>
-          </View>
 
-          <View style={styles.section}>
-            <ThemedText type="title" style={styles.stepsTitle}>
-              Các bước tiếp theo
-            </ThemedText>
-
-            <View style={styles.stepsList}>
-              {nextSteps.map((step) => (
-                <View key={step.number} style={styles.stepRow}>
-                  <View style={styles.stepNumber}>
-                    <Text style={styles.stepNumberText}>{step.number}</Text>
-                  </View>
-                  <View style={styles.stepTextWrap}>
-                    <ThemedText type="smallBold" style={styles.stepTitle}>
-                      {step.title}
-                    </ThemedText>
-                    <ThemedText type="small" style={styles.stepDescription}>
-                      {step.description}
-                    </ThemedText>
-                  </View>
-                </View>
-              ))}
-            </View>
+            <DetailRow
+              label="Trạng thái"
+              value={bookingStatusLabel("PENDING")}
+              valueStyle={styles.statusValue}
+            />
+            {bookingId ? (
+              <DetailRow
+                label="Mã yêu cầu"
+                value={bookingId.slice(-8).toUpperCase()}
+              />
+            ) : null}
+            {checkInDate ? (
+              <DetailRow
+                label="Ngày đến xem phòng"
+                value={formatBookingDate(checkInDate)}
+              />
+            ) : null}
+            {notes ? <DetailRow label="Ghi chú" value={notes} /> : null}
           </View>
         </ScrollView>
 
@@ -151,11 +131,20 @@ export default function BookingSuccessPage() {
           ]}
         >
           <Pressable
-            style={styles.homeButton}
+            style={styles.primaryButton}
+            onPress={() => router.replace("/sv/profile_rooms_page" as any)}
+          >
+            <ThemedText type="smallBold" style={styles.primaryButtonText}>
+              Xem đơn đặt phòng
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            style={styles.secondaryButton}
             onPress={() => router.replace("/" as any)}
           >
-            <Text style={styles.homeIcon}>⌂</Text>
-            <Text style={styles.homeText}>Quay lại Trang chủ</Text>
+            <ThemedText type="smallBold" style={styles.secondaryButtonText}>
+              Về trang chủ
+            </ThemedText>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -166,29 +155,24 @@ export default function BookingSuccessPage() {
 function DetailRow({
   label,
   value,
-  subValue,
   valueStyle,
 }: {
   label: string;
   value: string;
-  subValue?: string;
-  valueStyle?: any;
+  valueStyle?: object;
 }) {
   return (
     <View style={styles.detailRow}>
       <ThemedText type="small" style={styles.detailLabel}>
         {label}
       </ThemedText>
-      <View style={styles.detailValueWrap}>
-        <ThemedText type="smallBold" style={[styles.detailValue, valueStyle]}>
-          {value}
-        </ThemedText>
-        {subValue ? (
-          <ThemedText type="small" style={styles.detailSubValue}>
-            {subValue}
-          </ThemedText>
-        ) : null}
-      </View>
+      <ThemedText
+        type="smallBold"
+        style={[styles.detailValue, valueStyle]}
+        numberOfLines={3}
+      >
+        {value}
+      </ThemedText>
     </View>
   );
 }
@@ -202,186 +186,112 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    height: 52,
-    zIndex: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#FCFAF6",
+    paddingHorizontal: 16,
+    paddingBottom: 8,
   },
-  backButton: {
-    width: 36,
-    height: 36,
+  headerButton: {
+    width: 40,
+    height: 40,
     alignItems: "center",
     justifyContent: "center",
   },
   backIcon: {
     color: "#1E2230",
-    fontSize: 21,
+    fontSize: 22,
     fontWeight: "700",
   },
   headerTitle: {
-    flex: 1,
-    textAlign: "center",
     color: "#1E2230",
-    fontSize: 20,
-  },
-  scroll: {
-    flex: 1,
-  },
-  heroWrap: {
-    paddingHorizontal: 16,
-  },
-  heroImage: {
-    width: "100%",
-    height: 250,
-    borderRadius: 20,
-    backgroundColor: "#E8DED0",
+    fontSize: 18,
   },
   centerBlock: {
     alignItems: "center",
-    paddingHorizontal: 28,
-    marginTop: 26,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    marginBottom: 20,
   },
   successBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: "#F1992D",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: 14,
   },
   successBadgeIcon: {
     color: "#FFFFFF",
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "800",
   },
   successTitle: {
     color: "#1E2230",
-    fontSize: 28,
+    fontSize: 24,
     textAlign: "center",
   },
   successDescription: {
     color: "#6B7280",
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 22,
     textAlign: "center",
     marginTop: 10,
   },
-  section: {
-    paddingHorizontal: 16,
-    marginTop: 22,
-  },
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "#F0E6D8",
     padding: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
   },
   cardTitle: {
     color: "#1E2230",
-    fontSize: 22,
+    fontSize: 17,
   },
   divider: {
     height: 1,
     backgroundColor: "#F0E6D8",
-    marginVertical: 14,
+    marginVertical: 12,
+  },
+  roomHighlight: {
+    backgroundColor: "#FFF8F0",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#F0D9BC",
+    padding: 12,
+    marginBottom: 14,
+  },
+  roomHighlightLabel: {
+    color: "#C47A10",
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  roomHighlightTitle: {
+    color: "#1E2230",
+    fontSize: 16,
+  },
+  roomHighlightMeta: {
+    color: "#7A869A",
+    marginTop: 4,
+    lineHeight: 18,
   },
   detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 16,
+    gap: 4,
+    marginBottom: 12,
   },
   detailLabel: {
     color: "#8A8F97",
-    width: 120,
-  },
-  detailValueWrap: {
-    flex: 1,
-    alignItems: "flex-end",
+    fontSize: 12,
   },
   detailValue: {
     color: "#1E2230",
-    textAlign: "right",
+    fontSize: 15,
   },
-  detailSubValue: {
-    color: "#9CA3AF",
-    textAlign: "right",
-    marginTop: 2,
-  },
-  priceValue: {
-    color: "#F1992D",
-    fontSize: 20,
-  },
-  invoiceButton: {
-    minHeight: 48,
-    borderRadius: 12,
-    backgroundColor: "#FCF1E3",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 4,
-  },
-  invoiceIcon: {
-    color: "#F1992D",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  invoiceText: {
-    color: "#F1992D",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  stepsTitle: {
-    color: "#1E2230",
-    fontSize: 22,
-    marginBottom: 14,
-  },
-  stepsList: {
-    gap: 18,
-  },
-  stepRow: {
-    flexDirection: "row",
-    gap: 12,
-    alignItems: "flex-start",
-  },
-  stepNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#F9E5C1",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 2,
-  },
-  stepNumberText: {
-    color: "#F1992D",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  stepTextWrap: {
-    flex: 1,
-  },
-  stepTitle: {
-    color: "#1E2230",
-    fontSize: 17,
-  },
-  stepDescription: {
-    color: "#6B7280",
-    lineHeight: 22,
-    marginTop: 4,
+  statusValue: {
+    color: "#C47A10",
   },
   footer: {
     position: "absolute",
@@ -391,29 +301,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     backgroundColor: "#FCFAF6",
+    gap: 10,
   },
-  homeButton: {
-    minHeight: 54,
-    borderRadius: 14,
+  primaryButton: {
+    minHeight: 50,
+    borderRadius: 12,
     backgroundColor: "#F1992D",
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
-    gap: 10,
-    shadowColor: "#F1992D",
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
   },
-  homeIcon: {
+  primaryButtonText: {
     color: "#FFFFFF",
-    fontSize: 20,
-    fontWeight: "700",
+    fontSize: 16,
   },
-  homeText: {
-    color: "#FFFFFF",
-    fontSize: 17,
-    fontWeight: "700",
+  secondaryButton: {
+    minHeight: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E8E1D8",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryButtonText: {
+    color: "#6B7280",
+    fontSize: 15,
   },
 });

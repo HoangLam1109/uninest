@@ -20,6 +20,7 @@ import { authApi } from "@/api/auth.api";
 import { invoiceApi } from "@/api/invoice.api";
 import { roomApi } from "@/api/room.api";
 import { LandlordBottomNavigation } from "@/components/landlord/bottom-navigation";
+import { AppLogo } from "@/components/app-logo";
 import { ThemedText } from "@/components/themed-text";
 import { useAuth } from "@/context/auth-context";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -31,6 +32,7 @@ import {
   sumUnpaidAmount,
 } from "@/utils/invoice-display";
 import { formatPrice } from "@/utils/room-display";
+import { getUserAvatarSource } from "@/utils/user-display";
 
 type RecentPayment = {
   id: string;
@@ -251,13 +253,12 @@ function PaymentRow({
 export default function LandlordHomePage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user: sessionUser } = useAuth();
+  const { user: sessionUser, updateUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [tenantCount, setTenantCount] = useState(0);
-  const [displayName, setDisplayName] = useState(sessionUser?.fullName ?? "Chủ nhà");
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -268,7 +269,9 @@ export default function LandlordHomePage() {
         invoiceApi.listLandlord({ page: 1, limit: 100 }),
       ]);
 
-      setDisplayName(meRes?.data?.user?.fullName ?? sessionUser?.fullName ?? "Chủ nhà");
+      if (meRes?.data?.user) {
+        updateUser(meRes.data.user);
+      }
       setRooms(roomsRes.data ?? []);
       setTenantCount(tenantsRes.data?.length ?? 0);
       setInvoices(invoicesRes.data ?? []);
@@ -281,7 +284,7 @@ export default function LandlordHomePage() {
       setInvoices([]);
       setTenantCount(0);
     }
-  }, [sessionUser?.fullName]);
+  }, [updateUser]);
 
   useFocusEffect(
     useCallback(() => {
@@ -341,13 +344,7 @@ export default function LandlordHomePage() {
         >
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <View style={styles.logoBox}>
-                <Image
-                  source={require("@/assets/images/icon.png")}
-                  style={styles.logoImage}
-                  contentFit="contain"
-                />
-              </View>
+              <AppLogo size={40} style={styles.logoBox} />
               <View>
                 <ThemedText type="smallBold" style={styles.brand}>
                   UniNest
@@ -365,9 +362,11 @@ export default function LandlordHomePage() {
                 style={styles.profileCircle}
                 onPress={() => router.push("/landlord/profile_page" as any)}
               >
-                <Text style={styles.profileEmoji}>
-                  {displayName.charAt(0).toUpperCase()}
-                </Text>
+                <Image
+                  source={getUserAvatarSource(sessionUser?.avatarUrl)}
+                  style={styles.profileAvatar}
+                  contentFit="cover"
+                />
               </Pressable>
             </View>
           </View>
@@ -503,6 +502,15 @@ export default function LandlordHomePage() {
           <View style={styles.quickActions}>
             <Pressable
               style={styles.quickActionBtn}
+              onPress={() => router.push("/landlord/bookings_page" as any)}
+            >
+              <Text style={styles.quickActionIcon}>📅</Text>
+              <ThemedText type="smallBold" style={styles.quickActionText}>
+                Đặt phòng
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              style={styles.quickActionBtn}
               onPress={() => router.push("/landlord/contracts_page" as any)}
             >
               <Text style={styles.quickActionIcon}>📄</Text>
@@ -564,17 +572,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logoBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: "#FFF0DF",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  logoImage: {
-    width: 28,
-    height: 28,
+    marginRight: 0,
   },
   brand: {
     fontSize: 18,
@@ -609,12 +607,11 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     backgroundColor: "#E8EDF5",
-    alignItems: "center",
-    justifyContent: "center",
     overflow: "hidden",
   },
-  profileEmoji: {
-    fontSize: 22,
+  profileAvatar: {
+    width: "100%",
+    height: "100%",
   },
   statCard: {
     backgroundColor: "#FFFFFF",

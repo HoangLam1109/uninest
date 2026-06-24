@@ -29,7 +29,7 @@ import { getChatParticipantName } from "@/hooks/use-chat-socket";
 import { useAuth } from "@/context/auth-context";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { ChatConversation, ChatMessage } from "@/types/chat";
-import type { Room, RoomImage, RoomPayload, RoomStatus, RoomType } from "@/types/room";
+import type { Amenity, Room, RoomImage, RoomPayload, RoomStatus, RoomType } from "@/types/room";
 import {
   MAX_ROOM_IMAGES,
   validateRoomForm,
@@ -38,11 +38,10 @@ import {
 import {
   formatPrice,
   formatRoomLocation,
+  getRoomImageSource,
   roomStatusLabel,
   roomTypeLabel,
 } from "@/utils/room-display";
-
-const ROOM_PLACEHOLDER = require("@/assets/images/tutorial-web.png");
 
 const ROOM_TYPES: RoomType[] = ["STUDIO", "SINGLE", "SHARED", "APARTMENT"];
 
@@ -62,6 +61,7 @@ type FormState = {
   ward: string;
   roomType: RoomType;
   status: RoomStatus;
+  amenityIds: string[];
   pricePerMonth: string;
   depositAmount: string;
   maxOccupants: string;
@@ -78,6 +78,7 @@ const EMPTY_FORM: FormState = {
   ward: "",
   roomType: "SINGLE",
   status: "AVAILABLE",
+  amenityIds: [],
   pricePerMonth: "",
   depositAmount: "",
   maxOccupants: "1",
@@ -86,6 +87,13 @@ const EMPTY_FORM: FormState = {
   waterRate: "",
   description: "",
 };
+
+function getRoomAmenityIds(room: Pick<Room, "amenityIds">): string[] {
+  if (!room.amenityIds?.length) return [];
+  return room.amenityIds.map((item) =>
+    typeof item === "string" ? item : item._id,
+  );
+}
 
 function parseNumber(value: string): number | undefined {
   const trimmed = value.trim();
@@ -123,6 +131,7 @@ function toPayload(form: FormState): RoomPayload {
     electricityRate: parseNumber(form.electricityRate),
     waterRate: parseNumber(form.waterRate),
     description: form.description.trim() || undefined,
+    amenityIds: form.amenityIds,
   };
 }
 
@@ -161,6 +170,8 @@ export default function LandlordRoomsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [amenities, setAmenities] = useState<Amenity[]>([]);
+  const [amenitiesLoading, setAmenitiesLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionRoomId, setActionRoomId] = useState<string | null>(null);
   const [roomImages, setRoomImages] = useState<RoomImage[]>([]);
@@ -259,6 +270,37 @@ export default function LandlordRoomsPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!formOpen) return;
+
+    let cancelled = false;
+    setAmenitiesLoading(true);
+    void roomApi
+      .listAmenities()
+      .then((res) => {
+        if (!cancelled) setAmenities(res.data ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setAmenities([]);
+      })
+      .finally(() => {
+        if (!cancelled) setAmenitiesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [formOpen]);
+
+  const toggleAmenity = (amenityId: string) => {
+    setForm((prev) => ({
+      ...prev,
+      amenityIds: prev.amenityIds.includes(amenityId)
+        ? prev.amenityIds.filter((id) => id !== amenityId)
+        : [...prev.amenityIds, amenityId],
+    }));
+  };
+
   const openCreateForm = () => {
     setEditingRoom(null);
     setForm(EMPTY_FORM);
@@ -275,6 +317,7 @@ export default function LandlordRoomsPage() {
       ward: room.ward ?? "",
       roomType: (room.roomType as RoomType) ?? "SINGLE",
       status: (room.status as RoomStatus) ?? "AVAILABLE",
+      amenityIds: getRoomAmenityIds(room),
       pricePerMonth: String(room.pricePerMonth ?? ""),
       depositAmount: room.depositAmount ? String(room.depositAmount) : "",
       maxOccupants: String(room.maxOccupants ?? 1),
@@ -286,6 +329,14 @@ export default function LandlordRoomsPage() {
     setRoomImages([]);
     setFormOpen(true);
     void loadRoomImages(room._id);
+    void roomApi.getById(room._id).then((res) => {
+      if (res.data) {
+        setForm((prev) => ({
+          ...prev,
+          amenityIds: getRoomAmenityIds(res.data),
+        }));
+      }
+    });
   };
 
   const closeForm = () => {
@@ -697,10 +748,13 @@ export default function LandlordRoomsPage() {
           editing={Boolean(editingRoom)}
           roomId={editingRoom?._id}
           form={form}
+          amenities={amenities}
+          amenitiesLoading={amenitiesLoading}
           images={roomImages}
           isSubmitting={isSubmitting}
           imageBusy={imageBusy}
           onChange={setForm}
+          onToggleAmenity={toggleAmenity}
           onClose={closeForm}
           onSubmit={() => void handleSubmit()}
           onPickImages={() => void handlePickAndUploadImages()}
@@ -772,7 +826,7 @@ function RoomCard({
   return (
     <View style={styles.roomCard}>
       <Image
-        source={imageUrl ? { uri: imageUrl } : ROOM_PLACEHOLDER}
+        source={getRoomImageSource(imageUrl)}
         style={styles.roomImage}
         contentFit="cover"
       />
@@ -893,10 +947,13 @@ function RoomFormModal({
   editing,
   roomId,
   form,
+  amenities,
+  amenitiesLoading,
   images,
   isSubmitting,
   imageBusy,
   onChange,
+  onToggleAmenity,
   onClose,
   onSubmit,
   onPickImages,
@@ -907,10 +964,13 @@ function RoomFormModal({
   editing: boolean;
   roomId?: string;
   form: FormState;
+  amenities: Amenity[];
+  amenitiesLoading: boolean;
   images: RoomImage[];
   isSubmitting: boolean;
   imageBusy: boolean;
   onChange: (next: FormState) => void;
+  onToggleAmenity: (amenityId: string) => void;
   onClose: () => void;
   onSubmit: () => void;
   onPickImages: () => void;
@@ -1037,6 +1097,47 @@ function RoomFormModal({
                     );
                   })}
                 </View>
+              </Field>
+
+              <Field label="Tiện ích phòng">
+                {amenitiesLoading ? (
+                  <View style={styles.amenityHint}>
+                    <ThemedText type="small" style={styles.amenityHintText}>
+                      Đang tải tiện ích...
+                    </ThemedText>
+                  </View>
+                ) : null}
+                {!amenitiesLoading && amenities.length === 0 ? (
+                  <View style={styles.amenityHint}>
+                    <ThemedText type="small" style={styles.amenityHintText}>
+                      Chưa có tiện ích preset.
+                    </ThemedText>
+                  </View>
+                ) : null}
+                {amenities.length > 0 ? (
+                  <View style={styles.amenityRow}>
+                    {amenities.map((amenity) => {
+                      const active = form.amenityIds.includes(amenity._id);
+                      return (
+                        <Pressable
+                          key={amenity._id}
+                          onPress={() => onToggleAmenity(amenity._id)}
+                          style={[styles.typeChip, active && styles.typeChipActive]}
+                        >
+                          <ThemedText
+                            type="small"
+                            style={[
+                              styles.typeChipText,
+                              active && styles.typeChipTextActive,
+                            ]}
+                          >
+                            {amenity.name}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : null}
               </Field>
 
               <View style={styles.formRow}>
@@ -1627,6 +1728,22 @@ const styles = StyleSheet.create({
   typeChipTextActive: {
     color: "#C47A10",
     fontWeight: "700",
+  },
+  amenityRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  amenityHint: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E4E8EF",
+    backgroundColor: "#F7F9FC",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  amenityHintText: {
+    color: "#7A869A",
   },
   formRow: {
     flexDirection: "row",
