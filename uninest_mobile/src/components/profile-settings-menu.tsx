@@ -11,7 +11,6 @@ export type ProfileSettingsItemId =
   | "meter"
   | "identity"
   | "upgrade"
-  | "landlord"
   | "logout";
 
 type MenuItem = {
@@ -29,7 +28,6 @@ const MENU_ITEMS: MenuItem[] = [
   { id: "meter", label: "Chỉ số điện nước", icon: "⚡" },
   { id: "identity", label: "Xác minh danh tính", icon: "🪪" },
   { id: "upgrade", label: "Nâng cấp gói", icon: "⭐" },
-  { id: "landlord", label: "Làm chủ nhà", icon: "🏢" },
   { id: "logout", label: "Đăng xuất", icon: "↪", danger: true },
 ];
 

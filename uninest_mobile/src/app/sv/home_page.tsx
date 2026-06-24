@@ -149,8 +149,10 @@ export default function HomePage() {
           </View>
 
           <Image
-            source={require("@/assets/images/tutorial-web.png")}
+            source={require("@/assets/images/home.jpg")}
             style={styles.heroImage}
+            resizeMode="cover"
+            accessibilityLabel="Không gian phòng trọ hiện đại"
           />
 
           <View style={styles.featuresSection}>

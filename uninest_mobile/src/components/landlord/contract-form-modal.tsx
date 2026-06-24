@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import * as DocumentPicker from "expo-document-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { bookingApi } from "@/api/booking.api";
@@ -17,7 +18,9 @@ import { ThemedText } from "@/components/themed-text";
 import type { Booking } from "@/types/booking";
 import type { Contract } from "@/types/contract";
 import { getBookingRoom, getBookingTenant } from "@/utils/booking-display";
+import { getExistingContractFileName } from "@/utils/contract-display";
 import { formatPrice } from "@/utils/room-display";
+import type { ContractPdfUpload } from "@/utils/contract-upload";
 import { validateContractForm, type ContractFormMode } from "@/utils/validation/contract";
 
 export type { ContractFormMode };
@@ -32,7 +35,7 @@ type ContractFormModalProps = {
     monthlyRent: number;
     depositAmount?: number;
     terms?: string;
-    contractFileUrl?: string;
+    contractFile?: ContractPdfUpload;
     startDate?: string;
     endDate?: string;
   }) => Promise<void>;
@@ -76,7 +79,7 @@ export function ContractFormModal({
   const [depositAmount, setDepositAmount] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [contractFileUrl, setContractFileUrl] = useState("");
+  const [contractFile, setContractFile] = useState<ContractPdfUpload | null>(null);
   const [terms, setTerms] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -88,7 +91,7 @@ export function ContractFormModal({
       setEndDate("");
       setMonthlyRent(String(contract?.monthlyRent ?? ""));
       setDepositAmount(String(contract?.depositAmount ?? ""));
-      setContractFileUrl(contract?.contractFileUrl ?? "");
+      setContractFile(null);
       setTerms(contract?.terms ?? "");
       return;
     }
@@ -98,7 +101,7 @@ export function ContractFormModal({
     setDepositAmount(String(contract?.depositAmount ?? ""));
     setStartDate(toDateInput(contract?.startDate));
     setEndDate(toDateInput(contract?.endDate));
-    setContractFileUrl(contract?.contractFileUrl ?? "");
+    setContractFile(null);
     setTerms(contract?.terms ?? "");
   }, [visible, mode, contract]);
 
@@ -121,6 +124,31 @@ export function ContractFormModal({
   const minStartDate = mode === "edit" ? undefined : startOfToday();
   const minEndDate = parseDateInput(startDate) ?? minStartDate;
 
+  const hasExistingContractFile = Boolean(
+    contract?.contractFileStorageKey ?? contract?.contractFileUrl,
+  );
+  const existingContractFileName = getExistingContractFileName(contract);
+
+  const pickContractPdf = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: "application/pdf",
+      copyToCacheDirectory: true,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+
+    const asset = result.assets[0];
+    if (asset.mimeType && asset.mimeType !== "application/pdf") {
+      alert("Vui lòng chọn file PDF.");
+      return;
+    }
+
+    setContractFile({
+      uri: asset.uri,
+      fileName: asset.name ?? "contract.pdf",
+      mimeType: asset.mimeType ?? "application/pdf",
+    });
+  };
+
   const handleSubmit = async () => {
     const error = validateContractForm({
       mode,
@@ -129,8 +157,9 @@ export function ContractFormModal({
       depositAmount,
       startDate,
       endDate,
-      contractFileUrl,
       terms,
+      hasExistingContractFile,
+      contractFile,
     });
     if (error) {
       alert(error);
@@ -145,7 +174,7 @@ export function ContractFormModal({
         monthlyRent: rent,
         depositAmount: depositAmount ? Number(depositAmount) : undefined,
         terms: terms.trim() || undefined,
-        contractFileUrl: contractFileUrl.trim() || undefined,
+        contractFile: contractFile ?? undefined,
         startDate: toIsoDate(startDate),
         endDate: toIsoDate(endDate),
       });
@@ -234,7 +263,21 @@ export function ContractFormModal({
             placeholder="Chọn ngày kết thúc"
             minimumDate={minEndDate}
           />
-          <Field label="Link file hợp đồng" value={contractFileUrl} onChangeText={setContractFileUrl} placeholder="https://..." />
+          <View style={styles.field}>
+            <ThemedText type="smallBold" style={styles.label}>
+              File hợp đồng (PDF)
+            </ThemedText>
+            <Pressable style={styles.fileBtn} onPress={() => void pickContractPdf()}>
+              <Text style={styles.fileBtnText}>Chọn file PDF</Text>
+            </Pressable>
+            <ThemedText type="small" style={styles.fileHint}>
+              {contractFile
+                ? `Đã chọn: ${contractFile.fileName ?? "contract.pdf"}`
+                : hasExistingContractFile
+                  ? `Giữ file hiện tại: ${existingContractFileName}`
+                  : "Chưa tải file hợp đồng"}
+            </ThemedText>
+          </View>
           <Field label="Điều khoản" value={terms} onChangeText={setTerms} multiline />
         </ScrollView>
 
@@ -329,6 +372,17 @@ const styles = StyleSheet.create({
     color: "#1F2940",
   },
   inputMultiline: { minHeight: 100, textAlignVertical: "top" },
+  fileBtn: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E8E1D8",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    alignSelf: "flex-start",
+  },
+  fileBtnText: { color: "#E68A2E", fontWeight: "600" },
+  fileHint: { color: "#9AA3B2", marginTop: 4 },
   footer: {
     padding: 16,
     borderTopWidth: 1,

@@ -32,7 +32,6 @@ import { useLogout } from "@/hooks/use-logout";
 import { useFavorites } from "@/context/favorites-context";
 import { useTenantGate } from "@/hooks/use-tenant-gate";
 import type { UpgradeFeatureKey } from "@/constants/upgrade-features";
-import { isLandlordRole } from "@/utils/landlord-access";
 import { getMembershipPlanDisplay } from "@/utils/membership-display";
 import { formatPrice, getRoomImageSource } from "@/utils/room-display";
 import { getUserAvatarSource } from "@/utils/user-display";
@@ -176,16 +175,6 @@ export default function ProfilePage() {
   const handleSettingsSelect = (id: ProfileSettingsItemId) => {
     setSettingsOpen(false);
 
-    if (id === "landlord") {
-      const role = displayUser?.role ?? sessionUser?.role;
-      if (isLandlordRole(role)) {
-        router.push("/landlord/home_page" as any);
-      } else {
-        router.push("/sv/landlord_request_page" as any);
-      }
-      return;
-    }
-
     if (id === "logout") {
       logout();
       return;
@@ -196,13 +185,7 @@ export default function ProfilePage() {
       return;
     }
 
-    const routes: Record<
-      Exclude<
-        ProfileSettingsItemId,
-        "logout" | "landlord"
-      >,
-      string
-    > = {
+    const routes: Record<Exclude<ProfileSettingsItemId, "logout">, string> = {
       personal: "/sv/profile_personal_page",
       rooms: "/sv/profile_rooms_page",
       invoices: "/sv/profile_invoices_page",

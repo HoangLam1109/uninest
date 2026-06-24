@@ -104,6 +104,9 @@ export const api = {
   postForm: <T>(path: string, formData: FormData) =>
     requestForm<T>(path, formData, "POST"),
 
+  putForm: <T>(path: string, formData: FormData) =>
+    requestForm<T>(path, formData, "PUT"),
+
   patchForm: <T>(path: string, formData: FormData) =>
     requestForm<T>(path, formData, "PATCH"),
 };
@@ -111,7 +114,7 @@ export const api = {
 async function requestForm<T>(
   path: string,
   formData: FormData,
-  method: "POST" | "PATCH" = "POST",
+  method: "POST" | "PUT" | "PATCH" = "POST",
 ): Promise<T> {
   let response: Response;
   try {

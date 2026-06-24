@@ -74,7 +74,21 @@ export function contractStatusPillStyle(status: ContractStatus) {
 }
 
 export function hasContractFile(contract: Contract) {
-  return Boolean(contract.contractFileUrl?.trim());
+  return Boolean(
+    contract.contractFileStorageKey?.trim() ||
+      contract.signedContractStorageKey?.trim() ||
+      contract.signedContractFileUrl?.trim() ||
+      contract.contractFileUrl?.trim(),
+  );
+}
+
+export function getExistingContractFileName(contract?: Contract | null) {
+  if (!contract) return null;
+  if (contract.contractFileStorageKey || contract.signedContractStorageKey) {
+    return "contract.pdf";
+  }
+  const filename = contract.contractFileUrl?.split("/").pop()?.split("?")[0];
+  return filename || "contract.pdf";
 }
 
 export function getContractBookingId(contract: Contract): string | null {

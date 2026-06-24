@@ -25,7 +25,12 @@ import { LandlordContractCard } from "@/components/landlord/landlord-contract-ca
 import { LandlordBottomNavigation } from "@/components/landlord/bottom-navigation";
 import { ThemedText } from "@/components/themed-text";
 import { getApiErrorMessage } from "@/lib/api-error";
-import type { Contract } from "@/types/contract";
+import type {
+  Contract,
+  CreateContractPayload,
+  RenewContractPayload,
+  UpdateContractPayload,
+} from "@/types/contract";
 import { openContractFile } from "@/utils/open-contract-file";
 
 const PAGE_SIZE = 10;
@@ -136,7 +141,7 @@ export default function LandlordContractsPage() {
     monthlyRent: number;
     depositAmount?: number;
     terms?: string;
-    contractFileUrl?: string;
+    contractFile?: CreateContractPayload["contractFile"];
     startDate?: string;
     endDate?: string;
   }) => {
@@ -149,24 +154,33 @@ export default function LandlordContractsPage() {
         monthlyRent: payload.monthlyRent,
         depositAmount: payload.depositAmount,
         terms: payload.terms,
-        contractFileUrl: payload.contractFileUrl,
+        contractFile: payload.contractFile,
         startDate: payload.startDate,
         endDate: payload.endDate,
       });
       Alert.alert("Thành công", "Đã tạo hợp đồng nháp.");
     } else if (modalState.mode === "edit" && modalState.contract) {
-      await contractApi.update(modalState.contract._id, payload);
-      Alert.alert("Thành công", "Đã cập nhật hợp đồng.");
-    } else if (modalState.mode === "renew" && modalState.contract) {
-      if (!payload.startDate) throw new Error("Thiếu ngày bắt đầu");
-      await contractApi.renew(modalState.contract._id, {
+      const updatePayload: UpdateContractPayload = {
         monthlyRent: payload.monthlyRent,
         depositAmount: payload.depositAmount,
         terms: payload.terms,
-        contractFileUrl: payload.contractFileUrl,
+        contractFile: payload.contractFile,
         startDate: payload.startDate,
         endDate: payload.endDate,
-      });
+      };
+      await contractApi.update(modalState.contract._id, updatePayload);
+      Alert.alert("Thành công", "Đã cập nhật hợp đồng.");
+    } else if (modalState.mode === "renew" && modalState.contract) {
+      if (!payload.startDate) throw new Error("Thiếu ngày bắt đầu");
+      const renewPayload: RenewContractPayload = {
+        monthlyRent: payload.monthlyRent,
+        depositAmount: payload.depositAmount,
+        terms: payload.terms,
+        contractFile: payload.contractFile,
+        startDate: payload.startDate,
+        endDate: payload.endDate,
+      };
+      await contractApi.renew(modalState.contract._id, renewPayload);
       Alert.alert("Thành công", "Đã gia hạn hợp đồng.");
     }
 

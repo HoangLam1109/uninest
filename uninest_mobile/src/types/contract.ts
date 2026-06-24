@@ -1,3 +1,5 @@
+import type { ContractPdfUpload } from "@/utils/contract-upload";
+
 export type ContractStatus =
   | "DRAFT"
   | "PENDING_TENANT_SIGNATURE"
@@ -28,6 +30,9 @@ export type Contract = {
   depositAmount?: number;
   terms?: string;
   contractFileUrl?: string;
+  contractFileStorageKey?: string;
+  signedContractFileUrl?: string;
+  signedContractStorageKey?: string;
   status: ContractStatus;
   signedAt?: string | null;
   createdAt?: string;
@@ -50,7 +55,7 @@ export type CreateContractPayload = {
   monthlyRent: number;
   depositAmount?: number;
   terms?: string;
-  contractFileUrl?: string;
+  contractFile?: ContractPdfUpload;
   startDate?: string;
   endDate?: string;
 };
