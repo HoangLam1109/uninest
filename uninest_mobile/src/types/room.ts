@@ -2,6 +2,11 @@ export type RoomStatus = "AVAILABLE" | "RENTED" | "MAINTENANCE";
 
 export type RoomType = "STUDIO" | "SINGLE" | "SHARED" | "APARTMENT";
 
+export type Amenity = {
+  _id: string;
+  name: string;
+};
+
 export type RoomLandlord = {
   _id: string;
   fullName?: string;
@@ -26,6 +31,7 @@ export type Room = {
   areaSqm?: number;
   maxOccupants?: number;
   isPublished?: boolean;
+  amenityIds?: Array<string | Amenity>;
   landlordId?: string | RoomLandlord;
   deletedAt?: string | null;
 };
@@ -77,6 +83,12 @@ export type RoomPayload = {
   roomType?: RoomType;
   status?: RoomStatus;
   propertyId?: string | null;
+  amenityIds?: string[];
+};
+
+export type AmenityListResponse = {
+  success: boolean;
+  data: Amenity[];
 };
 
 export type RoomImageResponse = {

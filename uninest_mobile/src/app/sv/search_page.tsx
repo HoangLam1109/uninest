@@ -25,8 +25,7 @@ import { useFavorites } from "@/context/favorites-context";
 import { useTenantGate } from "@/hooks/use-tenant-gate";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { Room } from "@/types/room";
-
-const PLACEHOLDER_IMAGE = require("@/assets/images/tutorial-web.png");
+import { getRoomImageSource } from "@/utils/room-display";
 
 function formatPrice(value: number) {
   return `${value.toLocaleString("vi-VN")}đ`;
@@ -264,7 +263,7 @@ function RoomCard({ room, onPress }: { room: Room; onPress: () => void }) {
     <Pressable style={styles.card} onPress={onPress}>
       <View style={styles.imageWrap}>
         <Image
-          source={imageUrl ? { uri: imageUrl } : PLACEHOLDER_IMAGE}
+          source={getRoomImageSource(imageUrl)}
           style={styles.propertyImage}
           contentFit="cover"
         />

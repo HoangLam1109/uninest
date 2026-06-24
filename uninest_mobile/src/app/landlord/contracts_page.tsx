@@ -1,5 +1,5 @@
-import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,69 +20,45 @@ import {
   ContractFormModal,
   type ContractFormMode,
 } from "@/components/landlord/contract-form-modal";
+import { ContractSummary } from "@/components/landlord/contract-summary";
+import { LandlordContractCard } from "@/components/landlord/landlord-contract-card";
 import { LandlordBottomNavigation } from "@/components/landlord/bottom-navigation";
 import { ThemedText } from "@/components/themed-text";
 import { getApiErrorMessage } from "@/lib/api-error";
-import type { Contract, ContractStatus } from "@/types/contract";
-import {
-  contractStatusLabel,
-  getContractBookingId,
-} from "@/utils/contract-display";
-import { formatPrice } from "@/utils/room-display";
+import type { Contract } from "@/types/contract";
 import { openContractFile } from "@/utils/open-contract-file";
+
+const PAGE_SIZE = 10;
 
 type ModalState = {
   mode: ContractFormMode;
   contract?: Contract;
 } | null;
 
-const STATUS_FILTERS: { id: "ALL" | ContractStatus; label: string }[] = [
-  { id: "ALL", label: "Tất cả" },
-  { id: "DRAFT", label: "Nháp" },
-  { id: "PENDING_TENANT_SIGNATURE", label: "Chờ ký" },
-  { id: "ACTIVE", label: "Hiệu lực" },
-  { id: "EXPIRED", label: "Hết hạn" },
-  { id: "TERMINATED", label: "Đã chấm dứt" },
-];
-
-function getTenantName(contract: Contract) {
-  const tenant = contract.tenantId;
-  if (typeof tenant === "object" && tenant !== null) {
-    return tenant.fullName ?? tenant.email ?? "Người thuê";
-  }
-  return "Người thuê";
-}
-
-function getRoomTitle(contract: Contract) {
-  const booking = contract.bookingId;
-  if (typeof booking === "object" && booking?.roomId) {
-    const room = booking.roomId;
-    if (typeof room === "object" && room !== null && "title" in room) {
-      return room.title ?? "Phòng";
-    }
-  }
-  return "Phòng";
-}
-
 export default function LandlordContractsPage() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<"ALL" | ContractStatus>("ALL");
   const [modalState, setModalState] = useState<ModalState>(null);
   const [actionId, setActionId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
-      const res = await contractApi.listLandlord({ page: 1, limit: 100 });
+      const res = await contractApi.listLandlord({ page, limit: PAGE_SIZE });
       setContracts(res.data ?? []);
+      setTotalPages(res.pagination?.totalPages ?? 1);
+      setTotal(res.pagination?.total ?? res.data?.length ?? 0);
     } catch (err) {
       Alert.alert("Lỗi", getApiErrorMessage(err, "Không tải được hợp đồng."));
       setContracts([]);
+      setTotalPages(1);
+      setTotal(0);
     }
-  }, []);
+  }, [page]);
 
   useFocusEffect(
     useCallback(() => {
@@ -91,23 +67,10 @@ export default function LandlordContractsPage() {
     }, [loadData]),
   );
 
-  const filtered = useMemo(() => {
-    if (statusFilter === "ALL") return contracts;
-    return contracts.filter((item) => item.status === statusFilter);
-  }, [contracts, statusFilter]);
-
-  const summary = useMemo(() => {
-    return contracts.reduce(
-      (acc, item) => {
-        acc.total += 1;
-        if (item.status === "DRAFT") acc.draft += 1;
-        if (item.status === "ACTIVE") acc.active += 1;
-        if (item.status === "PENDING_TENANT_SIGNATURE") acc.pending += 1;
-        return acc;
-      },
-      { total: 0, draft: 0, active: 0, pending: 0 },
-    );
-  }, [contracts]);
+  useEffect(() => {
+    setLoading(true);
+    void loadData().finally(() => setLoading(false));
+  }, [loadData]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -115,24 +78,31 @@ export default function LandlordContractsPage() {
     setRefreshing(false);
   };
 
+  const runAction = async (
+    contractId: string,
+    action: () => Promise<unknown>,
+    successMessage: string,
+    errorMessage: string,
+  ) => {
+    setActionId(contractId);
+    try {
+      await action();
+      await loadData();
+      Alert.alert("Thành công", successMessage);
+    } catch (err) {
+      Alert.alert(errorMessage, getApiErrorMessage(err, "Vui lòng thử lại."));
+    } finally {
+      setActionId(null);
+    }
+  };
+
   const handleActivate = (contract: Contract) => {
-    Alert.alert("Gửi hợp đồng", "Gửi hợp đồng cho người thuê ký?", [
-      { text: "Hủy", style: "cancel" },
-      {
-        text: "Gửi",
-        onPress: () => {
-          setActionId(contract._id);
-          void contractApi
-            .activate(contract._id)
-            .then(() => loadData())
-            .then(() => Alert.alert("Thành công", "Đã gửi hợp đồng cho người thuê ký."))
-            .catch((err) =>
-              Alert.alert("Lỗi", getApiErrorMessage(err, "Không gửi được hợp đồng.")),
-            )
-            .finally(() => setActionId(null));
-        },
-      },
-    ]);
+    void runAction(
+      contract._id,
+      () => contractApi.activate(contract._id),
+      "Đã gửi hợp đồng cho người thuê ký.",
+      "Không gửi được hợp đồng",
+    );
   };
 
   const handleTerminate = (contract: Contract) => {
@@ -142,15 +112,12 @@ export default function LandlordContractsPage() {
         text: "Chấm dứt",
         style: "destructive",
         onPress: () => {
-          setActionId(contract._id);
-          void contractApi
-            .terminate(contract._id)
-            .then(() => loadData())
-            .then(() => Alert.alert("Đã chấm dứt", "Hợp đồng đã được chấm dứt."))
-            .catch((err) =>
-              Alert.alert("Lỗi", getApiErrorMessage(err, "Không chấm dứt được hợp đồng.")),
-            )
-            .finally(() => setActionId(null));
+          void runAction(
+            contract._id,
+            () => contractApi.terminate(contract._id),
+            "Hợp đồng đã được chấm dứt.",
+            "Không chấm dứt được hợp đồng",
+          );
         },
       },
     ]);
@@ -210,75 +177,65 @@ export default function LandlordContractsPage() {
   return (
     <View style={styles.screen}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <View style={[styles.header, { paddingTop: insets.top > 0 ? 0 : 8 }]}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>←</Text>
-          </Pressable>
-          <View style={styles.headerTextWrap}>
-            <ThemedText type="smallBold" style={styles.headerTitle}>
-              Hợp đồng
-            </ThemedText>
-            <ThemedText type="small" style={styles.headerSubtitle}>
-              Quản lý hợp đồng thuê phòng
-            </ThemedText>
-          </View>
-          <Pressable
-            style={styles.createBtn}
-            onPress={() => setModalState({ mode: "create" })}
-          >
-            <Text style={styles.createBtnText}>+ Tạo</Text>
-          </Pressable>
-        </View>
-
         <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.statsRow}
-        >
-          <StatCard label="Tổng" value={String(summary.total)} />
-          <StatCard label="Nháp" value={String(summary.draft)} />
-          <StatCard label="Chờ ký" value={String(summary.pending)} />
-          <StatCard label="Hiệu lực" value={String(summary.active)} />
-        </ScrollView>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
-        >
-          {STATUS_FILTERS.map((filter) => {
-            const active = statusFilter === filter.id;
-            return (
-              <Pressable
-                key={filter.id}
-                style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => setStatusFilter(filter.id)}
-              >
-                <Text style={[styles.filterText, active && styles.filterTextActive]}>
-                  {filter.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        <ScrollView
-          contentContainerStyle={{ padding: 16, paddingBottom: 120 + insets.bottom }}
+          showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#E68A2E" />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void handleRefresh()}
+              tintColor="#E68A2E"
+            />
           }
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: 120 + insets.bottom },
+          ]}
         >
+          <View style={styles.header}>
+            <View style={styles.headerText}>
+              <ThemedText type="title" style={styles.pageTitle}>
+                Quản lý hợp đồng
+              </ThemedText>
+              <ThemedText type="small" style={styles.pageSubtitle}>
+                Theo dõi trạng thái ký, thời hạn thuê và file hợp đồng của từng
+                phòng.
+              </ThemedText>
+            </View>
+            <Pressable
+              style={styles.createBtn}
+              onPress={() => setModalState({ mode: "create" })}
+            >
+              <Text style={styles.createBtnIcon}>+</Text>
+              <ThemedText type="smallBold" style={styles.createBtnText}>
+                Tạo hợp đồng
+              </ThemedText>
+            </Pressable>
+          </View>
+
+          <ContractSummary contracts={contracts} total={total} />
+
           {loading ? (
-            <ActivityIndicator color="#E68A2E" style={{ marginTop: 24 }} />
-          ) : filtered.length === 0 ? (
+            <ActivityIndicator
+              color="#E68A2E"
+              style={{ marginTop: 32 }}
+              size="large"
+            />
+          ) : contracts.length === 0 ? (
             <View style={styles.emptyCard}>
+              <View style={styles.emptyIconWrap}>
+                <Text style={styles.emptyIcon}>📄</Text>
+              </View>
+              <ThemedText type="smallBold" style={styles.emptyTitle}>
+                Chưa có hợp đồng nào
+              </ThemedText>
               <ThemedText type="small" style={styles.emptyText}>
-                Chưa có hợp đồng nào.
+                Tạo hợp đồng từ booking đã duyệt để quản lý thời hạn thuê và
+                quy trình ký.
               </ThemedText>
             </View>
           ) : (
-            filtered.map((contract) => (
-              <ContractCard
+            contracts.map((contract) => (
+              <LandlordContractCard
                 key={contract._id}
                 contract={contract}
                 busy={actionId === contract._id}
@@ -286,13 +243,44 @@ export default function LandlordContractsPage() {
                 onRenew={() => setModalState({ mode: "renew", contract })}
                 onActivate={() => handleActivate(contract)}
                 onTerminate={() => handleTerminate(contract)}
-                onOpenFile={() => void handleOpenFile(contract)}
+                onOpenFile={() => handleOpenFile(contract)}
               />
             ))
           )}
+
+          {totalPages > 1 ? (
+            <View style={styles.pagination}>
+              <Pressable
+                style={[styles.pageBtn, page <= 1 && styles.pageBtnDisabled]}
+                disabled={page <= 1}
+                onPress={() => setPage((current) => Math.max(1, current - 1))}
+              >
+                <ThemedText type="smallBold" style={styles.pageBtnText}>
+                  Trước
+                </ThemedText>
+              </Pressable>
+              <ThemedText type="small" style={styles.pageInfo}>
+                Trang {page}/{totalPages}
+              </ThemedText>
+              <Pressable
+                style={[
+                  styles.pageBtn,
+                  page >= totalPages && styles.pageBtnDisabled,
+                ]}
+                disabled={page >= totalPages}
+                onPress={() =>
+                  setPage((current) => Math.min(totalPages, current + 1))
+                }
+              >
+                <ThemedText type="smallBold" style={styles.pageBtnText}>
+                  Sau
+                </ThemedText>
+              </Pressable>
+            </View>
+          ) : null}
         </ScrollView>
 
-        <LandlordBottomNavigation activeTab="settings" />
+        <LandlordBottomNavigation activeTab="profile" />
       </SafeAreaView>
 
       <ContractFormModal
@@ -306,217 +294,103 @@ export default function LandlordContractsPage() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.statCard}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function ContractCard({
-  contract,
-  busy,
-  onEdit,
-  onRenew,
-  onActivate,
-  onTerminate,
-  onOpenFile,
-}: {
-  contract: Contract;
-  busy: boolean;
-  onEdit: () => void;
-  onRenew: () => void;
-  onActivate: () => void;
-  onTerminate: () => void;
-  onOpenFile: () => void;
-}) {
-  const bookingId = getContractBookingId(contract);
-  const canEdit = contract.status === "DRAFT";
-  const canActivate = contract.status === "DRAFT";
-  const canTerminate = contract.status === "ACTIVE";
-  const canRenew = contract.status === "ACTIVE" || contract.status === "EXPIRED";
-
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardTop}>
-        <View style={{ flex: 1 }}>
-          <ThemedText type="smallBold" style={styles.cardTitle}>
-            {getTenantName(contract)}
-          </ThemedText>
-          <ThemedText type="small" style={styles.cardMeta}>
-            {getRoomTitle(contract)}
-          </ThemedText>
-        </View>
-        <View style={styles.statusBadge}>
-          <Text style={styles.statusBadgeText}>
-            {contractStatusLabel(contract.status)}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.infoBox}>
-        <InfoRow label="Giá thuê" value={`${formatPrice(contract.monthlyRent)}/tháng`} />
-        {contract.depositAmount ? (
-          <InfoRow label="Tiền cọc" value={formatPrice(contract.depositAmount)} />
-        ) : null}
-        {bookingId ? <InfoRow label="Mã đơn" value={bookingId.slice(-8)} /> : null}
-      </View>
-
-      <View style={styles.actionRow}>
-        <ActionButton label="PDF" onPress={onOpenFile} />
-        {canEdit ? <ActionButton label="Sửa" onPress={onEdit} primary /> : null}
-        {canActivate ? (
-          <ActionButton label="Gửi ký" onPress={onActivate} primary disabled={busy} />
-        ) : null}
-        {canRenew ? <ActionButton label="Gia hạn" onPress={onRenew} /> : null}
-        {canTerminate ? (
-          <ActionButton label="Chấm dứt" onPress={onTerminate} danger disabled={busy} />
-        ) : null}
-      </View>
-    </View>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <ThemedText type="small" style={styles.infoLabel}>
-        {label}
-      </ThemedText>
-      <ThemedText type="smallBold" style={styles.infoValue}>
-        {value}
-      </ThemedText>
-    </View>
-  );
-}
-
-function ActionButton({
-  label,
-  onPress,
-  primary,
-  danger,
-  disabled,
-}: {
-  label: string;
-  onPress: () => void;
-  primary?: boolean;
-  danger?: boolean;
-  disabled?: boolean;
-}) {
-  return (
-    <Pressable
-      style={[
-        styles.actionBtn,
-        primary && styles.actionBtnPrimary,
-        danger && styles.actionBtnDanger,
-        disabled && styles.actionBtnDisabled,
-      ]}
-      onPress={onPress}
-      disabled={disabled}
-    >
-      <Text
-        style={[
-          styles.actionBtnText,
-          primary && styles.actionBtnTextPrimary,
-          danger && styles.actionBtnTextDanger,
-        ]}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#F7F6F2" },
   safeArea: { flex: 1 },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
   header: {
+    gap: 14,
+    marginBottom: 16,
+  },
+  headerText: {
+    gap: 4,
+  },
+  pageTitle: {
+    fontSize: 24,
+    color: "#1F2940",
+  },
+  pageSubtitle: {
+    color: "#7A869A",
+    lineHeight: 18,
+  },
+  createBtn: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    gap: 10,
-  },
-  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  backText: { fontSize: 22, color: "#1F2940" },
-  headerTextWrap: { flex: 1 },
-  headerTitle: { fontSize: 22, color: "#1F2940" },
-  headerSubtitle: { color: "#9AA3B2", marginTop: 2 },
-  createBtn: {
+    justifyContent: "center",
+    gap: 8,
     backgroundColor: "#E68A2E",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  createBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
-  statsRow: { paddingHorizontal: 16, gap: 10, paddingBottom: 10 },
-  statCard: {
-    minWidth: 78,
-    backgroundColor: "#FFFFFF",
     borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#EDE8DF",
-    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 18,
   },
-  statValue: { fontSize: 20, fontWeight: "700", color: "#E68A2E" },
-  statLabel: { fontSize: 11, color: "#9AA3B2", marginTop: 4 },
-  filterRow: { paddingHorizontal: 16, gap: 8, paddingBottom: 8 },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#EDE8DF",
+  createBtnIcon: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "700",
   },
-  filterChipActive: { backgroundColor: "#FFF4E8", borderColor: "#E68A2E" },
-  filterText: { fontSize: 12, fontWeight: "600", color: "#9AA3B2" },
-  filterTextActive: { color: "#E68A2E" },
+  createBtnText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+  },
   emptyCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 24,
+    borderRadius: 16,
+    padding: 32,
     alignItems: "center",
-  },
-  emptyText: { color: "#9AA3B2" },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#EDE8DF",
-    padding: 14,
+    borderColor: "#ECE7DF",
+    marginTop: 8,
+  },
+  emptyIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#FFF0DF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  emptyIcon: {
+    fontSize: 24,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    color: "#1F2940",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  emptyText: {
+    color: "#7A869A",
+    textAlign: "center",
+    lineHeight: 20,
+    maxWidth: 300,
+  },
+  pagination: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+    marginTop: 8,
     marginBottom: 12,
   },
-  cardTop: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
-  cardTitle: { color: "#1F2940", fontSize: 16 },
-  cardMeta: { color: "#9AA3B2", marginTop: 4 },
-  statusBadge: {
-    backgroundColor: "#FFF4E8",
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  statusBadgeText: { fontSize: 11, fontWeight: "700", color: "#E68A2E" },
-  infoBox: { marginTop: 12, gap: 8 },
-  infoRow: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
-  infoLabel: { color: "#9AA3B2" },
-  infoValue: { color: "#1F2940" },
-  actionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14 },
-  actionBtn: {
+  pageBtn: {
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#EDE8DF",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#ECE7DF",
   },
-  actionBtnPrimary: { backgroundColor: "#E68A2E", borderColor: "#E68A2E" },
-  actionBtnDanger: { backgroundColor: "#FFEBEE", borderColor: "#FFCDD2" },
-  actionBtnDisabled: { opacity: 0.6 },
-  actionBtnText: { fontSize: 12, fontWeight: "700", color: "#1F2940" },
-  actionBtnTextPrimary: { color: "#FFFFFF" },
-  actionBtnTextDanger: { color: "#C62828" },
+  pageBtnDisabled: {
+    opacity: 0.45,
+  },
+  pageBtnText: {
+    color: "#1F2940",
+  },
+  pageInfo: {
+    color: "#7A869A",
+  },
 });

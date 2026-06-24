@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import {
@@ -23,30 +24,19 @@ import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/auth-context";
 import { useTenantGate } from "@/hooks/use-tenant-gate";
 import { getApiErrorMessage } from "@/lib/api-error";
-import type { Room } from "@/types/room";
 import type { Identity } from "@/types/identity";
-import { formatPrice, formatRoomLocation, sortRoomImages } from "@/utils/room-display";
-import { validateBookingNotes, validateCheckInDate } from "@/utils/validation/booking";
+import type { Room } from "@/types/room";
+import { formatRoomLocation, sortRoomImages, getRoomImageSource } from "@/utils/room-display";
+import {
+  toBookingIsoDate,
+  validateBookingNotes,
+  validateCheckInDate,
+} from "@/utils/validation/booking";
 
 const WEEKDAYS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
-const SERVICE_FEE = 200_000;
-const PLACEHOLDER_IMAGE = require("@/assets/images/tutorial-web.png");
-
-const TERM_OPTIONS = [
-  { label: "NGẮN HẠN", value: "6 tháng", months: 6 },
-  { label: "PHỔ BIẾN", value: "12 tháng", months: 12 },
-  { label: "ƯU ĐÃI", value: "24 tháng", months: 24 },
-] as const;
-
 function startOfDay(date: Date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function addMonths(date: Date, months: number) {
-  const d = new Date(date);
-  d.setMonth(d.getMonth() + months);
   return d;
 }
 
@@ -55,9 +45,7 @@ function isSameDay(a: Date, b: Date) {
 }
 
 function getDefaultCheckIn() {
-  const d = startOfDay(new Date());
-  d.setDate(d.getDate() + 7);
-  return d;
+  return startOfDay(new Date());
 }
 
 function buildCalendarCells(viewMonth: Date): (Date | null)[] {
@@ -73,6 +61,9 @@ function buildCalendarCells(viewMonth: Date): (Date | null)[] {
   for (let day = 1; day <= daysInMonth; day += 1) {
     cells.push(new Date(year, month, day));
   }
+  while (cells.length % 7 !== 0) {
+    cells.push(null);
+  }
   return cells;
 }
 
@@ -83,7 +74,7 @@ function formatMonthTitle(date: Date) {
 export default function BookingPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { requireTenant, handleTenantApiError, TenantGatePrompt } = useTenantGate();
   const params = useLocalSearchParams<{ roomId?: string; title?: string }>();
   const roomId =
@@ -101,7 +92,7 @@ export default function BookingPage() {
     return new Date(checkIn.getFullYear(), checkIn.getMonth(), 1);
   });
   const [selectedDate, setSelectedDate] = useState(getDefaultCheckIn);
-  const [termMonths, setTermMonths] = useState<number>(6);
+  const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [identities, setIdentities] = useState<Identity[]>([]);
   const [loadingIdentities, setLoadingIdentities] = useState(true);
@@ -110,9 +101,12 @@ export default function BookingPage() {
   const today = useMemo(() => startOfDay(new Date()), []);
   const calendarCells = useMemo(() => buildCalendarCells(viewMonth), [viewMonth]);
 
-  const monthlyRent = room?.pricePerMonth ?? 0;
-  const deposit = monthlyRent;
-  const payNow = monthlyRent + deposit + SERVICE_FEE;
+  const canSubmit =
+    Boolean(roomId) &&
+    Boolean(room) &&
+    selectedIdentityIds.length > 0 &&
+    !loadingIdentities &&
+    !submitting;
 
   const loadRoom = useCallback(async () => {
     if (!roomId) {
@@ -192,10 +186,9 @@ export default function BookingPage() {
       return;
     }
 
-    const notes = `Thời hạn thuê ${termMonths} tháng`;
     const notesError = validateBookingNotes(notes);
     if (notesError) {
-      Alert.alert("Không thể đặt phòng", notesError);
+      Alert.alert("Ghi chú không hợp lệ", notesError);
       return;
     }
 
@@ -203,13 +196,13 @@ export default function BookingPage() {
       Alert.alert(
         "Thiếu hồ sơ định danh",
         identities.length === 0
-          ? "Bạn cần xác minh CCCD trước khi đặt phòng. Vào Hồ sơ → Xác minh danh tính."
+          ? "Bạn cần có hồ sơ định danh đã xác minh mới được đặt phòng."
           : "Vui lòng chọn ít nhất một hồ sơ định danh đã xác minh.",
         identities.length === 0
           ? [
               { text: "Để sau", style: "cancel" },
               {
-                text: "Xác minh ngay",
+                text: "Tạo hồ sơ",
                 onPress: () => router.push("/sv/profile_identity_page" as any),
               },
             ]
@@ -220,13 +213,13 @@ export default function BookingPage() {
 
     setSubmitting(true);
     try {
-      const checkOutDate = addMonths(selectedDate, termMonths);
+      const trimmedNotes = notes.trim();
+      const checkInIso = toBookingIsoDate(selectedDate);
       const res = await bookingApi.create({
         roomId,
-        checkInDate: selectedDate.toISOString(),
-        checkOutDate: checkOutDate.toISOString(),
+        checkInDate: checkInIso,
         identityIds: selectedIdentityIds,
-        notes,
+        notes: trimmedNotes || undefined,
       });
 
       router.replace({
@@ -234,6 +227,9 @@ export default function BookingPage() {
         params: {
           bookingId: String(res.data._id),
           roomTitle: room.title,
+          checkInDate: checkInIso,
+          roomLocation: formatRoomLocation(room),
+          notes: trimmedNotes,
         },
       } as any);
     } catch (error) {
@@ -268,7 +264,7 @@ export default function BookingPage() {
             <Text style={styles.iconText}>←</Text>
           </Pressable>
           <ThemedText type="smallBold" style={styles.headerTitle}>
-            Đặt phòng UniNest
+            Đặt phòng
           </ThemedText>
           <View style={styles.iconButton} />
         </View>
@@ -286,13 +282,126 @@ export default function BookingPage() {
               style={styles.scroll}
               contentContainerStyle={{
                 paddingTop: insets.top + 64,
-                paddingBottom: 170 + insets.bottom,
+                paddingBottom: 100 + insets.bottom,
               }}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
               <View style={styles.section}>
+                <View style={styles.roomHighlight}>
+                  <ThemedText type="smallBold" style={styles.roomHighlightLabel}>
+                    Phòng đang đặt
+                  </ThemedText>
+                  <ThemedText type="smallBold" style={styles.roomHighlightTitle}>
+                    {displayTitle}
+                  </ThemedText>
+                  {room ? (
+                    <ThemedText type="small" style={styles.roomHighlightMeta}>
+                      📍 {formatRoomLocation(room)}
+                    </ThemedText>
+                  ) : null}
+                </View>
+              </View>
+
+              <View style={styles.section}>
                 <ThemedText type="title" style={styles.sectionTitle}>
-                  Ngày nhận phòng
+                  Hồ sơ định danh <Text style={styles.required}>*</Text>
+                </ThemedText>
+
+                <View style={styles.tenantSummary}>
+                  <View style={styles.tenantSummaryMain}>
+                    <ThemedText type="smallBold" style={styles.tenantName}>
+                      {user?.fullName ?? "Người thuê"}
+                    </ThemedText>
+                    <ThemedText type="small" style={styles.tenantMeta}>
+                      {[user?.phone, user?.email].filter(Boolean).join(" • ")}
+                    </ThemedText>
+                  </View>
+                  <ThemedText type="small" style={styles.identityCount}>
+                    {loadingIdentities
+                      ? "..."
+                      : `${selectedIdentityIds.length}/${identities.length} hồ sơ`}
+                  </ThemedText>
+                </View>
+
+                {loadingIdentities ? (
+                  <View style={styles.identityLoading}>
+                    <ActivityIndicator color="#F28C1B" />
+                    <ThemedText type="small" style={styles.identityHint}>
+                      Đang tải hồ sơ...
+                    </ThemedText>
+                  </View>
+                ) : identities.length === 0 ? (
+                  <View style={styles.identityEmptyCard}>
+                    <ThemedText type="small" style={styles.identityHint}>
+                      Bạn chưa có hồ sơ định danh. Vui lòng tạo hồ sơ và chờ xác
+                      minh để có thể đặt phòng.
+                    </ThemedText>
+                    <Pressable
+                      style={styles.identityLinkButton}
+                      onPress={() =>
+                        router.push("/sv/profile_identity_page" as any)
+                      }
+                    >
+                      <ThemedText type="smallBold" style={styles.identityLinkText}>
+                        Tạo hồ sơ định danh →
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View style={styles.identityList}>
+                    {identities.map((identity) => {
+                      const id = String(identity._id);
+                      const selected = selectedIdentityIds.includes(id);
+                      return (
+                        <Pressable
+                          key={id}
+                          style={[
+                            styles.identityCard,
+                            selected && styles.identityCardSelected,
+                          ]}
+                          onPress={() => toggleIdentity(id)}
+                        >
+                          <View
+                            style={[
+                              styles.radio,
+                              selected && styles.radioActive,
+                            ]}
+                          >
+                            {selected ? <View style={styles.radioDot} /> : null}
+                          </View>
+                          <View style={styles.identityMeta}>
+                            <ThemedText type="smallBold" style={styles.identityName}>
+                              {identity.fullName}
+                            </ThemedText>
+                            <ThemedText type="small" style={styles.identitySub}>
+                              CCCD: {identity.cccdNumber}
+                              {identity.phone ? ` • ${identity.phone}` : ""}
+                            </ThemedText>
+                          </View>
+                          <ThemedText type="small" style={styles.verifiedBadge}>
+                            Đã xác minh
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {selectedIdentityIds.length > 0 ? (
+                  <ThemedText type="small" style={styles.selectedHint}>
+                    Đã chọn {selectedIdentityIds.length} hồ sơ định danh
+                  </ThemedText>
+                ) : !loadingIdentities && identities.length > 0 ? (
+                  <ThemedText type="small" style={styles.warningHint}>
+                    Bạn cần chọn ít nhất một hồ sơ định danh đã xác minh.
+                  </ThemedText>
+                ) : null}
+              </View>
+
+              <View style={styles.section}>
+                <ThemedText type="title" style={styles.sectionTitle}>
+                  Ngày đến xem phòng <Text style={styles.required}>*</Text>
                 </ThemedText>
                 <View style={styles.calendarCard}>
                   <View style={styles.calendarHeader}>
@@ -356,170 +465,34 @@ export default function BookingPage() {
 
               <View style={styles.section}>
                 <ThemedText type="title" style={styles.sectionTitle}>
-                  Thời hạn thuê
+                  Ghi chú
                 </ThemedText>
-                <View style={styles.termRow}>
-                  {TERM_OPTIONS.map((term) => (
-                    <TermChip
-                      key={term.months}
-                      label={term.label}
-                      value={term.value}
-                      active={termMonths === term.months}
-                      onPress={() => setTermMonths(term.months)}
-                    />
-                  ))}
-                </View>
+                <TextInput
+                  value={notes}
+                  onChangeText={setNotes}
+                  placeholder="Ví dụ: tôi muốn thuê dài hạn, cần tư vấn về phòng"
+                  placeholderTextColor="#A89888"
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  style={styles.notesInput}
+                />
+                <ThemedText type="small" style={styles.notesHint}>
+                  Tối đa 500 ký tự
+                </ThemedText>
               </View>
 
-              <View style={styles.section}>
-                <View style={styles.propertyCard}>
-                  <View style={styles.propertyRow}>
+              {room ? (
+                <View style={styles.section}>
+                  <View style={styles.propertyCard}>
                     <Image
-                      source={imageUrl ? { uri: imageUrl } : PLACEHOLDER_IMAGE}
+                      source={getRoomImageSource(imageUrl)}
                       style={styles.propertyImage}
                       contentFit="cover"
                     />
-                    <View style={styles.propertyMeta}>
-                      <ThemedText type="smallBold" style={styles.propertyTitle}>
-                        {displayTitle}
-                      </ThemedText>
-                      <ThemedText type="small" style={styles.propertyLocation}>
-                        📍 {room ? formatRoomLocation(room) : "—"}
-                      </ThemedText>
-                    </View>
-                  </View>
-
-                  <View style={styles.line} />
-
-                  <View style={styles.priceRows}>
-                    <PriceRow
-                      label={`Giá thuê (${termMonths} tháng)`}
-                      value={`${formatPrice(monthlyRent)} / tháng`}
-                    />
-                    <PriceRow
-                      label="Tiền cọc (1 tháng)"
-                      value={formatPrice(deposit)}
-                    />
-                    <PriceRow
-                      label="Phí dịch vụ"
-                      value={formatPrice(SERVICE_FEE)}
-                    />
-                  </View>
-
-                  <View style={styles.totalRow}>
-                    <ThemedText type="smallBold" style={styles.totalLabel}>
-                      Tổng thanh toán dự kiến
-                    </ThemedText>
-                    <ThemedText type="title" style={styles.totalValue}>
-                      {formatPrice(payNow)}
-                    </ThemedText>
                   </View>
                 </View>
-              </View>
-
-              <View style={styles.section}>
-                <ThemedText type="title" style={styles.sectionTitle}>
-                  Hồ sơ định danh
-                </ThemedText>
-                {loadingIdentities ? (
-                  <View style={styles.identityLoading}>
-                    <ActivityIndicator color="#F28C1B" />
-                    <ThemedText type="small" style={styles.identityHint}>
-                      Đang tải hồ sơ...
-                    </ThemedText>
-                  </View>
-                ) : identities.length === 0 ? (
-                  <View style={styles.identityEmptyCard}>
-                    <ThemedText type="small" style={styles.identityHint}>
-                      Bạn chưa có hồ sơ CCCD đã xác minh. Cần xác minh danh tính
-                      trước khi đặt phòng.
-                    </ThemedText>
-                    <Pressable
-                      style={styles.identityLinkButton}
-                      onPress={() =>
-                        router.push("/sv/profile_identity_page" as any)
-                      }
-                    >
-                      <ThemedText type="smallBold" style={styles.identityLinkText}>
-                        Xác minh danh tính →
-                      </ThemedText>
-                    </Pressable>
-                  </View>
-                ) : (
-                  <View style={styles.identityList}>
-                    {identities.map((identity) => {
-                      const id = String(identity._id);
-                      const selected = selectedIdentityIds.includes(id);
-                      return (
-                        <Pressable
-                          key={id}
-                          style={[
-                            styles.identityCard,
-                            selected && styles.identityCardSelected,
-                          ]}
-                          onPress={() => toggleIdentity(id)}
-                        >
-                          <View
-                            style={[
-                              styles.radio,
-                              selected && styles.radioActive,
-                            ]}
-                          >
-                            {selected ? <View style={styles.radioDot} /> : null}
-                          </View>
-                          <View style={styles.identityMeta}>
-                            <ThemedText type="smallBold" style={styles.identityName}>
-                              {identity.fullName}
-                            </ThemedText>
-                            <ThemedText type="small" style={styles.identitySub}>
-                              CCCD: {identity.cccdNumber}
-                            </ThemedText>
-                          </View>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                )}
-              </View>
-
-              <View style={styles.section}>
-                <ThemedText type="title" style={styles.sectionTitle}>
-                  Phương thức thanh toán
-                </ThemedText>
-
-                <PaymentOption
-                  active
-                  title="Chuyển khoản ngân hàng"
-                  subtitle="Xác nhận nhanh trong 5–10 phút"
-                  icon="🏦"
-                />
-                <PaymentOption
-                  title="Ví điện tử (Momo, ZaloPay)"
-                  subtitle="Thanh toán tức thì, bảo mật cao"
-                  icon="💳"
-                />
-                <PaymentOption
-                  title="Thẻ quốc tế (Visa, Mastercard)"
-                  subtitle="Hỗ trợ trả góp 0% lãi suất"
-                  icon="💳"
-                />
-              </View>
-
-              <View style={styles.section}>
-                <View style={styles.policyCard}>
-                  <Text style={styles.policyIcon}>ℹ</Text>
-                  <View style={styles.policyContent}>
-                    <ThemedText type="smallBold" style={styles.policyTitle}>
-                      Chính sách hủy phòng
-                    </ThemedText>
-                    <ThemedText type="small" style={styles.policyText}>
-                      Hoàn trả 100% tiền cọc nếu hủy trước ngày nhận phòng 07 ngày.
-                      Sau thời gian này, phí hủy sẽ tương đương 50% tiền cọc. Vui
-                      lòng xem chi tiết hợp đồng thuê nhà.
-                    </ThemedText>
-                  </View>
-                </View>
-              </View>
+              ) : null}
             </ScrollView>
 
             <View
@@ -528,37 +501,19 @@ export default function BookingPage() {
                 { paddingBottom: Math.max(insets.bottom, 12) },
               ]}
             >
-              <View style={styles.footerSummary}>
-                <ThemedText type="small" style={styles.footerLabel}>
-                  Bạn sẽ thanh toán ngay:
-                </ThemedText>
-                <ThemedText type="smallBold" style={styles.footerPrice}>
-                  {formatPrice(payNow)}
-                </ThemedText>
-              </View>
-
               <Pressable
                 style={[
                   styles.confirmButton,
-                  (submitting ||
-                    !room ||
-                    loadingIdentities ||
-                    selectedIdentityIds.length === 0) &&
-                    styles.confirmButtonDisabled,
+                  !canSubmit && styles.confirmButtonDisabled,
                 ]}
-                disabled={
-                  submitting ||
-                  !room ||
-                  loadingIdentities ||
-                  selectedIdentityIds.length === 0
-                }
+                disabled={!canSubmit}
                 onPress={() => void handleConfirm()}
               >
                 {submitting ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
                   <ThemedText type="smallBold" style={styles.confirmText}>
-                    Xác nhận & Thanh toán →
+                    Gửi yêu cầu đặt phòng
                   </ThemedText>
                 )}
               </Pressable>
@@ -568,80 +523,6 @@ export default function BookingPage() {
         <TenantGatePrompt />
       </SafeAreaView>
     </ThemedView>
-  );
-}
-
-function TermChip({
-  label,
-  value,
-  active,
-  onPress,
-}: {
-  label: string;
-  value: string;
-  active?: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      style={[styles.termChip, active && styles.termChipActive]}
-      onPress={onPress}
-    >
-      <ThemedText
-        type="smallBold"
-        style={[styles.termLabel, active && styles.termLabelActive]}
-      >
-        {label}
-      </ThemedText>
-      <ThemedText
-        type="smallBold"
-        style={[styles.termValue, active && styles.termValueActive]}
-      >
-        {value}
-      </ThemedText>
-    </Pressable>
-  );
-}
-
-function PriceRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.priceRow}>
-      <ThemedText type="small" style={styles.priceLabel}>
-        {label}
-      </ThemedText>
-      <ThemedText type="smallBold" style={styles.priceValue}>
-        {value}
-      </ThemedText>
-    </View>
-  );
-}
-
-function PaymentOption({
-  title,
-  subtitle,
-  icon,
-  active,
-}: {
-  title: string;
-  subtitle: string;
-  icon: string;
-  active?: boolean;
-}) {
-  return (
-    <Pressable style={[styles.paymentCard, active && styles.paymentCardActive]}>
-      <View style={[styles.radio, active && styles.radioActive]}>
-        {active ? <View style={styles.radioDot} /> : null}
-      </View>
-      <Text style={styles.paymentIcon}>{icon}</Text>
-      <View style={styles.paymentTextWrap}>
-        <ThemedText type="smallBold" style={styles.paymentTitle}>
-          {title}
-        </ThemedText>
-        <ThemedText type="small" style={styles.paymentSubtitle}>
-          {subtitle}
-        </ThemedText>
-      </View>
-    </Pressable>
   );
 }
 
@@ -700,189 +581,53 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: "#3F2F22",
-    fontSize: 24,
+    fontSize: 22,
     marginBottom: 14,
   },
-  calendarCard: {
+  required: {
+    color: "#D14343",
+  },
+  roomHighlight: {
+    backgroundColor: "rgba(242, 140, 27, 0.12)",
+    borderRadius: 14,
+    padding: 16,
+    gap: 6,
+  },
+  roomHighlightLabel: {
+    color: "#F28C1B",
+    fontSize: 14,
+  },
+  roomHighlightTitle: {
+    color: "#3F2F22",
+    fontSize: 18,
+  },
+  roomHighlightMeta: {
+    color: "#8D96A7",
+  },
+  tenantSummary: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#E8E1D8",
     padding: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    marginBottom: 12,
   },
-  calendarHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 14,
-  },
-  chevronButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  chevronText: {
-    color: "#3F2F22",
-    fontSize: 24,
-    fontWeight: "700",
-  },
-  monthTitle: {
-    color: "#3F2F22",
-    fontSize: 18,
-  },
-  weekRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  weekText: {
-    width: 38,
-    textAlign: "center",
-    color: "#9AA0A9",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  dayCell: {
-    width: "14.28%",
-    aspectRatio: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  dayCellSelected: {
-    backgroundColor: "#F28C1B",
-    borderRadius: 18,
-    shadowColor: "#F28C1B",
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  dayText: {
-    color: "#1E2230",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  dayTextMuted: {
-    color: "#D1D5DB",
-    fontWeight: "600",
-  },
-  dayTextSelected: {
-    color: "#FFFFFF",
-  },
-  termRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  termChip: {
+  tenantSummaryMain: {
     flex: 1,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E2DED8",
-    backgroundColor: "#FFFFFF",
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
     gap: 4,
   },
-  termChipActive: {
-    borderColor: "#F28C1B",
-    backgroundColor: "#FFF8F0",
-  },
-  termLabel: {
-    color: "#A49A90",
-    fontSize: 12,
-  },
-  termLabelActive: {
-    color: "#F28C1B",
-  },
-  termValue: {
+  tenantName: {
     color: "#3F2F22",
     fontSize: 16,
   },
-  termValueActive: {
-    color: "#3F2F22",
+  tenantMeta: {
+    color: "#8E95A3",
   },
-  propertyCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#EAE4DB",
-    padding: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  propertyRow: {
-    flexDirection: "row",
-    gap: 12,
-    alignItems: "center",
-  },
-  propertyImage: {
-    width: 104,
-    height: 88,
-    borderRadius: 12,
-    backgroundColor: "#D7C7B1",
-  },
-  propertyMeta: {
-    flex: 1,
-    gap: 6,
-  },
-  propertyTitle: {
-    color: "#3F2F22",
-    fontSize: 18,
-    lineHeight: 22,
-  },
-  propertyLocation: {
-    color: "#8D96A7",
-  },
-  line: {
-    height: 1,
-    backgroundColor: "#F0EBE4",
-    marginVertical: 14,
-  },
-  priceRows: {
-    gap: 10,
-  },
-  priceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  priceLabel: {
-    color: "#7A7F86",
-  },
-  priceValue: {
-    color: "#3F2F22",
-  },
-  totalRow: {
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#F0EBE4",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  totalLabel: {
-    color: "#3F2F22",
-  },
-  totalValue: {
-    color: "#F28C1B",
-    fontSize: 20,
+  identityCount: {
+    color: "#9AA0A9",
   },
   identityLoading: {
     alignItems: "center",
@@ -935,20 +680,120 @@ const styles = StyleSheet.create({
   identitySub: {
     color: "#8E95A3",
   },
-  paymentCard: {
+  verifiedBadge: {
+    color: "#2E9B57",
+    fontWeight: "700",
+    fontSize: 11,
+  },
+  selectedHint: {
+    color: "#F28C1B",
+    marginTop: 10,
+  },
+  warningHint: {
+    color: "#C47A10",
+    marginTop: 10,
+    fontWeight: "600",
+  },
+  calendarCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E8E1D8",
+    padding: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  calendarHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  chevronButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chevronText: {
+    color: "#3F2F22",
+    fontSize: 24,
+    fontWeight: "700",
+  },
+  monthTitle: {
+    color: "#3F2F22",
+    fontSize: 18,
+  },
+  weekRow: {
+    flexDirection: "row",
+    marginBottom: 10,
+  },
+  weekText: {
+    width: "14.28%",
+    textAlign: "center",
+    color: "#9AA0A9",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  dayCell: {
+    width: "14.28%",
+    aspectRatio: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  dayCellSelected: {
+    backgroundColor: "#F28C1B",
+    borderRadius: 18,
+    shadowColor: "#F28C1B",
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  dayText: {
+    color: "#1E2230",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  dayTextMuted: {
+    color: "#D1D5DB",
+    fontWeight: "600",
+  },
+  dayTextSelected: {
+    color: "#FFFFFF",
+  },
+  notesInput: {
+    minHeight: 110,
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "#E8E1D8",
-    padding: 14,
-    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: "#3F2F22",
+    fontSize: 15,
+    lineHeight: 22,
   },
-  paymentCardActive: {
-    borderColor: "#F28C1B",
-    backgroundColor: "#FFF9F1",
+  notesHint: {
+    color: "#9AA0A9",
+    marginTop: 8,
+  },
+  propertyCard: {
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  propertyImage: {
+    width: "100%",
+    height: 180,
+    backgroundColor: "#D7C7B1",
   },
   radio: {
     width: 20,
@@ -968,46 +813,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: "#F28C1B",
   },
-  paymentIcon: {
-    fontSize: 20,
-    color: "#F28C1B",
-  },
-  paymentTextWrap: {
-    flex: 1,
-  },
-  paymentTitle: {
-    color: "#3F2F22",
-    fontSize: 16,
-  },
-  paymentSubtitle: {
-    color: "#8E95A3",
-    marginTop: 2,
-  },
-  policyCard: {
-    backgroundColor: "#FFF8EF",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#EBCFA6",
-    padding: 14,
-    flexDirection: "row",
-    gap: 10,
-  },
-  policyIcon: {
-    color: "#F28C1B",
-    fontSize: 18,
-    marginTop: 2,
-  },
-  policyContent: {
-    flex: 1,
-  },
-  policyTitle: {
-    color: "#3F2F22",
-  },
-  policyText: {
-    color: "#7A7F86",
-    lineHeight: 20,
-    marginTop: 4,
-  },
   footer: {
     position: "absolute",
     left: 0,
@@ -1018,24 +823,9 @@ const styles = StyleSheet.create({
     borderTopColor: "#ECE5DC",
     paddingHorizontal: 16,
     paddingTop: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  footerSummary: {
-    flex: 1,
-  },
-  footerLabel: {
-    color: "#8A8F97",
-  },
-  footerPrice: {
-    color: "#F28C1B",
-    fontSize: 24,
-    marginTop: 2,
   },
   confirmButton: {
-    flex: 1.2,
-    minHeight: 76,
+    minHeight: 56,
     borderRadius: 14,
     backgroundColor: "#F28C1B",
     alignItems: "center",

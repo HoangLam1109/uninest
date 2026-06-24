@@ -2,12 +2,19 @@ import type { Booking, BookingRoomRef, BookingStatus, BookingUser } from "@/type
 
 export function bookingStatusLabel(status: BookingStatus) {
   const map: Record<BookingStatus, string> = {
-    PENDING: "CHỜ DUYỆT",
-    APPROVED: "ĐÃ CHẤP NHẬN",
-    REJECTED: "TỪ CHỐI",
-    CANCELLED: "ĐÃ HỦY",
+    PENDING: "Chờ duyệt",
+    APPROVED: "Đã duyệt",
+    REJECTED: "Từ chối",
+    CANCELLED: "Đã hủy",
   };
   return map[status] ?? status;
+}
+
+export function bookingStatusBadgeStyle(status: BookingStatus) {
+  if (status === "PENDING") return "pending" as const;
+  if (status === "APPROVED") return "approved" as const;
+  if (status === "REJECTED") return "rejected" as const;
+  return "cancelled" as const;
 }
 
 export function getBookingTenant(booking: Booking): BookingUser | null {
@@ -52,4 +59,17 @@ export function formatSubmittedAgo(createdAt: string) {
   const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   if (days <= 0) return "Hôm nay";
   return `${days} ngày trước`;
+}
+
+export function formatBookingCurrency(value?: number) {
+  if (typeof value !== "number") return "—";
+  return `${value.toLocaleString("vi-VN")}đ`;
+}
+
+export function formatRoomLocationParts(
+  address?: string,
+  district?: string,
+  city?: string,
+) {
+  return [address, district, city].filter(Boolean).join(", ") || "Chưa có thông tin phòng";
 }

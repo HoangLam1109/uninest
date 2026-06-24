@@ -22,7 +22,7 @@ type MenuItem = {
 };
 
 const MENU_ITEMS: MenuItem[] = [
-  { id: "personal", label: "Thông tin cá nhân", icon: "👤" },
+  { id: "personal", label: "Hồ sơ cá nhân", icon: "👤" },
   { id: "rooms", label: "Đặt phòng", icon: "🏠" },
   { id: "invoices", label: "Hóa đơn", icon: "🧾" },
   { id: "contracts", label: "Hợp đồng", icon: "📄" },

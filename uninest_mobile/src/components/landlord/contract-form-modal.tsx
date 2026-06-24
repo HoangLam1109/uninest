@@ -102,7 +102,7 @@ export function ContractFormModal({
   const title = useMemo(() => {
     if (mode === "create") return "Tạo hợp đồng";
     if (mode === "renew") return "Gia hạn hợp đồng";
-    return "Chỉnh sửa hợp đồng";
+    return "Cập nhật hợp đồng";
   }, [mode]);
 
   const handleSubmit = async () => {

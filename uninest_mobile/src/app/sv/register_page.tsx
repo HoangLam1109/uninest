@@ -3,7 +3,6 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -18,6 +17,8 @@ import {
 } from "react-native-safe-area-context";
 
 import { authApi } from "@/api/auth.api";
+import { AppLogo } from "@/components/app-logo";
+import { AuthBanner } from "@/components/auth-banner";
 import { ThemedText } from "@/components/themed-text";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { validateRegisterForm } from "@/utils/validation/auth";
@@ -151,15 +152,9 @@ export default function RegisterPage() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="always"
           >
-            <ThemedText type="small" style={styles.pageTitle}>
-              Đăng ký (HCMC)
-            </ThemedText>
-
             <View style={styles.card}>
               <View style={styles.heroBlock}>
-                <View style={styles.logoCircle}>
-                  <ThemedText style={styles.logoIcon}>🎓</ThemedText>
-                </View>
+                <AppLogo size={72} style={styles.logoCircle} withBackground={false} />
                 <ThemedText type="title" style={styles.brand}>
                   UniNest
                 </ThemedText>
@@ -168,12 +163,7 @@ export default function RegisterPage() {
                 </ThemedText>
               </View>
 
-              <View style={styles.bannerWrap}>
-                <Image
-                  source={require("@/assets/images/tutorial-web.png")}
-                  style={styles.banner}
-                />
-              </View>
+              <AuthBanner />
 
               <ThemedText type="smallBold" style={styles.fieldLabel}>
                 Họ và tên
@@ -384,12 +374,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 24,
   },
-  pageTitle: {
-    color: "#8D8D8D",
-    fontSize: 22,
-    marginBottom: 12,
-  },
   card: {
+    width: "100%",
     backgroundColor: "#F8F6F2",
     borderRadius: 8,
     paddingHorizontal: 16,
@@ -401,16 +387,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logoCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: "#FFF0DF",
-    alignItems: "center",
-    justifyContent: "center",
     marginBottom: 12,
-  },
-  logoIcon: {
-    fontSize: 28,
   },
   brand: {
     fontSize: 31,
@@ -421,16 +398,6 @@ const styles = StyleSheet.create({
     color: "#4B5568",
     textAlign: "center",
     lineHeight: 20,
-  },
-  bannerWrap: {
-    borderRadius: 14,
-    overflow: "hidden",
-    marginBottom: 18,
-  },
-  banner: {
-    width: "100%",
-    height: 134,
-    resizeMode: "cover",
   },
   fieldLabel: {
     color: "#263045",
