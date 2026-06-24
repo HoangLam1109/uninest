@@ -19,6 +19,7 @@ export interface IContract extends Document {
   depositAmount?: number;
   terms?: string;
   contractFileUrl?: string;
+  contractFileStorageKey?: string;
   signedContractFileUrl?: string;
   signedContractStorageKey?: string;
   tenantSignatureDataUrl?: string;
@@ -76,6 +77,10 @@ const ContractSchema = new Schema<IContract>(
       trim: true,
     },
     contractFileUrl: {
+      type: String,
+      trim: true,
+    },
+    contractFileStorageKey: {
       type: String,
       trim: true,
     },

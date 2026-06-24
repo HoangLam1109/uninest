@@ -28,6 +28,7 @@ export type Contract = {
   depositAmount?: number
   terms?: string
   contractFileUrl?: string
+  contractFileStorageKey?: string
   signedContractFileUrl?: string
   signedContractStorageKey?: string
   tenantSignatureDataUrl?: string
@@ -48,7 +49,7 @@ export type CreateContractPayload = {
   monthlyRent: number
   depositAmount?: number
   terms?: string
-  contractFileUrl?: string
+  contractFile?: File
   startDate?: string
   endDate?: string
 }
@@ -57,7 +58,7 @@ export type UpdateContractPayload = {
   monthlyRent?: number
   depositAmount?: number
   terms?: string
-  contractFileUrl?: string
+  contractFile?: File
   startDate?: string
   endDate?: string
 }

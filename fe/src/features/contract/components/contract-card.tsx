@@ -59,6 +59,7 @@ export function ContractCard({
     (contract.status === 'ACTIVE' || contract.status === 'EXPIRED')
   const hasContractFile = Boolean(
     contract.signedContractStorageKey ??
+      contract.contractFileStorageKey ??
       contract.signedContractFileUrl ??
       contract.contractFileUrl,
   )

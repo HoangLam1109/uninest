@@ -24,6 +24,7 @@ import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/auth-context";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { AuthUser } from "@/types/auth";
+import { validateProfilePersonal } from "@/utils/validation/profile";
 
 const AVATAR_PLACEHOLDER = require("@/assets/images/icon.png");
 
@@ -88,8 +89,9 @@ export default function ProfilePersonalPage() {
   const handleSave = async () => {
     const userId = user?.id ?? sessionUser?.id;
     if (!userId) return;
-    if (fullName.trim().length < 3) {
-      Alert.alert("Lỗi", "Họ tên phải có ít nhất 3 ký tự.");
+    const error = validateProfilePersonal(fullName, phone);
+    if (error) {
+      Alert.alert("Lỗi", error);
       return;
     }
 

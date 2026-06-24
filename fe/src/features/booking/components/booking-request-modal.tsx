@@ -170,12 +170,6 @@ export function BookingRequestModal({
         checkInDate: toIsoDate(values.checkInDate),
         notes: values.notes || undefined,
       },
-      {
-        onSuccess: () => {
-          toast.success('Đã gửi yêu cầu đặt phòng')
-          handleClose()
-        },
-      },
     )
   }
 

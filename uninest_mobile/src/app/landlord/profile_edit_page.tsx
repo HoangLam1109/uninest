@@ -22,6 +22,7 @@ import { userApi } from "@/api/user.api";
 import { ThemedText } from "@/components/themed-text";
 import { useAuth } from "@/context/auth-context";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { validateLandlordProfileEdit } from "@/utils/validation/profile";
 
 function validateForm(
   fullName: string,
@@ -30,34 +31,13 @@ function validateForm(
   password: string,
   confirmPassword: string,
 ): string | null {
-  const trimmedName = fullName.trim();
-  if (trimmedName.length < 3) {
-    return "Họ và tên phải có ít nhất 3 ký tự.";
-  }
-
-  const trimmedEmail = email.trim().toLowerCase();
-  if (!trimmedEmail) {
-    return "Vui lòng nhập email.";
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-    return "Email không hợp lệ.";
-  }
-
-  const trimmedPhone = phone.trim();
-  if (!trimmedPhone) {
-    return "Vui lòng nhập số điện thoại.";
-  }
-
-  if (password || confirmPassword) {
-    if (password.length < 8) {
-      return "Mật khẩu mới phải có ít nhất 8 ký tự.";
-    }
-    if (password !== confirmPassword) {
-      return "Mật khẩu xác nhận không khớp.";
-    }
-  }
-
-  return null;
+  return validateLandlordProfileEdit(
+    fullName,
+    email,
+    phone,
+    password,
+    confirmPassword,
+  );
 }
 
 export default function LandlordProfileEditPage() {

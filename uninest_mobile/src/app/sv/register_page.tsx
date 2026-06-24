@@ -20,6 +20,7 @@ import {
 import { authApi } from "@/api/auth.api";
 import { ThemedText } from "@/components/themed-text";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { validateRegisterForm } from "@/utils/validation/auth";
 
 type RegisterForm = {
   fullName: string;
@@ -32,32 +33,7 @@ type RegisterForm = {
 };
 
 function validateRegister(form: RegisterForm): string | null {
-  const fullName = form.fullName.trim();
-  const email = form.email.trim().toLowerCase();
-  const phone = form.phone.trim();
-
-  if (fullName.length < 3) {
-    return "Họ và tên phải có ít nhất 3 ký tự.";
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return "Email không hợp lệ.";
-  }
-  if (!/^0\d{9,10}$/.test(phone)) {
-    return "Số điện thoại phải bắt đầu bằng 0 và có 10–11 chữ số.";
-  }
-  if (form.password.length < 8) {
-    return "Mật khẩu tối thiểu 8 ký tự.";
-  }
-  if (form.password !== form.confirmPassword) {
-    return "Mật khẩu xác nhận không khớp.";
-  }
-  if (!/^\d{6}$/.test(form.otp.trim())) {
-    return "Mã OTP phải gồm 6 chữ số. Nhấn Gửi OTP để nhận mã qua email.";
-  }
-  if (!form.terms) {
-    return "Bạn cần đồng ý điều khoản sử dụng.";
-  }
-  return null;
+  return validateRegisterForm(form);
 }
 
 function validateEmailForOtp(email: string): string | null {

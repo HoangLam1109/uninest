@@ -2,6 +2,15 @@ import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import { ContractService } from "../services/contract.service.js";
 
+function toOptionalNumber(value: unknown) {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 /**
  * CREATE CONTRACT FROM BOOKING (Landlord)
  */
@@ -20,6 +29,7 @@ export const createContractFromBooking = async (req: Request, res: Response) => 
       startDate,
       endDate,
     } = req.body;
+    const contractFile = req.file;
 
     if (!bookingId || !monthlyRent) {
       return res.status(400).json({
@@ -32,11 +42,19 @@ export const createContractFromBooking = async (req: Request, res: Response) => 
       return res.status(400).json({ success: false, message: "Invalid booking id" });
 
     const contractData: any = {
-      monthlyRent,
-      depositAmount,
+      monthlyRent: Number(monthlyRent),
+      depositAmount: toOptionalNumber(depositAmount),
       terms,
       contractFileUrl,
     };
+    if (contractFile) {
+      contractData.contractFileStorageKey = await ContractService.uploadContractPdf(
+        contractFile,
+        bookingId,
+        "draft"
+      );
+      delete contractData.contractFileUrl;
+    }
     if (startDate) contractData.startDate = new Date(startDate);
     if (endDate) contractData.endDate = new Date(endDate);
 
@@ -221,8 +239,22 @@ export const updateContract = async (req: Request, res: Response) => {
       startDate,
       endDate,
     } = req.body;
+    const contractFile = req.file;
 
-    const updateData: any = { monthlyRent, depositAmount, terms, contractFileUrl };
+    const updateData: any = {
+      monthlyRent: toOptionalNumber(monthlyRent),
+      depositAmount: toOptionalNumber(depositAmount),
+      terms,
+      contractFileUrl,
+    };
+    if (contractFile) {
+      updateData.contractFileStorageKey = await ContractService.uploadContractPdf(
+        contractFile,
+        contractId as string,
+        "updated"
+      );
+      delete updateData.contractFileUrl;
+    }
     if (startDate) updateData.startDate = new Date(startDate);
     if (endDate) updateData.endDate = new Date(endDate);
 
@@ -376,6 +408,7 @@ export const renewContract = async (req: Request, res: Response) => {
 
     const { monthlyRent, depositAmount, startDate, endDate, terms, contractFileUrl } =
       req.body;
+    const contractFile = req.file;
 
     if (!startDate) {
       return res.status(400).json({
@@ -385,12 +418,20 @@ export const renewContract = async (req: Request, res: Response) => {
     }
 
     const renewalData: any = {
-      monthlyRent,
-      depositAmount,
+      monthlyRent: toOptionalNumber(monthlyRent),
+      depositAmount: toOptionalNumber(depositAmount),
       terms,
       contractFileUrl,
       startDate: new Date(startDate),
     };
+    if (contractFile) {
+      renewalData.contractFileStorageKey = await ContractService.uploadContractPdf(
+        contractFile,
+        contractId as string,
+        "renewal"
+      );
+      delete renewalData.contractFileUrl;
+    }
     if (endDate) renewalData.endDate = new Date(endDate);
 
     const renewalContract = await ContractService.renewContract(contractId as string, landlordId, renewalData);

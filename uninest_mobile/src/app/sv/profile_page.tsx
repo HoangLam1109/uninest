@@ -28,6 +28,7 @@ import {
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/auth-context";
+import { useLogout } from "@/hooks/use-logout";
 import { useFavorites } from "@/context/favorites-context";
 import { useTenantGate } from "@/hooks/use-tenant-gate";
 import type { UpgradeFeatureKey } from "@/constants/upgrade-features";
@@ -103,7 +104,8 @@ const TENANT_SETTINGS_FEATURES: Partial<
 export default function ProfilePage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { isAuthenticated, user: sessionUser, signOut, updateUser } = useAuth();
+  const { isAuthenticated, user: sessionUser, updateUser } = useAuth();
+  const logout = useLogout();
   const { requireTenant, TenantGatePrompt } = useTenantGate();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { favoriteRooms } = useFavorites();
@@ -187,17 +189,7 @@ export default function ProfilePage() {
     }
 
     if (id === "logout") {
-      Alert.alert("Đăng xuất", "Bạn có chắc muốn đăng xuất?", [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Đăng xuất",
-          style: "destructive",
-          onPress: () => {
-            signOut();
-            router.replace("/sv/login_page" as any);
-          },
-        },
-      ]);
+      logout();
       return;
     }
 

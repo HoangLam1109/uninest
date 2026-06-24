@@ -9,9 +9,27 @@ import type {
   UpdateContractPayload,
 } from '../types/contract.type'
 
+function buildContractFormData(
+  payload: CreateContractPayload | UpdateContractPayload | RenewContractPayload,
+) {
+  const formData = new FormData()
+
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null) return
+    if (value instanceof File) {
+      formData.append(key, value)
+      return
+    }
+
+    formData.append(key, String(value))
+  })
+
+  return formData
+}
+
 export const contractApi = {
   create: (payload: CreateContractPayload) =>
-    api.post<ContractResponse>('/contracts', payload),
+    api.post<ContractResponse>('/contracts', buildContractFormData(payload)),
 
   landlord: (params: ContractListParams) =>
     api.get<ContractListResponse>('/contracts/landlord', { params }),
@@ -25,7 +43,7 @@ export const contractApi = {
     api.get<Blob>(`/contracts/${id}/file`, { responseType: 'blob' }),
 
   update: (id: string, payload: UpdateContractPayload) =>
-    api.put<ContractResponse>(`/contracts/${id}`, payload),
+    api.put<ContractResponse>(`/contracts/${id}`, buildContractFormData(payload)),
 
   activate: (id: string) =>
     api.patch<ContractResponse>(`/contracts/${id}/activate`),
@@ -37,5 +55,5 @@ export const contractApi = {
     api.patch<ContractResponse>(`/contracts/${id}/terminate`),
 
   renew: (id: string, payload: RenewContractPayload) =>
-    api.post<ContractResponse>(`/contracts/${id}/renew`, payload),
+    api.post<ContractResponse>(`/contracts/${id}/renew`, buildContractFormData(payload)),
 }

@@ -56,6 +56,19 @@ export async function openPdfFromGridFs(fileId: string): Promise<PdfFileStream> 
   };
 }
 
+export async function downloadPdfFromGridFs(fileId: string): Promise<Buffer> {
+  const file = await openPdfFromGridFs(fileId);
+  const chunks: Buffer[] = [];
+
+  return new Promise<Buffer>((resolve, reject) => {
+    file.stream.on("data", (chunk) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    });
+    file.stream.on("error", reject);
+    file.stream.on("end", () => resolve(Buffer.concat(chunks)));
+  });
+}
+
 export async function openPdfFromUrl(fileUrl: string): Promise<PdfFileStream> {
   const response = await fetch(fileUrl);
   if (!response.ok || !response.body) {

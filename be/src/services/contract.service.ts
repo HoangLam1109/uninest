@@ -8,6 +8,7 @@ import { IDENTITY_STATUS } from "../models/Identity.model.js";
 import { ROOM_STATUS } from "../models/Room.model.js";
 import { PDFDocument } from "pdf-lib";
 import {
+  downloadPdfFromGridFs,
   openPdfFromGridFs,
   openPdfFromUrl,
   uploadPdfToGridFs,
@@ -30,17 +31,47 @@ function uploadSignedPdf(buffer: Buffer, contractId: string) {
   return uploadPdfToGridFs(filename, buffer, { contractId, type: "signed" });
 }
 
-async function createSignedContractPdf(
-  contractFileUrl: string,
-  tenantSignatureDataUrl: string,
-  contractId: string
+function uploadContractPdf(
+  file: Express.Multer.File,
+  referenceId: string,
+  type: "draft" | "renewal" | "updated"
 ) {
-  const response = await fetch(contractFileUrl);
+  const filename = `${referenceId}-${Date.now()}-${file.originalname || "contract.pdf"}`;
+  return uploadPdfToGridFs(filename, file.buffer, {
+    referenceId,
+    type,
+    contentType: file.mimetype,
+    originalName: file.originalname,
+  });
+}
+
+async function downloadPdfFromUrl(fileUrl: string) {
+  const response = await fetch(fileUrl);
   if (!response.ok) {
     throw new Error("Cannot download contract PDF");
   }
 
-  const pdfBytes = await response.arrayBuffer();
+  return Buffer.from(await response.arrayBuffer());
+}
+
+async function createSignedContractPdf(
+  contractSource: {
+    contractFileStorageKey: string | undefined;
+    contractFileUrl: string | undefined;
+  },
+  tenantSignatureDataUrl: string,
+  contractId: string
+) {
+  const pdfBytes = contractSource.contractFileStorageKey
+    ? await downloadPdfFromGridFs(contractSource.contractFileStorageKey)
+    : contractSource.contractFileUrl
+      ? await downloadPdfFromUrl(contractSource.contractFileUrl)
+      : null;
+
+  if (!pdfBytes) {
+    throw new Error("Contract file not found");
+  }
+
   const pdfDocument = await PDFDocument.load(pdfBytes);
   const pages = pdfDocument.getPages();
   const page = pages[pages.length - 1];
@@ -78,6 +109,7 @@ export const ContractService = {
       depositAmount?: number;
       terms?: string;
       contractFileUrl?: string;
+      contractFileStorageKey?: string;
       startDate?: Date;
       endDate?: Date;
     }
@@ -130,6 +162,7 @@ export const ContractService = {
       depositAmount: contractData.depositAmount,
       terms: contractData.terms,
       contractFileUrl: contractData.contractFileUrl,
+      contractFileStorageKey: contractData.contractFileStorageKey,
       startDate: contractData.startDate || new Date(),
       endDate: contractData.endDate,
       status: CONTRACT_STATUS.DRAFT,
@@ -209,6 +242,7 @@ export const ContractService = {
       depositAmount?: number;
       terms?: string;
       contractFileUrl?: string;
+      contractFileStorageKey?: string;
       startDate?: Date;
       endDate?: Date;
     }
@@ -291,8 +325,12 @@ export const ContractService = {
     }
 
     const signedContractStorageKey = contract.contractFileUrl
+      || contract.contractFileStorageKey
       ? await createSignedContractPdf(
-          contract.contractFileUrl,
+          {
+            contractFileStorageKey: contract.contractFileStorageKey,
+            contractFileUrl: contract.contractFileUrl,
+          },
           signatureData.tenantSignatureDataUrl,
           contractId
         )
@@ -374,6 +412,10 @@ export const ContractService = {
       return openPdfFromGridFs(contract.signedContractStorageKey);
     }
 
+    if (contract.contractFileStorageKey) {
+      return openPdfFromGridFs(contract.contractFileStorageKey);
+    }
+
     const fileUrl = contract.signedContractFileUrl ?? contract.contractFileUrl;
     if (!fileUrl) {
       throw new Error("Contract file not found");
@@ -437,6 +479,7 @@ export const ContractService = {
       endDate?: Date;
       terms?: string;
       contractFileUrl?: string;
+      contractFileStorageKey?: string;
     }
   ) => {
     const originalContract = await ContractRepository.findById(contractId);
@@ -459,6 +502,9 @@ export const ContractService = {
       depositAmount: renewalData.depositAmount || originalContract.depositAmount,
       terms: renewalData.terms || originalContract.terms,
       contractFileUrl: renewalData.contractFileUrl || originalContract.contractFileUrl,
+      contractFileStorageKey:
+        renewalData.contractFileStorageKey ||
+        originalContract.contractFileStorageKey,
       startDate: renewalData.startDate,
       endDate: renewalData.endDate,
       status: CONTRACT_STATUS.DRAFT,
@@ -466,4 +512,6 @@ export const ContractService = {
 
     return renewalContract;
   },
+
+  uploadContractPdf,
 };
