@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { bookingApi } from "@/api/booking.api";
+import { DatePickerField } from "@/components/date-picker-field";
 import { ThemedText } from "@/components/themed-text";
 import type { Booking } from "@/types/booking";
 import type { Contract } from "@/types/contract";
@@ -46,7 +47,19 @@ function toDateInput(value?: string | null) {
 
 function toIsoDate(value: string) {
   if (!value.trim()) return undefined;
-  return new Date(`${value.trim()}T00:00:00.000Z`).toISOString();
+  return new Date(`${value.trim()}T00:00:00.000`).toISOString();
+}
+
+function parseDateInput(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return null;
+  const date = new Date(`${value.trim()}T00:00:00.000`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function startOfToday() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
 }
 
 export function ContractFormModal({
@@ -104,6 +117,9 @@ export function ContractFormModal({
     if (mode === "renew") return "Gia hạn hợp đồng";
     return "Cập nhật hợp đồng";
   }, [mode]);
+
+  const minStartDate = mode === "edit" ? undefined : startOfToday();
+  const minEndDate = parseDateInput(startDate) ?? minStartDate;
 
   const handleSubmit = async () => {
     const error = validateContractForm({
@@ -204,13 +220,20 @@ export function ContractFormModal({
 
           <Field label="Giá thuê / tháng *" value={monthlyRent} onChangeText={setMonthlyRent} keyboardType="numeric" />
           <Field label="Tiền cọc" value={depositAmount} onChangeText={setDepositAmount} keyboardType="numeric" />
-          <Field
-            label={mode === "renew" ? "Ngày bắt đầu * (YYYY-MM-DD)" : "Ngày bắt đầu (YYYY-MM-DD)"}
+          <DatePickerField
+            label={mode === "renew" ? "Ngày bắt đầu *" : "Ngày bắt đầu"}
             value={startDate}
-            onChangeText={setStartDate}
-            placeholder="2026-01-01"
+            onChange={setStartDate}
+            placeholder="Chọn ngày bắt đầu"
+            minimumDate={minStartDate}
           />
-          <Field label="Ngày kết thúc (YYYY-MM-DD)" value={endDate} onChangeText={setEndDate} placeholder="2026-12-31" />
+          <DatePickerField
+            label="Ngày kết thúc"
+            value={endDate}
+            onChange={setEndDate}
+            placeholder="Chọn ngày kết thúc"
+            minimumDate={minEndDate}
+          />
           <Field label="Link file hợp đồng" value={contractFileUrl} onChangeText={setContractFileUrl} placeholder="https://..." />
           <Field label="Điều khoản" value={terms} onChangeText={setTerms} multiline />
         </ScrollView>

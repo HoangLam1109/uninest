@@ -47,6 +47,32 @@ export function getContractRoomTitle(contract: Contract) {
   return "Phòng chưa cập nhật";
 }
 
+export function getContractRoomAddress(contract: Contract) {
+  const booking = contract.bookingId;
+  if (typeof booking === "object" && booking?.roomId) {
+    const room = booking.roomId;
+    if (typeof room === "object" && room !== null && "address" in room) {
+      return room.address ?? null;
+    }
+  }
+  return null;
+}
+
+export function contractStatusPillStyle(status: ContractStatus) {
+  switch (status) {
+    case "DRAFT":
+      return { backgroundColor: "#F0EBE4", color: "#7A6B58" };
+    case "PENDING_TENANT_SIGNATURE":
+      return { backgroundColor: "#FFF4D6", color: "#C47A10" };
+    case "ACTIVE":
+      return { backgroundColor: "#E2F5E8", color: "#2E8B57" };
+    case "EXPIRED":
+      return { backgroundColor: "#FDECEC", color: "#D14343" };
+    default:
+      return { backgroundColor: "#EEF1F5", color: "#6B7280" };
+  }
+}
+
 export function hasContractFile(contract: Contract) {
   return Boolean(contract.contractFileUrl?.trim());
 }
