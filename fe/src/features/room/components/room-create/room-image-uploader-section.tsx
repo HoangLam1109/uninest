@@ -93,7 +93,7 @@ export function RoomImageUploaderSection({
                     </span>
                   ) : (
                     <span className="absolute inset-x-2 bottom-2 rounded-md bg-black/55 px-2 py-1 text-center text-[10px] font-bold text-white opacity-0 transition group-hover:opacity-100">
-                      Chọn primary
+                      Chọn ảnh đại diện
                     </span>
                   )}
 

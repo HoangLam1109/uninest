@@ -73,3 +73,47 @@ export const uploadRoomImages = (
     });
   });
 };
+
+export const uploadContractPdfMiddleware = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+  },
+  fileFilter: (_req, file, callback) => {
+    if (file.mimetype !== "application/pdf") {
+      callback(new Error("Only PDF files are allowed"));
+      return;
+    }
+
+    callback(null, true);
+  },
+});
+
+export const uploadSingleContractPdf = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  uploadContractPdfMiddleware.single("contractFile")(req, res, (error) => {
+    if (!error) {
+      next();
+      return;
+    }
+
+    if (error instanceof multer.MulterError) {
+      res.status(400).json({
+        success: false,
+        message:
+          error.code === "LIMIT_FILE_SIZE"
+            ? "Contract PDF must be 10MB or smaller"
+            : error.message,
+      });
+      return;
+    }
+
+    res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Invalid contract upload",
+    });
+  });
+};

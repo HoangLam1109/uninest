@@ -15,11 +15,6 @@ const optionalNonNegativeNumberSchema = z
   .nonnegative('Giá trị không được âm')
   .optional()
 
-const optionalUrlSchema = z
-  .string()
-  .url('Link hợp lệ phải bắt đầu bằng http:// hoặc https://')
-  .optional()
-
 const optionalTextSchema = z
   .string()
   .max(5000, 'Nội dung tối đa 5000 ký tự')
@@ -72,7 +67,6 @@ const contractPayloadSchema = z.object({
   monthlyRent: positiveNumberSchema,
   depositAmount: optionalNonNegativeNumberSchema,
   terms: optionalTextSchema,
-  contractFileUrl: optionalUrlSchema,
   startDate: isoDateSchema.optional(),
   endDate: isoDateSchema.optional(),
 })

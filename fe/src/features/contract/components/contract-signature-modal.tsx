@@ -5,9 +5,12 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { CheckCircle2, Eraser, PenLine } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
-import type { Contract, ConfirmContractPayload } from '../types/contract.type'
+import { getApiErrorMessage } from '@/lib/api-error'
+import { contractApi } from '../api/contract.api'
+import type { ConfirmContractPayload, Contract } from '../types/contract.type'
 
 type ContractSignatureModalProps = {
   open: boolean
@@ -39,8 +42,11 @@ export function ContractSignatureModal({
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const isDrawingRef = useRef(false)
   const [hasSignature, setHasSignature] = useState(false)
+  const [fileUrl, setFileUrl] = useState<string | null>(null)
+  const [isLoadingFile, setIsLoadingFile] = useState(false)
   const signatureResetKey = open ? `open:${contract?._id ?? 'none'}` : 'closed'
-  const [prevSignatureResetKey, setPrevSignatureResetKey] = useState(signatureResetKey)
+  const [prevSignatureResetKey, setPrevSignatureResetKey] =
+    useState(signatureResetKey)
 
   if (signatureResetKey !== prevSignatureResetKey) {
     setPrevSignatureResetKey(signatureResetKey)
@@ -70,6 +76,58 @@ export function ContractSignatureModal({
     context.lineWidth = 2.4
     context.strokeStyle = '#0f172a'
     context.clearRect(0, 0, width, height)
+  }, [open, contract?._id])
+
+  useEffect(() => {
+    const hasContractFile = Boolean(
+      contract?.signedContractStorageKey ??
+        contract?.contractFileStorageKey ??
+        contract?.signedContractFileUrl ??
+        contract?.contractFileUrl,
+    )
+
+    if (!open || !contract?._id || !hasContractFile) {
+      setFileUrl(null)
+      return
+    }
+
+    let nextObjectUrl: string | null = null
+    let isCancelled = false
+    const contractId = contract._id
+
+    async function loadContractFile() {
+      try {
+        setIsLoadingFile(true)
+        const { data } = await contractApi.file(contractId)
+        nextObjectUrl = URL.createObjectURL(
+          new Blob([data], { type: data.type || 'application/pdf' }),
+        )
+
+        if (!isCancelled) {
+          setFileUrl(nextObjectUrl)
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setFileUrl(null)
+          toast.error('Không thể tải file hợp đồng', {
+            description: getApiErrorMessage(error, 'Vui lòng thử lại sau.'),
+          })
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingFile(false)
+        }
+      }
+    }
+
+    loadContractFile()
+
+    return () => {
+      isCancelled = true
+      if (nextObjectUrl) {
+        URL.revokeObjectURL(nextObjectUrl)
+      }
+    }
   }, [open, contract?._id])
 
   function clearSignature() {
@@ -118,8 +176,6 @@ export function ContractSignatureModal({
     })
   }
 
-  const fileUrl = contract?.signedContractFileUrl ?? contract?.contractFileUrl
-
   return (
     <Modal
       open={open}
@@ -135,6 +191,10 @@ export function ContractSignatureModal({
               src={fileUrl}
               className="h-[60svh] w-full bg-white"
             />
+          ) : isLoadingFile ? (
+            <div className="flex h-[60svh] items-center justify-center px-6 text-center text-sm font-semibold text-slate-500">
+              Đang tải file hợp đồng...
+            </div>
           ) : (
             <div className="flex h-[60svh] items-center justify-center px-6 text-center text-sm font-semibold text-slate-500">
               Hợp đồng chưa có file PDF để xem.
@@ -169,7 +229,12 @@ export function ContractSignatureModal({
           </div>
 
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end lg:flex-col">
-            <Button type="button" variant="ghost" disabled={isPending} onClick={onClose}>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={isPending}
+              onClick={onClose}
+            >
               Hủy
             </Button>
             <Button
