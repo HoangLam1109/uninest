@@ -12,6 +12,7 @@ import {
   updateContract,
 } from "../controllers/contract.controller.js";
 import authenticateMiddleware from "../middlewares/authenticate.middleware.js";
+import { uploadSingleContractPdf } from "../middlewares/upload.middleware.js";
 
 const router = express.Router();
 
@@ -19,7 +20,7 @@ const router = express.Router();
 router.use(authenticateMiddleware.authenticateUser);
 
 // Create contract from booking
-router.post("/", createContractFromBooking);
+router.post("/", uploadSingleContractPdf, createContractFromBooking);
 
 // Specific paths before param routes
 router.get("/landlord", getLandlordContracts);
@@ -30,10 +31,10 @@ router.get("/:id/file", streamContractFile);
 router.get("/:id", getContractById);
 
 // Contract actions
-router.put("/:id", updateContract);
+router.put("/:id", uploadSingleContractPdf, updateContract);
 router.patch("/:id/activate", activateContract);
 router.patch("/:id/tenant-confirm", confirmContractByTenant);
 router.patch("/:id/terminate", terminateContract);
-router.post("/:id/renew", renewContract);
+router.post("/:id/renew", uploadSingleContractPdf, renewContract);
 
 export default router;

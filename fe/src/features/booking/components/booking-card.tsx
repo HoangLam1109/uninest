@@ -78,7 +78,7 @@ export function BookingCard({
               </span>
               {booking.createdAt ? (
                 <span className="text-xs font-semibold text-slate-400">
-                  Tao ngay {formatBookingDate(booking.createdAt)}
+                  Tạo ngày {formatBookingDate(booking.createdAt)}
                 </span>
               ) : null}
             </div>
@@ -90,7 +90,7 @@ export function BookingCard({
               <Home className="mt-0.5 size-4 shrink-0" />
               {room
                 ? [room.address, room.district, room.city].filter(Boolean).join(', ')
-                : 'Chua co thong tin phong'}
+                : 'Chưa có thông tin phòng'}
             </p>
           </div>
 
@@ -114,11 +114,11 @@ export function BookingCard({
           </div>
           <div className="rounded-lg bg-surface p-3">
             <p className="text-slate-500">
-              {mode === 'landlord' ? 'Nguoi thue' : 'Trang thai hien tai'}
+              {mode === 'landlord' ? 'Người thuê' : 'Trạng thái hiện tại'}
             </p>
             <p className="mt-1 font-bold text-slate-950">
               {mode === 'landlord'
-                ? tenant?.fullName ?? tenant?.email ?? 'Chua co thong tin'
+                ? tenant?.fullName ?? tenant?.email ?? 'Chưa có thông tin'
                 : bookingStatusLabels[booking.status]}
             </p>
           </div>
@@ -144,13 +144,13 @@ export function BookingCard({
         {identityIds.length > 0 ? (
           <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3">
             <p className="mb-2 text-xs font-bold uppercase text-primary">
-              Ho so dinh danh ({identityIds.length})
+              Hồ sơ định danh ({identityIds.length})
             </p>
             <div className="space-y-2">
               {identities.map((identity, index) => {
                 const id = typeof identity === 'string' ? identity : identity._id
                 const name =
-                  typeof identity === 'object' ? identity.fullName : `Nguoi ${index + 1}`
+                  typeof identity === 'object' ? identity.fullName : `Người ${index + 1}`
                 const cccd = typeof identity === 'object' ? identity.cccdNumber : ''
                 const phone = typeof identity === 'object' ? identity.phone : ''
 
@@ -196,7 +196,7 @@ export function BookingCard({
                 onClick={() => onCancel?.(booking._id)}
               >
                 <XCircle className="size-4" />
-                Huy booking
+                Hủy yêu cầu
               </Button>
             ) : null}
 
@@ -209,7 +209,7 @@ export function BookingCard({
                   onClick={() => onReject?.(booking._id)}
                 >
                   <XCircle className="size-4" />
-                  Tu choi
+                  Từ chối
                 </Button>
                 <Button
                   type="button"
@@ -217,7 +217,7 @@ export function BookingCard({
                   onClick={() => onApprove?.(booking._id)}
                 >
                   <CheckCircle2 className="size-4" />
-                  Phe duyet
+                  Phê duyệt
                 </Button>
               </>
             ) : null}
@@ -234,7 +234,7 @@ export function BookingCard({
               onClick={() => onDelete?.(booking._id)}
             >
               <Trash2 className="size-3.5" />
-              Xoa
+              Xóa
             </Button>
           </div>
         ) : null}
@@ -246,16 +246,16 @@ export function BookingCard({
           setShowIdentity(false)
           setViewingIdentityId(null)
         }}
-        title="Ho so dinh danh nguoi thue"
+        title="Hồ sơ định danh người thuê"
         className="max-w-lg"
       >
         {viewingIdentityQuery.data ? (
           <IdentityDetail identity={viewingIdentityQuery.data} />
         ) : viewingIdentityQuery.isLoading ? (
-          <p className="py-8 text-center text-sm text-slate-500">Dang tai ho so...</p>
+          <p className="py-8 text-center text-sm text-slate-500">Đang tải hồ sơ...</p>
         ) : (
           <p className="py-8 text-center text-sm text-slate-500">
-            Khong the tai ho so
+            Không thể tải hồ sơ định danh. Vui lòng thử lại sau.
           </p>
         )}
       </Modal>
