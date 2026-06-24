@@ -28,6 +28,7 @@ import {
   identityStatusColor,
   identityStatusLabel,
 } from "@/utils/identity-display";
+import { validateIdentityForm } from "@/utils/validation/identity";
 
 export default function ProfileIdentityPage() {
   const insets = useSafeAreaInsets();
@@ -90,16 +91,14 @@ export default function ProfileIdentityPage() {
   };
 
   const handleSubmit = async () => {
-    if (fullName.trim().length < 3) {
-      Alert.alert("Lỗi", "Họ tên phải có ít nhất 3 ký tự.");
-      return;
-    }
-    if (!dateOfBirth.trim() || !phone.trim() || !cccdNumber.trim()) {
-      Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin.");
-      return;
-    }
-    if (cccdNumber.trim().length < 9) {
-      Alert.alert("Lỗi", "Số CCCD không hợp lệ.");
+    const error = validateIdentityForm({
+      fullName,
+      dateOfBirth,
+      phone,
+      cccdNumber,
+    });
+    if (error) {
+      Alert.alert("Lỗi", error);
       return;
     }
     if (!frontUri || !backUri) {

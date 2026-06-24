@@ -31,6 +31,11 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import type { ChatConversation, ChatMessage } from "@/types/chat";
 import type { Room, RoomImage, RoomPayload, RoomStatus, RoomType } from "@/types/room";
 import {
+  MAX_ROOM_IMAGES,
+  validateRoomForm,
+  validateRoomImageSelection,
+} from "@/utils/validation/room";
+import {
   formatPrice,
   formatRoomLocation,
   roomStatusLabel,
@@ -90,21 +95,16 @@ function parseNumber(value: string): number | undefined {
 }
 
 function validateForm(form: FormState): string | null {
-  if (form.title.trim().length < 3) {
-    return "Tên phòng phải có ít nhất 3 ký tự.";
-  }
-  if (form.address.trim().length < 5) {
-    return "Vui lòng nhập địa chỉ đầy đủ.";
-  }
-  const price = parseNumber(form.pricePerMonth);
-  if (price == null || price <= 0) {
-    return "Giá thuê phải lớn hơn 0.";
-  }
-  const maxOccupants = parseNumber(form.maxOccupants);
-  if (maxOccupants == null || maxOccupants < 1) {
-    return "Số người ở tối đa phải ≥ 1.";
-  }
-  return null;
+  return validateRoomForm({
+    title: form.title,
+    address: form.address,
+    pricePerMonth: form.pricePerMonth,
+    depositAmount: form.depositAmount,
+    maxOccupants: form.maxOccupants,
+    areaSqm: form.areaSqm,
+    electricityRate: form.electricityRate,
+    waterRate: form.waterRate,
+  });
 }
 
 function toPayload(form: FormState): RoomPayload {
@@ -339,6 +339,16 @@ export default function LandlordRoomsPage() {
   ) => {
     if (!editingRoom?._id || assets.length === 0) return;
 
+    const imageError = validateRoomImageSelection({
+      currentCount: roomImages.length,
+      newCount: assets.length,
+      assets,
+    });
+    if (imageError) {
+      Alert.alert("Không thể thêm ảnh", imageError);
+      return;
+    }
+
     setImageBusy(true);
     try {
       const hasPrimary = roomImages.some((img) => img.isPrimary);
@@ -381,11 +391,17 @@ export default function LandlordRoomsPage() {
       return;
     }
 
+    const remainingSlots = Math.max(0, MAX_ROOM_IMAGES - roomImages.length);
+    if (remainingSlots === 0) {
+      Alert.alert("Không thể thêm ảnh", `Chỉ được tải tối đa ${MAX_ROOM_IMAGES} ảnh.`);
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsMultipleSelection: true,
       quality: 0.8,
-      selectionLimit: 10,
+      selectionLimit: remainingSlots,
     });
 
     if (result.canceled || result.assets.length === 0) return;

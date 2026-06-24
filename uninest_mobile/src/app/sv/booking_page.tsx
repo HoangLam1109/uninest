@@ -26,6 +26,7 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import type { Room } from "@/types/room";
 import type { Identity } from "@/types/identity";
 import { formatPrice, formatRoomLocation, sortRoomImages } from "@/utils/room-display";
+import { validateBookingNotes, validateCheckInDate } from "@/utils/validation/booking";
 
 const WEEKDAYS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 const SERVICE_FEE = 200_000;
@@ -185,8 +186,16 @@ export default function BookingPage() {
     if (!roomId || !room || submitting) return;
     if (!requireTenant("booking")) return;
 
-    if (startOfDay(selectedDate) < today) {
-      Alert.alert("Ngày không hợp lệ", "Vui lòng chọn ngày nhận phòng từ hôm nay trở đi.");
+    const checkInError = validateCheckInDate(selectedDate);
+    if (checkInError) {
+      Alert.alert("Ngày không hợp lệ", checkInError);
+      return;
+    }
+
+    const notes = `Thời hạn thuê ${termMonths} tháng`;
+    const notesError = validateBookingNotes(notes);
+    if (notesError) {
+      Alert.alert("Không thể đặt phòng", notesError);
       return;
     }
 
@@ -217,7 +226,7 @@ export default function BookingPage() {
         checkInDate: selectedDate.toISOString(),
         checkOutDate: checkOutDate.toISOString(),
         identityIds: selectedIdentityIds,
-        notes: `Thời hạn thuê ${termMonths} tháng`,
+        notes,
       });
 
       router.replace({

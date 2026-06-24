@@ -17,8 +17,9 @@ import type { Booking } from "@/types/booking";
 import type { Contract } from "@/types/contract";
 import { getBookingRoom, getBookingTenant } from "@/utils/booking-display";
 import { formatPrice } from "@/utils/room-display";
+import { validateContractForm, type ContractFormMode } from "@/utils/validation/contract";
 
-export type ContractFormMode = "create" | "edit" | "renew";
+export type { ContractFormMode };
 
 type ContractFormModalProps = {
   visible: boolean;
@@ -105,20 +106,22 @@ export function ContractFormModal({
   }, [mode]);
 
   const handleSubmit = async () => {
-    const rent = Number(monthlyRent);
-    if (!Number.isFinite(rent) || rent <= 0) {
-      alert("Giá thuê phải lớn hơn 0.");
-      return;
-    }
-    if (mode === "create" && !bookingId) {
-      alert("Vui lòng chọn đơn đặt phòng.");
-      return;
-    }
-    if (mode === "renew" && !startDate.trim()) {
-      alert("Vui lòng nhập ngày bắt đầu gia hạn.");
+    const error = validateContractForm({
+      mode,
+      bookingId,
+      monthlyRent,
+      depositAmount,
+      startDate,
+      endDate,
+      contractFileUrl,
+      terms,
+    });
+    if (error) {
+      alert(error);
       return;
     }
 
+    const rent = Number(monthlyRent);
     setSubmitting(true);
     try {
       await onSubmit({

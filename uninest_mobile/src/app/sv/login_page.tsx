@@ -23,6 +23,22 @@ import { useAuth } from "@/context/auth-context";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { isLandlordRole } from "@/utils/landlord-access";
 
+function getLoginErrorMessage(error: unknown): string {
+  const message = getApiErrorMessage(error, "");
+  const normalized = message.trim().toLowerCase();
+
+  if (
+    normalized === "user not found!" ||
+    normalized === "user not found" ||
+    normalized === "invalid password!" ||
+    normalized === "invalid password"
+  ) {
+    return "Sai mật khẩu hoặc mail không tồn tại.";
+  }
+
+  return message || "Vui lòng kiểm tra email và mật khẩu.";
+}
+
 function validateLogin(email: string, password: string): string | null {
   const trimmedEmail = email.trim().toLowerCase();
   if (!trimmedEmail) {
@@ -75,7 +91,7 @@ export default function LoginPage() {
     } catch (err) {
       Alert.alert(
         "Đăng nhập thất bại",
-        getApiErrorMessage(err, "Vui lòng kiểm tra email và mật khẩu."),
+        getLoginErrorMessage(err),
       );
     } finally {
       setIsSubmitting(false);

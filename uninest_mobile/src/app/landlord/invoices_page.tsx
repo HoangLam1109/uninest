@@ -41,6 +41,11 @@ import {
   sumUnpaidAmount,
 } from "@/utils/invoice-display";
 import { formatPrice } from "@/utils/room-display";
+import {
+  validateInvoiceCreateForm,
+  validateInvoiceEditForm,
+  validateInvoiceUtilityForm,
+} from "@/utils/validation/invoice";
 
 type StatusFilter = "ALL" | InvoiceStatus | "UNPAID";
 
@@ -141,25 +146,15 @@ function invoiceToEditForm(invoice: Invoice): EditForm {
 }
 
 function validateUtilityForm(form: CreateForm): string | null {
-  const base = validateCreateForm(form);
-  if (base) return base;
-  const elec = parseAmount(form.electricityNewIndex);
-  const water = parseAmount(form.waterNewIndex);
-  if (elec == null && water == null) {
-    return "Nhập ít nhất một chỉ số điện hoặc nước mới.";
-  }
-  return null;
+  return validateInvoiceUtilityForm(form);
 }
 
 function validateCreateForm(form: CreateForm): string | null {
-  if (!form.bookingId) return "Vui lòng chọn đơn đặt phòng.";
-  if (!/^\d{4}-\d{2}$/.test(form.billingMonth.trim())) {
-    return "Kỳ hóa đơn phải theo định dạng YYYY-MM.";
-  }
-  if (!form.dueDate.trim()) return "Vui lòng nhập hạn thanh toán.";
-  const rent = parseAmount(form.rentAmount);
-  if (rent == null || rent <= 0) return "Tiền thuê phải lớn hơn 0.";
-  return null;
+  return validateInvoiceCreateForm(form);
+}
+
+function validateEditForm(form: EditForm): string | null {
+  return validateInvoiceEditForm(form);
 }
 
 export default function LandlordInvoicesPage() {
@@ -323,15 +318,14 @@ export default function LandlordInvoicesPage() {
 
   const handleUpdate = async () => {
     if (!editingInvoice || !editForm) return;
+    const error = validateEditForm(editForm);
+    if (error) {
+      Alert.alert("Không thể lưu", error);
+      return;
+    }
+
     const rent = parseAmount(editForm.rentAmount);
-    if (rent == null || rent <= 0) {
-      Alert.alert("Không thể lưu", "Tiền thuê phải lớn hơn 0.");
-      return;
-    }
-    if (!editForm.dueDate.trim()) {
-      Alert.alert("Không thể lưu", "Vui lòng nhập hạn thanh toán.");
-      return;
-    }
+    if (rent == null) return;
 
     setIsSubmitting(true);
     try {

@@ -7,7 +7,7 @@ import {
 
 import { LandlordBottomNavigation } from "@/components/landlord/bottom-navigation";
 import { ThemedText } from "@/components/themed-text";
-import { useAuth } from "@/context/auth-context";
+import { useLogout } from "@/hooks/use-logout";
 
 type SettingsItem = {
   id: string;
@@ -29,21 +29,11 @@ const MENU_ITEMS: SettingsItem[] = [
 export default function LandlordSettingsPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { signOut } = useAuth();
+  const logout = useLogout();
 
   const handlePress = (item: SettingsItem) => {
     if (item.id === "logout") {
-      Alert.alert("Đăng xuất", "Bạn có chắc muốn đăng xuất?", [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Đăng xuất",
-          style: "destructive",
-          onPress: () => {
-            signOut();
-            router.replace("/sv/login_page" as any);
-          },
-        },
-      ]);
+      logout();
       return;
     }
 

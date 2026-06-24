@@ -21,6 +21,7 @@ import { invoiceApi } from "@/api/invoice.api";
 import { roomApi } from "@/api/room.api";
 import { ThemedText } from "@/components/themed-text";
 import { useAuth } from "@/context/auth-context";
+import { useLogout } from "@/hooks/use-logout";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { AuthUser } from "@/types/auth";
 import { getRoleLabel } from "@/utils/landlord-access";
@@ -46,7 +47,8 @@ const QUICK_LINKS = [
 export default function LandlordProfilePage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user: sessionUser, signOut } = useAuth();
+  const { user: sessionUser } = useAuth();
+  const logout = useLogout();
   const [user, setUser] = useState<AuthUser | null>(sessionUser);
   const [stats, setStats] = useState<ProfileStats>({
     roomCount: 0,
@@ -94,20 +96,6 @@ export default function LandlordProfilePage() {
     setRefreshing(true);
     await loadProfile();
     setRefreshing(false);
-  };
-
-  const handleLogout = () => {
-    Alert.alert("Đăng xuất", "Bạn có chắc muốn đăng xuất?", [
-      { text: "Hủy", style: "cancel" },
-      {
-        text: "Đăng xuất",
-        style: "destructive",
-        onPress: () => {
-          signOut();
-          router.replace("/sv/login_page" as any);
-        },
-      },
-    ]);
   };
 
   const displayUser = user ?? sessionUser;
@@ -234,7 +222,7 @@ export default function LandlordProfilePage() {
                 ))}
               </View>
 
-              <Pressable style={styles.logoutButton} onPress={handleLogout}>
+              <Pressable style={styles.logoutButton} onPress={logout}>
                 <ThemedText type="smallBold" style={styles.logoutText}>
                   Đăng xuất
                 </ThemedText>
