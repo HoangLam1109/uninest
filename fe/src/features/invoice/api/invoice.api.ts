@@ -10,6 +10,7 @@ import type {
   InvoiceResponse,
   MeterReadingListResponse,
   MeterReadingResponse,
+  PreviousReadingResponse,
   UpdateInvoicePayload,
   UtilityInvoiceResponse,
 } from '../types/invoice.type'
@@ -59,4 +60,9 @@ export const invoiceApi = {
 
   getMeterReadingsByContract: (contractId: string, params?: { meterType?: string; page?: number; limit?: number }) =>
     api.get<MeterReadingListResponse>(`/meter-readings/contract/${contractId}`, { params }),
+
+  // ---- Previous Reading (kiểm tra hóa đơn trước) ----
+
+  getPreviousReadingByBooking: (bookingId: string) =>
+    api.get<PreviousReadingResponse>(`/invoices/booking/${bookingId}/previous-reading`),
 }

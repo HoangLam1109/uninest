@@ -7,6 +7,7 @@ import type {
   CreateInvoicePayload,
   CreateUtilityInvoicePayload,
   InvoiceListParams,
+  PreviousReadingData,
   UpdateInvoicePayload,
 } from '../types/invoice.type'
 
@@ -22,6 +23,8 @@ export const invoiceKeys = {
   meterReadings: () => [...invoiceKeys.all, 'meter-readings'] as const,
   myMeterReadings: (params?: { meterType?: string }) =>
     [...invoiceKeys.meterReadings(), 'my', params ?? {}] as const,
+  previousReading: (bookingId: string) =>
+    [...invoiceKeys.all, 'previous-reading', bookingId] as const,
 }
 
 // ---- Queries ----
@@ -223,6 +226,17 @@ export function useDeleteInvoice() {
       toast.error('Không thể xóa hóa đơn', {
         description: getApiErrorMessage(error, 'Chỉ xóa được hóa đơn nháp.'),
       })
+    },
+  })
+}
+
+export function useGetPreviousReading(bookingId: string | null) {
+  return useQuery({
+    queryKey: invoiceKeys.previousReading(bookingId ?? ''),
+    enabled: Boolean(bookingId),
+    queryFn: async () => {
+      const { data } = await invoiceApi.getPreviousReadingByBooking(bookingId as string)
+      return data.data as PreviousReadingData
     },
   })
 }
