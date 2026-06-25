@@ -1,6 +1,7 @@
 import { PaymentRepository } from "../repositories/payment.repo.js";
 import { InvoiceRepository } from "../repositories/invoice.repo.js";
 import { BookingRepository } from "../repositories/booking.repo.js";
+import { BankAccountRepository } from "../repositories/bank-account.repo.js";
 import { ServicePackageRepository } from "../repositories/service-package.repo.js";
 import { ServiceSubscriptionRepository } from "../repositories/service-subscription.repo.js";
 import { SUBSCRIPTION_STATUS } from "../models/ServiceSubscription.model.js";
@@ -31,6 +32,7 @@ export class PaymentService {
     subscriptionPackageId?: string;
     returnUrl?: string;
     cancelUrl?: string;
+    payosKeys?: { clientId: string; apiKey: string; checksumKey: string };
   }) {
     const paymentData: any = {
       payerId: params.payerId,
@@ -63,6 +65,7 @@ export class PaymentService {
         description: params.description,
         returnUrl: params.returnUrl,
         cancelUrl: params.cancelUrl,
+        payosKeys: params.payosKeys,
       });
 
       return {
@@ -133,10 +136,48 @@ export class PaymentService {
       throw new Error("This invoice has already been paid");
     }
 
+    // Cancel any existing PENDING payments before creating a new one
+    // Also null out bookingId on CANCELLED/FAILED payments to avoid
+    // unique index conflict on (bookingId, payerId)
+    for (const p of existingPayments) {
+      if (p.status === PAYMENT_STATUS.PENDING) {
+        const orderCode = p.transactionRef?.toString();
+        if (orderCode) {
+          try {
+            await PayOSService.cancelPayment(orderCode);
+          } catch {
+            // If cancel fails (e.g. already cancelled on PayOS), just mark locally
+          }
+        }
+        await PaymentRepository.update(p._id.toString(), {
+          status: PAYMENT_STATUS.CANCELLED,
+          bookingId: null,
+        });
+      } else if (
+        p.status === PAYMENT_STATUS.CANCELLED ||
+        p.status === PAYMENT_STATUS.FAILED
+      ) {
+        // Clean up old cancelled/failed payments to avoid unique index conflict
+        await PaymentRepository.update(p._id.toString(), {
+          bookingId: null,
+        });
+      }
+    }
+
     const bookingId =
       invoice.bookingId?._id?.toString() || invoice.bookingId?.toString() || "";
     const landlordId =
       invoice.landlordId?._id?.toString() || invoice.landlordId.toString();
+
+    // Look up landlord's verified PayOS keys for direct settlement
+    const landlordBankAccount = await BankAccountRepository.findVerifiedByUserId(landlordId);
+    const payosKeys = landlordBankAccount
+      ? {
+          clientId: landlordBankAccount.payosClientId,
+          apiKey: landlordBankAccount.payosApiKey,
+          checksumKey: landlordBankAccount.payosChecksumKey,
+        }
+      : undefined;
 
     return this.processPayment({
       payerId,
@@ -149,6 +190,7 @@ export class PaymentService {
       bookingId,
       returnUrl: frontendUrls.returnUrl,
       cancelUrl: frontendUrls.cancelUrl,
+      payosKeys,
     });
   }
 
@@ -176,6 +218,20 @@ export class PaymentService {
       existingDeposit.status === PAYMENT_STATUS.COMPLETED
     ) {
       throw new Error("Deposit has already been paid for this booking");
+    }
+
+    // Cancel any existing non-completed deposit payment & null bookingId to avoid unique index conflict
+    if (existingDeposit && existingDeposit.status !== PAYMENT_STATUS.COMPLETED) {
+      const orderCode = existingDeposit.transactionRef?.toString();
+      if (orderCode) {
+        try {
+          await PayOSService.cancelPayment(orderCode);
+        } catch { /* already cancelled */ }
+      }
+      await PaymentRepository.update(existingDeposit._id.toString(), {
+        status: PAYMENT_STATUS.CANCELLED,
+        bookingId: null,
+      });
     }
 
     const room = booking.roomId as any;

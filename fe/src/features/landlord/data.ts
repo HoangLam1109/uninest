@@ -6,6 +6,7 @@ import {
   LogOut,
   MessageCircle,
   ScrollText,
+  UserCircle,
   Users,
 } from 'lucide-react'
 
@@ -22,6 +23,7 @@ export const landlordNavItems: LandlordNavItem[] = [
   { label: 'Tin nhắn', href: '/chu-nha/tin-nhan', icon: MessageCircle },
   { label: 'Người thuê', href: '/chu-nha/nguoi-thue', icon: Users },
   { label: 'Hóa đơn', href: '/chu-nha/hoa-don', icon: FileText },
+  { label: 'Hồ sơ', href: '/chu-nha/ho-so', icon: UserCircle },
 ]
 
 export const landlordSidebarConfig = {

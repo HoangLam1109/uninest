@@ -1,5 +1,6 @@
 import { InvoiceRepository, InvoiceDetailRepository } from "../repositories/invoice.repo.js";
 import { BookingRepository } from "../repositories/booking.repo.js";
+import { BankAccountRepository } from "../repositories/bank-account.repo.js";
 import { INVOICE_STATUS } from "../models/Invoice.model.js";
 
 export const InvoiceService = {
@@ -25,6 +26,12 @@ export const InvoiceService = {
 
     if ((booking.roomId as any).landlordId.toString() !== landlordId) {
       throw new Error("You do not own this booking");
+    }
+
+    // Verify landlord has a verified PayOS bank account
+    const verifiedBankAccount = await BankAccountRepository.findVerifiedByUserId(landlordId);
+    if (!verifiedBankAccount) {
+      throw new Error("Bạn cần có tài khoản PayOS đã được duyệt trước khi tạo hóa đơn. Vui lòng vào Hồ sơ để thêm.");
     }
 
     // Check if invoice already exists for this month

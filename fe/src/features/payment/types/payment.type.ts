@@ -28,6 +28,28 @@ export type RoleUpgradePaymentResponse = {
   data: RoleUpgradePayment
 }
 
+export type InvoicePayment = {
+  payment: {
+    _id: string
+    amount: number
+    currency: string
+    type: string
+    method: string
+    status: string
+    note?: string
+    transactionRef?: string
+  }
+  checkoutUrl: string
+  orderCode: number
+  status: 'PENDING'
+}
+
+export type InvoicePaymentResponse = {
+  success: boolean
+  message: string
+  data: InvoicePayment
+}
+
 export type PayOSPaymentStatus = {
   payosStatus: string
   payment: {

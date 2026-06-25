@@ -3,6 +3,7 @@ import { InvoiceRepository, InvoiceDetailRepository } from "../repositories/invo
 import { MeterReadingRepository } from "../repositories/meter-reading.repo.js";
 import { BookingRepository } from "../repositories/booking.repo.js";
 import { ContractRepository } from "../repositories/contract.repo.js";
+import { BankAccountRepository } from "../repositories/bank-account.repo.js";
 import { InvoiceModel, INVOICE_STATUS } from "../models/Invoice.model.js";
 import type { IInvoice } from "../models/Invoice.model.js";
 import { InvoiceDetailModel } from "../models/InvoiceDetail.model.js";
@@ -96,6 +97,16 @@ export const UtilityInvoiceService = {
     const room = booking.roomId as any;
     if (!room || room.landlordId?.toString() !== landlordId) {
       throw new UtilityInvoiceError("You do not own this booking", "FORBIDDEN", 403);
+    }
+
+    // ----- Step 1.5: Verify landlord has verified PayOS account -----
+    const verifiedBankAccount = await BankAccountRepository.findVerifiedByUserId(landlordId);
+    if (!verifiedBankAccount) {
+      throw new UtilityInvoiceError(
+        "Bạn cần có tài khoản PayOS đã được duyệt trước khi tạo hóa đơn. Vui lòng vào Hồ sơ để thêm.",
+        "NO_BANK_ACCOUNT",
+        400
+      );
     }
 
     // ----- Step 2: Validate billing month uniqueness -----

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useReducer } from 'react'
+import { AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +12,7 @@ import {
 } from '@/features/booking/lib/booking-display'
 import { utilityInvoiceFormSchema } from '../schemas/invoice.schema'
 import { useGetPreviousReading } from '../hooks/use-invoices'
+import { useGetMyVerifiedBankAccount } from '@/features/bank-account/hooks/use-bank-accounts'
 
 type InvoiceFormState = {
   bookingId: string
@@ -122,9 +124,14 @@ export function InvoiceFormModal({
     notes,
   } = formState
 
-  // Fetch previous reading when a booking is selected
-  const previousReadingQuery = useGetPreviousReading(bookingId || null)
+  // Fetch previous reading when a booking is selected, using the form's billingMonth
+  const previousReadingQuery = useGetPreviousReading(bookingId || null, billingMonth || undefined)
   const previousReading = previousReadingQuery.data
+
+  // Check if landlord has verified PayOS account
+  const bankAccountQuery = useGetMyVerifiedBankAccount()
+  const hasBankAccount = !!bankAccountQuery.data
+  const bankAccountLoading = bankAccountQuery.isLoading
 
   // Auto-fill old indices & rates from previous invoice
   useEffect(() => {
@@ -198,7 +205,7 @@ export function InvoiceFormModal({
 
   return (
     <Modal open={open} onClose={onClose} title="Tạo hóa đơn" className="max-w-2xl">
-      <form className="grid gap-4" onSubmit={handleSubmit}>
+      <form className="grid gap-4 max-h-[80vh] overflow-y-auto pr-1" onSubmit={handleSubmit}>
         {/* Booking Picker — full width */}
         <fieldset className="space-y-2">
           <legend className="text-sm font-semibold text-foreground">
@@ -400,11 +407,21 @@ export function InvoiceFormModal({
           </div>
         </div>
 
+        {!bankAccountLoading && !hasBankAccount ? (
+          <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <AlertCircle className="size-4 shrink-0 mt-0.5" />
+            <span>
+              Bạn chưa có tài khoản PayOS được duyệt.{' '}
+              <strong>Vào Hồ sơ để thêm tài khoản PayOS</strong> trước khi tạo hóa đơn.
+            </span>
+          </div>
+        ) : null}
+
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
             Hủy
           </Button>
-          <Button type="submit" disabled={isPending || !bookingId}>
+          <Button type="submit" disabled={isPending || !bookingId || !hasBankAccount}>
             {isPending ? 'Đang tạo...' : 'Tạo hóa đơn nháp'}
           </Button>
         </div>

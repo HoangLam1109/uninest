@@ -39,9 +39,9 @@ const LandlordBookingsPage = lazy(() =>
     default: module.LandlordBookingsPage,
   })),
 )
-const AdminIdentityModerationPage = lazy(() =>
-  import('@/features/identity/pages/admin-identity-moderation-page').then((module) => ({
-    default: module.AdminIdentityModerationPage,
+const AdminModerationPage = lazy(() =>
+  import('@/features/admin/pages/admin-moderation-page').then((module) => ({
+    default: module.AdminModerationPage,
   })),
 )
 const AdminPaymentManagementPage = lazy(() =>
@@ -161,6 +161,12 @@ const TenantProfilePage = lazy(() =>
   })),
 )
 
+const LandlordProfilePage = lazy(() =>
+  import('@/features/user/pages/landlord-profile-page').then((module) => ({
+    default: module.LandlordProfilePage,
+  })),
+)
+
 export function AppRouter() {
   return (
     <Suspense fallback={<Loading />}>
@@ -195,6 +201,7 @@ export function AppRouter() {
               <Route path="nguoi-thue" element={<LandlordTenantsPage />} />
               <Route path="hoa-don" element={<LandlordInvoicesPage />} />
               <Route path="tin-nhan" element={<ChatPage />} />
+              <Route path="ho-so" element={<LandlordProfilePage />} />
               <Route
                 path="tien-ich"
                 element={<LandlordPlaceholderPage title="Tien ich" />}
@@ -228,7 +235,7 @@ export function AppRouter() {
             >
               <Route index element={<AdminDashboardPage />} />
               <Route path="nguoi-dung" element={<AdminUserManagementPage />} />
-              <Route path="kiem-duyet" element={<AdminIdentityModerationPage />} />
+              <Route path="kiem-duyet" element={<AdminModerationPage />} />
               <Route path="thanh-toan" element={<AdminPaymentManagementPage />} />
               <Route path="goi-dich-vu" element={<AdminPackageManagementPage />} />
             </Route>

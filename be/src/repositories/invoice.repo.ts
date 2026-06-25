@@ -9,12 +9,14 @@ export const InvoiceRepository = {
     InvoiceModel.findOne({ _id: id, deletedAt: null })
       .populate("bookingId")
       .populate("landlordId", "fullName email phone")
-      .populate("tenantId", "fullName email phone"),
+      .populate("tenantId", "fullName email phone")
+      .populate("bankAccountId"),
 
   findByLandlordId: (landlordId: string, skip: number, limit: number) =>
     InvoiceModel.find({ landlordId, deletedAt: null })
       .populate("tenantId", "fullName email phone")
       .populate("bookingId", "roomId")
+      .populate("bankAccountId")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
@@ -26,6 +28,7 @@ export const InvoiceRepository = {
     InvoiceModel.find({ tenantId, deletedAt: null })
       .populate("landlordId", "fullName email phone")
       .populate("bookingId", "roomId")
+      .populate("bankAccountId")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
