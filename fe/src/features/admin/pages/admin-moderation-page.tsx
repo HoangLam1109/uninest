@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Building2, Key, ShieldCheck } from 'lucide-react'
+import { Building2, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AdminIdentityModerationPage } from '@/features/identity/pages/admin-identity-moderation-page'
 import { AdminBankAccountModerationPage } from '@/features/bank-account/pages/admin-bank-account-moderation-page'

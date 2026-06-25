@@ -1,21 +1,19 @@
 import { useState } from 'react'
 import {
   Building2,
-  CreditCard,
-  Upload,
-  User,
-  QrCode,
-  AlertCircle,
   CheckCircle2,
   Clock3,
-  XCircle,
   Loader2,
+  Save,
+  X,
+  XCircle,
+  Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { useCreateBankAccount, useGetMyBankAccounts, useUpdateBankAccount } from '../hooks/use-bank-accounts'
-import type { BankAccount, BankAccountStatus } from '../types/bank-account.type'
+import { useCreateBankAccount, useGetMyBankAccounts, useUpdateBankAccount, useTestPayOSConnection } from '../hooks/use-bank-accounts'
+import type { BankAccountStatus } from '../types/bank-account.type'
 
 const statusLabels: Record<BankAccountStatus, string> = {
   PENDING_VERIFICATION: 'Đang chờ duyệt',
@@ -39,57 +37,39 @@ export function LandlordBankAccountPage() {
   const { data: accounts, isLoading } = useGetMyBankAccounts()
   const createMutation = useCreateBankAccount()
   const updateMutation = useUpdateBankAccount()
+  const testConnection = useTestPayOSConnection()
 
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
   // Form state
-  const [bankName, setBankName] = useState('')
-  const [accountNumber, setAccountNumber] = useState('')
-  const [accountHolder, setAccountHolder] = useState('')
-  const [qrFile, setQrFile] = useState<File | null>(null)
-  const [qrPreview, setQrPreview] = useState<string | null>(null)
+  const [payosClientId, setPayosClientId] = useState('')
+  const [payosApiKey, setPayosApiKey] = useState('')
+  const [payosChecksumKey, setPayosChecksumKey] = useState('')
 
   const hasVerified = accounts?.some((a) => a.status === 'VERIFIED')
   const hasPending = accounts?.some((a) => a.status === 'PENDING_VERIFICATION')
-  const rejectedAccount = accounts?.find((a) => a.status === 'REJECTED')
+  const canAdd = !hasVerified && !hasPending
 
   const resetForm = () => {
-    setBankName('')
-    setAccountNumber('')
-    setAccountHolder('')
-    setQrFile(null)
-    setQrPreview(null)
+    setPayosClientId('')
+    setPayosApiKey('')
+    setPayosChecksumKey('')
     setEditingId(null)
-  }
-
-  const handleQrChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setQrFile(file)
-    setQrPreview(URL.createObjectURL(file))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!bankName || !accountNumber || !accountHolder) return
+    if (!payosClientId || !payosApiKey || !payosChecksumKey) return
 
     if (editingId) {
       await updateMutation.mutateAsync({
         id: editingId,
-        payload: {
-          bankName,
-          accountNumber,
-          accountHolder,
-          ...(qrFile ? { qrCode: qrFile } : {}),
-        },
+        payload: { payosClientId, payosApiKey, payosChecksumKey },
       })
     } else {
       await createMutation.mutateAsync({
-        bankName,
-        accountNumber,
-        accountHolder,
-        ...(qrFile ? { qrCode: qrFile } : {}),
+        payosClientId, payosApiKey, payosChecksumKey,
       })
     }
 
@@ -97,12 +77,10 @@ export function LandlordBankAccountPage() {
     setShowForm(false)
   }
 
-  const startEdit = (account: BankAccount) => {
-    setBankName(account.bankName)
-    setAccountNumber(account.accountNumber)
-    setAccountHolder(account.accountHolder)
-    setQrPreview(account.qrCodeImage ?? null)
-    setQrFile(null)
+  const startEdit = (account: NonNullable<typeof accounts>[number]) => {
+    setPayosClientId(account.payosClientId ?? '')
+    setPayosApiKey(account.payosApiKey ?? '')
+    setPayosChecksumKey(account.payosChecksumKey ?? '')
     setEditingId(account._id)
     setShowForm(true)
   }
@@ -118,9 +96,9 @@ export function LandlordBankAccountPage() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-6">
       <div>
-        <h1 className="text-2xl font-black text-slate-900">Tài khoản ngân hàng</h1>
+        <h1 className="text-2xl font-black text-slate-900">Tài khoản PayOS</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Thông tin tài khoản sẽ được đính kèm vào hóa đơn gửi cho người thuê
+          Kết nối tài khoản PayOS để nhận thanh toán từ người thuê
         </p>
       </div>
 
@@ -152,154 +130,103 @@ export function LandlordBankAccountPage() {
             </div>
 
             <div className="mt-4 space-y-2">
-              <InfoRow icon={Building2} label="Ngân hàng" value={account.bankName} />
-              <InfoRow icon={CreditCard} label="Số tài khoản" value={account.accountNumber} />
-              <InfoRow icon={User} label="Chủ tài khoản" value={account.accountHolder} />
+              <p className="text-sm">
+                <span className="font-medium">Client ID:</span>{' '}
+                {(account.payosClientId ?? '').slice(0, 16)}...
+              </p>
+              <p className="text-sm">
+                <span className="font-medium">API Key:</span> ••••••••••••••••
+              </p>
+              <p className="text-sm">
+                <span className="font-medium">Checksum Key:</span> ••••••••••••••••
+              </p>
             </div>
-
-            {account.qrCodeImage && (
-              <div className="mt-4 flex justify-center">
-                <img
-                  src={account.qrCodeImage}
-                  alt="QR Code"
-                  className="max-h-48 rounded-lg border bg-white object-contain"
-                />
-              </div>
-            )}
           </div>
         )
       })}
 
       {/* Add / Edit Form */}
-      {(!hasVerified && !hasPending) || rejectedAccount ? (
-        <>
-          {!showForm ? (
-            <Button
-              onClick={() => {
-                resetForm()
-                setShowForm(true)
-              }}
-              className="w-full"
+      {showForm && (
+        <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-800">
+              {editingId ? 'Cập nhật tài khoản' : 'Thêm tài khoản mới'}
+            </h3>
+            <button
+              type="button"
+              onClick={() => { resetForm(); setShowForm(false) }}
+              className="flex size-6 items-center justify-center rounded-md text-slate-400 hover:bg-slate-200"
             >
-              <Building2 className="size-4" />
-              {rejectedAccount ? 'Tạo tài khoản mới' : 'Thêm tài khoản ngân hàng'}
-            </Button>
-          ) : (
-            <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-white p-6">
-              <h2 className="mb-4 text-lg font-bold text-slate-800">
-                {editingId ? 'Cập nhật tài khoản' : 'Thêm tài khoản ngân hàng'}
-              </h2>
+              <X className="size-4" />
+            </button>
+          </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">
-                    Tên ngân hàng
-                  </label>
-                  <Input
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                    placeholder="VD: Vietcombank, Techcombank..."
-                    required
-                  />
-                </div>
+          <Input
+            placeholder="PayOS Client ID"
+            value={payosClientId}
+            onChange={(e) => setPayosClientId(e.target.value)}
+            required
+          />
+          <Input
+            placeholder="PayOS API Key"
+            value={payosApiKey}
+            onChange={(e) => setPayosApiKey(e.target.value)}
+            required
+          />
+          <Input
+            placeholder="PayOS Checksum Key"
+            value={payosChecksumKey}
+            onChange={(e) => setPayosChecksumKey(e.target.value)}
+            required
+          />
 
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">
-                    Số tài khoản
-                  </label>
-                  <Input
-                    value={accountNumber}
-                    onChange={(e) => setAccountNumber(e.target.value)}
-                    placeholder="Nhập số tài khoản"
-                    required
-                  />
-                </div>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={createMutation.isPending || updateMutation.isPending}
+          >
+            {(createMutation.isPending || updateMutation.isPending) ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Save className="size-4" />
+            )}
+            {editingId ? 'Cập nhật' : 'Gửi duyệt'}
+          </Button>
 
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">
-                    Chủ tài khoản
-                  </label>
-                  <Input
-                    value={accountHolder}
-                    onChange={(e) => setAccountHolder(e.target.value)}
-                    placeholder="Tên chủ tài khoản"
-                    required
-                  />
-                </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={!payosClientId || !payosApiKey || !payosChecksumKey || testConnection.isPending}
+            onClick={() =>
+              testConnection.mutate({ payosClientId, payosApiKey, payosChecksumKey })
+            }
+          >
+            {testConnection.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Zap className="size-4" />
+            )}
+            Kiểm tra kết nối
+          </Button>
 
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">
-                    Mã QR (tùy chọn)
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500 transition-colors hover:border-primary hover:text-primary">
-                      <Upload className="size-4" />
-                      Tải QR lên
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleQrChange}
-                        className="hidden"
-                      />
-                    </label>
-                    {qrPreview && (
-                      <img
-                        src={qrPreview}
-                        alt="QR Preview"
-                        className="h-12 w-12 rounded-lg border object-contain"
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
+          <p className="text-center text-xs text-slate-400">
+            Tài khoản sẽ được admin kiểm duyệt trước khi hiển thị trên hóa đơn.
+          </p>
+        </form>
+      )}
 
-              <div className="mt-6 flex gap-3">
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {(createMutation.isPending || updateMutation.isPending) ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : null}
-                  {editingId ? 'Cập nhật' : 'Gửi duyệt'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    resetForm()
-                    setShowForm(false)
-                  }}
-                >
-                  Hủy
-                </Button>
-              </div>
-
-              <div className="mt-4 flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
-                <AlertCircle className="size-4 shrink-0 mt-0.5" />
-                <span>
-                  Tài khoản của bạn sẽ được admin kiểm duyệt trước khi hiển thị trên hóa đơn.
-                </span>
-              </div>
-            </form>
-          )}
-        </>
-      ) : null}
-    </div>
-  )
-}
-
-function InfoRow({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Building2
-  label: string
-  value: string
-}) {
-  return (
-    <div className="flex items-center gap-2 text-sm">
-      <Icon className="size-4 opacity-60" />
-      <span className="opacity-70">{label}:</span>
-      <span className="font-semibold">{value}</span>
+      {/* Add new button */}
+      {canAdd && !showForm && (
+        <Button
+          onClick={() => { resetForm(); setShowForm(true) }}
+          className="w-full"
+          variant="outline"
+        >
+          <Building2 className="size-4" />
+          Thêm tài khoản PayOS
+        </Button>
+      )}
     </div>
   )
 }

@@ -2,8 +2,6 @@ import { useState } from 'react'
 import {
   Building2,
   Camera,
-  ChevronRight,
-  Key,
   Loader2,
   Mail,
   Phone,
@@ -54,7 +52,6 @@ function BankAccountSection() {
 
   const hasVerified = accounts?.some((a) => a.status === 'VERIFIED')
   const hasPending = accounts?.some((a) => a.status === 'PENDING_VERIFICATION')
-  const rejectedAccount = accounts?.find((a) => a.status === 'REJECTED')
   const canAdd = !hasVerified && !hasPending
 
   const resetForm = () => {
