@@ -97,7 +97,7 @@ export const InvoiceRepository = {
   ) => {
     const invoices = await InvoiceModel.find({
       contractId,
-      billingMonth: { $lt: billingMonth },
+      billingMonth: { $lte: billingMonth },
       status: { $ne: INVOICE_STATUS.CANCELLED },
       deletedAt: null,
     })
@@ -125,7 +125,35 @@ export const InvoiceRepository = {
   ) => {
     const invoices = await InvoiceModel.find({
       bookingId,
-      billingMonth: { $lt: billingMonth },
+      billingMonth: { $lte: billingMonth },
+      status: { $ne: INVOICE_STATUS.CANCELLED },
+      deletedAt: null,
+    })
+      .sort({ billingMonth: -1 })
+      .limit(1)
+      .lean();
+
+    const [invoice] = invoices;
+    if (!invoice) return null;
+
+    const detail = await InvoiceDetailModel.findOne({
+      invoiceId: invoice._id,
+    }).lean();
+
+    return { invoice, detail };
+  },
+
+  /**
+   * Tìm hóa đơn gần nhất TRƯỚC billingMonth theo tenantId
+   * (fallback khi booking bị tạo lại với ID khác).
+   */
+  findPreviousInvoiceByTenantId: async (
+    tenantId: string,
+    billingMonth: string
+  ) => {
+    const invoices = await InvoiceModel.find({
+      tenantId,
+      billingMonth: { $lte: billingMonth },
       status: { $ne: INVOICE_STATUS.CANCELLED },
       deletedAt: null,
     })

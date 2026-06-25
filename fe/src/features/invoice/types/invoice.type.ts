@@ -183,3 +183,24 @@ export type MeterReadingResponse = {
   message: string
   data: MeterReading | MeterReading[]
 }
+
+// ---- Previous Reading (for conditional old index display) ----
+
+export type PreviousReadingData = {
+  hasPreviousInvoice: boolean
+  hasMeterData: boolean
+  previousInvoice: {
+    billingMonth: string
+    electricityNewIndex: number | null
+    waterNewIndex: number | null
+    electricityOldIndex: number | null
+    waterOldIndex: number | null
+    electricityRate: number | null
+    waterRate: number | null
+  } | null
+}
+
+export type PreviousReadingResponse = {
+  success: boolean
+  data: PreviousReadingData
+}
