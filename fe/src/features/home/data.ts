@@ -80,4 +80,27 @@ export const roomTypeOptions = [
   { value: 'single', label: 'Phòng đơn' },
 ] as const
 
+export const homeFaqs = [
+  {
+    question: 'UniNest giúp tìm phòng trọ tại TP.HCM như thế nào?',
+    answer:
+      'UniNest cho phép bạn lọc phòng theo từ khóa, mức giá và loại phòng, sau đó xem chi tiết, hình ảnh, tiện ích và vị trí trước khi gửi yêu cầu đặt phòng.',
+  },
+  {
+    question: 'Ai nên sử dụng UniNest?',
+    answer:
+      'Nền tảng phù hợp với sinh viên, người đi làm và các chủ nhà cần một kênh đăng tin rõ ràng, minh bạch và dễ quản lý tại khu vực TP.HCM.',
+  },
+  {
+    question: 'Thông tin nào cần kiểm tra trước khi đặt phòng?',
+    answer:
+      'Bạn nên xem giá thuê theo tháng, tiền cọc, diện tích, số người tối đa, tiện ích, địa chỉ và đánh giá của người thuê trước để chọn phòng phù hợp.',
+  },
+  {
+    question: 'Làm sao để liên hệ chủ phòng trên UniNest?',
+    answer:
+      'Tại trang chi tiết phòng, bạn có thể nhắn tin trực tiếp cho chủ phòng hoặc gửi yêu cầu đặt phòng để tiếp tục xác nhận lịch hẹn.',
+  },
+] as const
+
 export { images }

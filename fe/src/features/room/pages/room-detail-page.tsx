@@ -4,6 +4,9 @@ import { ArrowLeft, CheckCircle2, MapPin, MessageCircle, Users } from 'lucide-re
 import { Button } from '@/components/ui/button'
 import { USER_ROLES } from '@/constants/roles'
 import { MainLayout } from '@/layouts/main-layout'
+import { toAbsoluteUrl } from '@/seo/config'
+import { Seo } from '@/seo/seo'
+import { createBreadcrumbSchema } from '@/seo/schemas'
 import { BookingRequestModal } from '@/features/booking'
 import { useCreateRoomConversation } from '@/features/chat'
 import { UpgradePackageModal } from '@/features/payment/components/upgrade-package-modal'
@@ -18,6 +21,7 @@ import {
 import {
   formatRoomCurrency,
   formatRoomFullLocation,
+  formatRoomLocation,
   formatRoomType,
   getRoomAmenityNames,
   resolveRoomImageUrl,
@@ -53,6 +57,73 @@ export function RoomDetailPage() {
   const selectedImage =
     images.find((image) => image._id === selectedImageId) ?? images[0]
   const amenityNames = room ? getRoomAmenityNames(room) : []
+  const primaryImageUrl = selectedImage
+    ? resolveRoomImageUrl(selectedImage.url)
+    : '/hero.jpg'
+  const reviewStats = reviewsQuery.data?.statistics
+  const seoTitle = room
+    ? `${room.title} | Phong cho thue tai ${formatRoomLocation(room)} | UniNest`
+    : 'Chi tiet phong cho thue | UniNest'
+  const seoDescription = room
+    ? `${room.title} tai ${formatRoomFullLocation(room)}. Gia ${formatRoomCurrency(
+        room.pricePerMonth,
+      )}/thang, suc chua toi da ${room.maxOccupants} nguoi. Xem anh, tien ich va danh gia tren UniNest.`
+    : 'Xem chi tiet phong cho thue, hinh anh, gia thue, tien ich va vi tri tren UniNest.'
+  const structuredData = room
+    ? [
+        createBreadcrumbSchema([
+          { name: 'Trang chu', path: '/' },
+          { name: 'Phong cho thue', path: '/phong' },
+          { name: room.title, path: `/phong/${room._id}` },
+        ]),
+        {
+          '@type': 'Product',
+          name: room.title,
+          description: room.description || seoDescription,
+          image: images.map((image) => resolveRoomImageUrl(image.url)),
+          category: formatRoomType(room.roomType),
+          brand: {
+            '@type': 'Brand',
+            name: 'UniNest',
+          },
+          offers: {
+            '@type': 'Offer',
+            price: room.pricePerMonth,
+            priceCurrency: 'VND',
+            availability:
+              room.status === 'AVAILABLE'
+                ? 'https://schema.org/InStock'
+                : 'https://schema.org/OutOfStock',
+            url: toAbsoluteUrl(`/phong/${room._id}`),
+          },
+          additionalProperty: [
+            {
+              '@type': 'PropertyValue',
+              name: 'Dia chi',
+              value: formatRoomFullLocation(room),
+            },
+            {
+              '@type': 'PropertyValue',
+              name: 'Dien tich',
+              value: room.areaSqm ? `${room.areaSqm} m2` : 'Dang cap nhat',
+            },
+            {
+              '@type': 'PropertyValue',
+              name: 'Suc chua',
+              value: room.maxOccupants,
+            },
+          ],
+          aggregateRating:
+            reviewStats && reviewStats.reviewCount > 0
+              ? {
+                  '@type': 'AggregateRating',
+                  ratingValue: reviewStats.averageRating,
+                  reviewCount: reviewStats.reviewCount,
+                }
+              : undefined,
+        },
+      ]
+    : undefined
 
   async function handleOpenChat() {
     if (!room?._id) return
@@ -78,6 +149,19 @@ export function RoomDetailPage() {
 
   return (
     <MainLayout>
+      <Seo
+        title={seoTitle}
+        description={seoDescription}
+        path={id ? `/phong/${id}` : '/phong'}
+        image={primaryImageUrl}
+        keywords={[
+          'chi tiet phong cho thue',
+          'gia phong tro',
+          'phong tro TP.HCM',
+          'UniNest',
+        ]}
+        structuredData={structuredData}
+      />
       <section className="bg-surface px-6 py-10 lg:px-20 lg:py-14">
         <div className="mx-auto max-w-7xl">
           <Button asChild variant="ghost" className="mb-6">
