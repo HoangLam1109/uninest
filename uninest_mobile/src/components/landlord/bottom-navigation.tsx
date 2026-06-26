@@ -5,16 +5,18 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export type LandlordTab =
   | "home"
   | "rooms"
+  | "bookings"
   | "tenants"
   | "reports"
-  | "settings";
+  | "profile";
 
 const TAB_ROUTES: Partial<Record<LandlordTab, string>> = {
   home: "/landlord/home_page",
   rooms: "/landlord/rooms_page",
+  bookings: "/landlord/bookings_page",
   tenants: "/landlord/tenants_page",
   reports: "/landlord/invoices_page",
-  settings: "/landlord/settings_page",
+  profile: "/landlord/profile_page",
 };
 
 export function LandlordBottomNavigation({
@@ -28,9 +30,10 @@ export function LandlordBottomNavigation({
   const items: { id: LandlordTab; label: string; icon: string }[] = [
     { id: "home", label: "Trang chủ", icon: "▦" },
     { id: "rooms", label: "Phòng", icon: "🛏" },
+    { id: "bookings", label: "Đặt phòng", icon: "📅" },
     { id: "tenants", label: "Người thuê", icon: "👥" },
     { id: "reports", label: "Báo cáo", icon: "🧾" },
-    { id: "settings", label: "Cài đặt", icon: "⚙" },
+    { id: "profile", label: "Hồ sơ", icon: "👤" },
   ];
 
   const handlePress = (tab: LandlordTab) => {
@@ -103,7 +106,7 @@ const styles = StyleSheet.create({
     color: "#E68A2E",
   },
   label: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "700",
     color: "#9AA3B2",
     textAlign: "center",

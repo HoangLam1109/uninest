@@ -1,4 +1,4 @@
-import { useReducer } from 'react'
+import { useEffect, useMemo, useReducer } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,7 @@ import {
   getBookingTenant,
 } from '@/features/booking/lib/booking-display'
 import { utilityInvoiceFormSchema } from '../schemas/invoice.schema'
+import { useGetPreviousReading } from '../hooks/use-invoices'
 
 type InvoiceFormState = {
   bookingId: string
@@ -28,6 +29,7 @@ type InvoiceFormState = {
 
 type InvoiceFormAction =
   | { type: 'fieldChanged'; name: keyof InvoiceFormState; value: string }
+  | { type: 'setPreviousReading'; payload: { electricityOldIndex: string; waterOldIndex: string; electricityRate: string; waterRate: string } }
 
 type InvoiceFormModalProps = {
   open: boolean
@@ -87,6 +89,8 @@ function invoiceFormReducer(
   switch (action.type) {
     case 'fieldChanged':
       return { ...state, [action.name]: action.value }
+    case 'setPreviousReading':
+      return { ...state, ...action.payload }
   }
 }
 
@@ -118,6 +122,40 @@ export function InvoiceFormModal({
     notes,
   } = formState
 
+  // Fetch previous reading when a booking is selected
+  const previousReadingQuery = useGetPreviousReading(bookingId || null)
+  const previousReading = previousReadingQuery.data
+
+  // Auto-fill old indices & rates from previous invoice
+  useEffect(() => {
+    if (!previousReading?.hasMeterData || !previousReading.previousInvoice) return
+
+    const prev = previousReading.previousInvoice
+    dispatch({
+      type: 'setPreviousReading',
+      payload: {
+        electricityOldIndex: prev.electricityNewIndex != null && prev.electricityNewIndex >= 0
+          ? String(prev.electricityNewIndex)
+          : '',
+        waterOldIndex: prev.waterNewIndex != null && prev.waterNewIndex >= 0
+          ? String(prev.waterNewIndex)
+          : '',
+        electricityRate: prev.electricityRate != null
+          ? String(prev.electricityRate)
+          : '',
+        waterRate: prev.waterRate != null
+          ? String(prev.waterRate)
+          : '',
+      },
+    })
+  }, [previousReading])
+
+  // Track if previous data exists for display
+  const hasPreviousData = useMemo(
+    () => previousReading?.hasMeterData ?? false,
+    [previousReading],
+  )
+
   function updateField(name: keyof InvoiceFormState, value: string) {
     dispatch({ type: 'fieldChanged', name, value })
   }
@@ -144,6 +182,8 @@ export function InvoiceFormModal({
       return
     }
 
+    // Always send old indices if filled — backend will prioritize explicit values
+    // If not filled and has previous data, backend auto-resolves
     onSubmit({
       ...validationResult.data,
       electricityOldIndex: electricityOldIndex.trim() ? parseFloat(electricityOldIndex) : undefined,
@@ -263,17 +303,34 @@ export function InvoiceFormModal({
             </div>
           </div>
 
-          {/* Old indices + rates — clearly visible section */}
+          {/* Old indices + rates — always visible when new indices are entered */}
           {(hasElectricity || hasWater) ? (
             <div className="mt-4 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50/60 p-4">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-sm font-bold text-amber-700">
                   📐 Chỉ số cũ & đơn giá
                 </p>
-                <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-                  Cần cho hóa đơn đầu tiên
-                </span>
+                {hasPreviousData ? (
+                  <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
+                    Đã điền từ tháng trước
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                    Nhập thủ công
+                  </span>
+                )}
               </div>
+
+              {/* Show billing month of previous data if available */}
+              {hasPreviousData && previousReading?.previousInvoice && (
+                <p className="mb-3 text-xs text-green-700">
+                  Dữ liệu từ hóa đơn tháng{' '}
+                  <strong>{previousReading.previousInvoice.billingMonth}</strong>
+                  {'. Bạn có thể sửa lại nếu cần.'}
+                </p>
+              )}
+
+              {/* Always show old indices + rates in 4 columns */}
               <div className="grid grid-cols-4 gap-3">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold" htmlFor="invoice-elec-old-idx">⚡ Chỉ số điện cũ</label>

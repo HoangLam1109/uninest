@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import { InvoiceService } from "../services/invoice.service.js";
 import { UtilityInvoiceService } from "../services/utility-invoice.service.js";
+import { InvoiceRepository } from "../repositories/invoice.repo.js";
+import { METER_TYPE } from "../models/MeterReading.model.js";
 
 /**
  * CREATE INVOICE (Landlord)
@@ -557,5 +559,134 @@ export const createInitialMeterReading = async (req: Request, res: Response) => 
       success: false,
       message: err.message || "Internal server error",
     });
+  }
+};
+
+/**
+ * GET PREVIOUS READING FOR BOOKING
+ * Trả về chỉ số điện/nước mới nhất từ hóa đơn trước đó của booking.
+ * Dùng để frontend quyết định có hiển thị trường "Chỉ số cũ" hay không.
+ */
+export const getPreviousReadingByBooking = async (req: Request, res: Response) => {
+  try {
+    const landlordId = req.userId;
+    if (!landlordId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const bookingId = req.params.bookingId as string;
+
+    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
+      return res.status(400).json({ success: false, message: "Invalid bookingId" });
+    }
+
+    // Verify booking belongs to this landlord
+    const { BookingRepository } = await import("../repositories/booking.repo.js");
+    const booking = await BookingRepository.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    const room = booking.roomId as any;
+    if (!room || room.landlordId?.toString() !== landlordId) {
+      return res.status(403).json({ success: false, message: "You do not own this booking" });
+    }
+
+    // Lấy billingMonth từ query param, nếu không có thì dùng tháng hiện tại
+    const currentBillingMonth = (req.query.billingMonth as string) || new Date().toISOString().slice(0, 7);
+
+    // Tìm hóa đơn gần nhất trước tháng hiện tại
+    const prevByBooking = await InvoiceRepository.findPreviousInvoiceByBookingId(
+      bookingId,
+      currentBillingMonth
+    );
+
+    // Nếu có contractId, thử tìm theo contract
+    const contractId = booking.contractId?.toString();
+    let prevByContract = null;
+    if (contractId) {
+      prevByContract = await InvoiceRepository.findPreviousInvoiceByContractId(
+        contractId,
+        currentBillingMonth
+      );
+    }
+
+    let bestMatch = prevByContract || prevByBooking;
+
+    // Fallback: tìm theo tenantId nếu vẫn chưa có
+    if (!bestMatch) {
+      const tenantId = booking.tenantId?._id?.toString() || booking.tenantId?.toString();
+      if (tenantId) {
+        bestMatch = await InvoiceRepository.findPreviousInvoiceByTenantId(
+          tenantId,
+          currentBillingMonth
+        );
+      }
+    }
+
+    // Try to resolve actual meter indices — may be in InvoiceDetail or MeterReading
+    let electricityNewIndex: number | null = bestMatch?.detail?.electricityNewIndex ?? null;
+    let waterNewIndex: number | null = bestMatch?.detail?.waterNewIndex ?? null;
+    const electricityRate = bestMatch?.detail?.electricityRate ?? null;
+    const waterRate = bestMatch?.detail?.waterRate ?? null;
+
+    // Fallback 1: Check if the invoice itself has electricityAmount/waterAmount > 0
+    // (means meter readings were used, even if InvoiceDetail is missing)
+    if (electricityNewIndex == null && bestMatch?.invoice?.electricityAmount != null && bestMatch.invoice.electricityAmount > 0) {
+      electricityNewIndex = -1; // Sentinel: means "has readings but unknown index"
+    }
+    if (waterNewIndex == null && bestMatch?.invoice?.waterAmount != null && bestMatch.invoice.waterAmount > 0) {
+      waterNewIndex = -1;
+    }
+
+    // Fallback 2: Check MeterReading collection
+    if (electricityNewIndex == null || waterNewIndex == null) {
+      if (contractId) {
+        const { MeterReadingRepository } = await import("../repositories/meter-reading.repo.js");
+
+        if (electricityNewIndex == null) {
+          const elecReading = await MeterReadingRepository.findLatestByContractAndType(
+            contractId,
+            METER_TYPE.ELECTRICITY,
+            currentBillingMonth
+          );
+          if (elecReading) electricityNewIndex = elecReading.readingValue;
+        }
+
+        if (waterNewIndex == null) {
+          const waterReading = await MeterReadingRepository.findLatestByContractAndType(
+            contractId,
+            METER_TYPE.WATER,
+            currentBillingMonth
+          );
+          if (waterReading) waterNewIndex = waterReading.readingValue;
+        }
+      }
+    }
+
+    // Determine if there's actual meter data from previous period
+    const hasMeterData =
+      (electricityNewIndex !== null) || (waterNewIndex !== null);
+
+    return res.json({
+      success: true,
+      data: {
+        hasPreviousInvoice: !!bestMatch,
+        hasMeterData,
+        previousInvoice: bestMatch
+          ? {
+              billingMonth: bestMatch.invoice.billingMonth,
+              electricityNewIndex,
+              waterNewIndex,
+              electricityOldIndex: bestMatch.detail?.electricityOldIndex ?? null,
+              waterOldIndex: bestMatch.detail?.waterOldIndex ?? null,
+              electricityRate,
+              waterRate,
+            }
+          : null,
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 };

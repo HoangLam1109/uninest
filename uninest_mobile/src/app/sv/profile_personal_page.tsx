@@ -9,7 +9,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import {
@@ -24,9 +23,7 @@ import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/auth-context";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { AuthUser } from "@/types/auth";
-import { validateProfilePersonal } from "@/utils/validation/profile";
-
-const AVATAR_PLACEHOLDER = require("@/assets/images/icon.png");
+import { getUserAvatarSource } from "@/utils/user-display";
 
 export default function ProfilePersonalPage() {
   const insets = useSafeAreaInsets();
@@ -34,22 +31,15 @@ export default function ProfilePersonalPage() {
   const { user: sessionUser, updateUser } = useAuth();
   const [user, setUser] = useState<AuthUser | null>(sessionUser);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
     try {
       const res = await authApi.getMe();
-      const nextUser = res.data.user;
-      setUser(nextUser);
-      setFullName(nextUser.fullName ?? "");
-      setPhone(nextUser.phone ?? "");
+      setUser(res.data.user);
     } catch {
       setUser(sessionUser);
-      setFullName(sessionUser?.fullName ?? "");
-      setPhone(sessionUser?.phone ?? "");
     } finally {
       setLoading(false);
     }
@@ -71,6 +61,7 @@ export default function ProfilePersonalPage() {
     });
     if (result.canceled || !result.assets[0]) return;
 
+    setUploadingAvatar(true);
     try {
       const res = await userApi.uploadAvatar({
         uri: result.assets[0].uri,
@@ -83,41 +74,12 @@ export default function ProfilePersonalPage() {
       Alert.alert("Thành công", "Đã cập nhật ảnh đại diện.");
     } catch (err) {
       Alert.alert("Lỗi", getApiErrorMessage(err, "Không tải được ảnh."));
-    }
-  };
-
-  const handleSave = async () => {
-    const userId = user?.id ?? sessionUser?.id;
-    if (!userId) return;
-    const error = validateProfilePersonal(fullName, phone);
-    if (error) {
-      Alert.alert("Lỗi", error);
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const res = await userApi.update(userId, {
-        fullName: fullName.trim(),
-        phone: phone.trim(),
-      });
-      const nextUser: AuthUser = {
-        id: userId,
-        email: user?.email ?? sessionUser?.email ?? res.data.email,
-        fullName: res.data.fullName,
-        phone: res.data.phone,
-        role: res.data.role ?? user?.role,
-        avatarUrl: user?.avatarUrl,
-      };
-      setUser(nextUser);
-      updateUser(nextUser);
-      Alert.alert("Thành công", "Đã cập nhật hồ sơ.");
-    } catch (err) {
-      Alert.alert("Lỗi", getApiErrorMessage(err, "Không lưu được hồ sơ."));
     } finally {
-      setSaving(false);
+      setUploadingAvatar(false);
     }
   };
+
+  const displayUser = user ?? sessionUser;
 
   return (
     <ThemedView style={styles.screen}>
@@ -127,7 +89,7 @@ export default function ProfilePersonalPage() {
             <Text style={styles.iconText}>←</Text>
           </Pressable>
           <ThemedText type="smallBold" style={styles.headerTitle}>
-            Thông tin cá nhân
+            Hồ sơ cá nhân
           </ThemedText>
           <View style={styles.iconButton} />
         </View>
@@ -138,103 +100,70 @@ export default function ProfilePersonalPage() {
             paddingBottom: 40 + insets.bottom,
           }}
         >
+          <ThemedText type="small" style={styles.subtitle}>
+            Quản lý thông tin cá nhân và hồ sơ định danh của bạn.
+          </ThemedText>
+
           {loading ? (
             <ActivityIndicator color="#F28C1B" style={{ marginTop: 24 }} />
           ) : (
-            <View style={styles.card}>
-              <Pressable style={styles.avatarWrap} onPress={() => void handlePickAvatar()}>
-                <Image
-                  source={
-                    user?.avatarUrl ? { uri: user.avatarUrl } : AVATAR_PLACEHOLDER
-                  }
-                  style={styles.avatar}
-                />
-                <ThemedText type="small" style={styles.avatarHint}>
-                  Chạm để đổi ảnh
+            <>
+              <View style={styles.card}>
+                <Pressable
+                  style={styles.avatarWrap}
+                  onPress={() => void handlePickAvatar()}
+                  disabled={uploadingAvatar}
+                >
+                  <Image
+                    source={getUserAvatarSource(displayUser?.avatarUrl)}
+                    style={styles.avatar}
+                    contentFit="cover"
+                  />
+                  {uploadingAvatar ? (
+                    <ActivityIndicator color="#F28C1B" />
+                  ) : (
+                    <ThemedText type="small" style={styles.avatarHint}>
+                      Chạm để đổi ảnh
+                    </ThemedText>
+                  )}
+                </Pressable>
+
+                <ThemedText type="smallBold" style={styles.userName}>
+                  {displayUser?.fullName ?? "—"}
                 </ThemedText>
-              </Pressable>
 
-              <Field label="Họ và tên" value={fullName} onChangeText={setFullName} />
-              <Field
-                label="Email"
-                value={user?.email ?? "—"}
-                editable={false}
-              />
-              <Field label="Số điện thoại" value={phone} onChangeText={setPhone} />
-              <InfoRow label="Vai trò" value={user?.role ?? "Sinh viên"} />
-
-              <Pressable
-                style={styles.saveButton}
-                onPress={() => void handleSave()}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <ThemedText type="smallBold" style={styles.saveText}>
-                    Lưu thay đổi
+                {displayUser?.email ? (
+                  <ThemedText type="small" style={styles.contactRow}>
+                    ✉ {displayUser.email}
                   </ThemedText>
-                )}
-              </Pressable>
+                ) : null}
+                {displayUser?.phone ? (
+                  <ThemedText type="small" style={styles.contactRow}>
+                    ☎ {displayUser.phone}
+                  </ThemedText>
+                ) : null}
+              </View>
 
               <Pressable
-                style={styles.identityLink}
+                style={styles.identityButton}
                 onPress={() => router.push("/sv/profile_identity_page" as any)}
               >
-                <ThemedText type="smallBold" style={styles.identityLinkText}>
-                  Quản lý xác minh CCCD →
-                </ThemedText>
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="smallBold" style={styles.identityTitle}>
+                    Hồ sơ định danh
+                  </ThemedText>
+                  <ThemedText type="small" style={styles.identityText}>
+                    Hồ sơ định danh giúp chủ trọ xác minh danh tính khi bạn đặt
+                    phòng.
+                  </ThemedText>
+                </View>
+                <Text style={styles.chevron}>›</Text>
               </Pressable>
-            </View>
+            </>
           )}
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChangeText,
-  editable = true,
-}: {
-  label: string;
-  value: string;
-  onChangeText?: (v: string) => void;
-  editable?: boolean;
-}) {
-  return (
-    <View style={styles.field}>
-      <ThemedText type="small" style={styles.fieldLabel}>
-        {label}
-      </ThemedText>
-      {editable ? (
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          style={styles.input}
-          placeholderTextColor="#A89888"
-        />
-      ) : (
-        <ThemedText type="smallBold" style={styles.readonlyValue}>
-          {value}
-        </ThemedText>
-      )}
-    </View>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <ThemedText type="small" style={styles.fieldLabel}>
-        {label}
-      </ThemedText>
-      <ThemedText type="smallBold" style={styles.readonlyValue}>
-        {value}
-      </ThemedText>
-    </View>
   );
 }
 
@@ -256,38 +185,61 @@ const styles = StyleSheet.create({
   },
   iconText: { fontSize: 22, color: "#3D3428" },
   headerTitle: { fontSize: 18, color: "#2F261A", fontWeight: "700" },
+  subtitle: {
+    color: "#8A7B68",
+    lineHeight: 20,
+    marginBottom: 14,
+  },
   card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#E8E1D8",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  avatarWrap: { alignItems: "center", gap: 8, marginBottom: 12 },
+  avatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 3,
+    borderColor: "#FFF0DF",
+  },
+  avatarHint: { color: "#8A7B68" },
+  userName: {
+    fontSize: 18,
+    color: "#2F261A",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  contactRow: {
+    color: "#8A7B68",
+    marginTop: 4,
+    textAlign: "center",
+  },
+  identityButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
     borderColor: "#E8E1D8",
-    gap: 12,
   },
-  avatarWrap: { alignItems: "center", gap: 8, marginBottom: 4 },
-  avatar: { width: 88, height: 88, borderRadius: 44 },
-  avatarHint: { color: "#8A7B68" },
-  field: { gap: 6 },
-  fieldLabel: { color: "#8A7B68", fontSize: 13 },
-  input: {
-    backgroundColor: "#FAF7F2",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E8E1D8",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+  identityTitle: {
     color: "#2F261A",
+    fontSize: 16,
+    marginBottom: 4,
   },
-  readonlyValue: { color: "#2F261A", fontSize: 16 },
-  infoRow: { gap: 4 },
-  saveButton: {
-    backgroundColor: "#F28C1B",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 4,
+  identityText: {
+    color: "#8A7B68",
+    lineHeight: 18,
   },
-  saveText: { color: "#FFFFFF" },
-  identityLink: { alignItems: "center", paddingVertical: 8 },
-  identityLinkText: { color: "#F28C1B" },
+  chevron: {
+    fontSize: 22,
+    color: "#C5B8A8",
+  },
 });

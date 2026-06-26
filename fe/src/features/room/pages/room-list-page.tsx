@@ -12,6 +12,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { MainLayout } from '@/layouts/main-layout'
 import { cn } from '@/lib/utils'
+import { toAbsoluteUrl } from '@/seo/config'
+import { Seo } from '@/seo/seo'
+import { createBreadcrumbSchema } from '@/seo/schemas'
 import { formatRoomType } from '@/utils/room-display'
 import { RoomListCard } from '../components/room-list-card'
 import { useRoomSearch } from '../hooks/use-room-search'
@@ -126,7 +129,10 @@ export function RoomListPage() {
   }, [searchParams])
 
   const activeQuery = useRoomSearch(searchQueryParams)
-  const visibleRooms = activeQuery.data?.data ?? []
+  const visibleRooms = useMemo(
+    () => activeQuery.data?.data ?? [],
+    [activeQuery.data?.data],
+  )
   const totalRoomsQuery = useGetRooms({
     page: 1,
     limit: 1,
@@ -154,6 +160,56 @@ export function RoomListPage() {
 
     return labels
   }, [searchQueryParams])
+
+  const seoTitle = useMemo(() => {
+    if (searchQueryParams.district) {
+      return `Phong cho thue tai ${searchQueryParams.district} | UniNest`
+    }
+
+    if (searchQueryParams.roomType) {
+      return `${formatRoomType(searchQueryParams.roomType)} cho thue tai TP.HCM | UniNest`
+    }
+
+    return 'Phong cho thue tai TP.HCM | UniNest'
+  }, [searchQueryParams.district, searchQueryParams.roomType])
+
+  const seoDescription = useMemo(() => {
+    const base =
+      'Kham pha danh sach phong tro, studio, phong ghep va can ho dang mo tren UniNest.'
+
+    if (activeFilterLabels.length === 0) {
+      return `${base} Loc theo gia, khu vuc va loai phong de tim lua chon phu hop.`
+    }
+
+    return `${base} Bo loc dang ap dung: ${activeFilterLabels.join(', ')}.`
+  }, [activeFilterLabels])
+
+  const structuredData = useMemo(() => {
+    const items = visibleRooms.slice(0, 10).map((room, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      url: toAbsoluteUrl(`/phong/${room._id}`),
+      name: room.title,
+    }))
+
+    return [
+      createBreadcrumbSchema([
+        { name: 'Trang chu', path: '/' },
+        { name: 'Phong cho thue', path: '/phong' },
+      ]),
+      {
+        '@type': 'CollectionPage',
+        name: 'Danh sach phong cho thue',
+        url: toAbsoluteUrl('/phong'),
+        description: seoDescription,
+        mainEntity: {
+          '@type': 'ItemList',
+          numberOfItems: visibleRooms.length,
+          itemListElement: items,
+        },
+      },
+    ]
+  }, [seoDescription, visibleRooms])
 
   function commitFilters(nextParams: URLSearchParams) {
     setSearchParams(nextParams)
@@ -230,6 +286,19 @@ export function RoomListPage() {
 
   return (
     <MainLayout>
+      <Seo
+        title={seoTitle}
+        description={seoDescription}
+        path="/phong"
+        keywords={[
+          'phong cho thue TP.HCM',
+          'tim phong tro',
+          'studio cho thue',
+          'phong ghep',
+          'UniNest',
+        ]}
+        structuredData={structuredData}
+      />
       <section className="bg-surface px-4 py-8 md:px-6 lg:px-12 lg:py-12">
         <div className="mx-auto flex max-w-7xl flex-col gap-6">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_320px] lg:items-start">

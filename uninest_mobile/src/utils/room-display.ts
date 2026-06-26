@@ -1,4 +1,7 @@
 import type { Room, RoomImage, RoomStatus } from "@/types/room";
+import type { ImageSourcePropType } from "react-native";
+
+import { ROOM_DEFAULT_IMAGE } from "@/constants/images";
 
 export function formatPrice(value: number) {
   return `${value.toLocaleString("vi-VN")}đ`;
@@ -45,6 +48,54 @@ export function sortRoomImages(images: RoomImage[]) {
     if (!a.isPrimary && b.isPrimary) return 1;
     return (a.order ?? 0) - (b.order ?? 0);
   });
+}
+
+export function getPrimaryRoomImageUrl(images: RoomImage[]): string | null {
+  const sorted = sortRoomImages(images);
+  const primary = sorted[0];
+  return primary?.url ?? null;
+}
+
+export function getRoomImageSource(url?: string | null): ImageSourcePropType {
+  return url ? { uri: url } : ROOM_DEFAULT_IMAGE;
+}
+
+type RoomAmenitySource = {
+  amenityIds?: Room["amenityIds"];
+  amenities?: string[];
+};
+
+export function getRoomAmenityNames(room: RoomAmenitySource): string[] {  const names = new Set<string>();
+
+  room.amenities?.forEach((amenity) => {
+    const name = amenity.trim();
+    if (name) names.add(name);
+  });
+
+  room.amenityIds?.forEach((amenity) => {
+    if (typeof amenity === "string") {
+      const value = amenity.trim();
+      if (value && !/^[a-f\d]{24}$/i.test(value)) names.add(value);
+      return;
+    }
+    const name = amenity.name?.trim();
+    if (name) names.add(name);
+  });
+
+  return Array.from(names);
+}
+
+export function roomStatusBadgeStyle(status?: string) {
+  switch (status) {
+    case "AVAILABLE":
+      return { backgroundColor: "#DDF6D5", color: "#2E7D4E" };
+    case "RENTED":
+      return { backgroundColor: "#FFF0DD", color: "#C47A10" };
+    case "MAINTENANCE":
+      return { backgroundColor: "#FEE2E2", color: "#B91C1C" };
+    default:
+      return { backgroundColor: "#E7EBF1", color: "#5F6672" };
+  }
 }
 
 export function buildRoomHighlights(room: Room): string[] {

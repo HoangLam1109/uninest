@@ -7,6 +7,7 @@ import {
   getInvoiceById,
   getInvoiceDetail,
   getLandlordInvoices,
+  getPreviousReadingByBooking,
   getTenantInvoices,
   markInvoiceAsPaid,
   sendInvoice,
@@ -32,6 +33,7 @@ router.post("/initial-reading", createInitialMeterReading);
 // Specific paths before param routes
 router.get("/landlord", getLandlordInvoices);
 router.get("/tenant", getTenantInvoices);
+router.get("/booking/:bookingId/previous-reading", getPreviousReadingByBooking);
 
 // Get invoice by ID
 router.get("/:id", getInvoiceById);

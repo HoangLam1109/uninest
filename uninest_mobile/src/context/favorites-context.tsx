@@ -8,56 +8,12 @@ import {
 } from "react";
 
 import { favoriteApi } from "@/api/favorite.api";
-import { roomApi } from "@/api/room.api";
 import { ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/api-error";
-import type { RoomFavorite } from "@/types/favorite";
 import type { Room } from "@/types/room";
+import { resolveFavoriteRooms } from "@/utils/favorite-display";
 
 import { useAuth } from "./auth-context";
-
-function getFavoriteRoomId(favorite: RoomFavorite): string | null {
-  const room = favorite.roomId;
-  if (typeof room === "string") return room;
-  if (typeof room === "object" && room !== null && "_id" in room) {
-    return String(room._id);
-  }
-  return null;
-}
-
-function roomFromFavorite(favorite: RoomFavorite): Room | null {
-  const room = favorite.roomId;
-  if (typeof room === "object" && room !== null && "_id" in room) {
-    return { ...(room as Room), _id: String(room._id) };
-  }
-  return null;
-}
-
-async function resolveFavoriteRooms(favorites: RoomFavorite[]): Promise<Room[]> {
-  const rooms: Room[] = [];
-
-  for (const favorite of favorites) {
-    const embedded = roomFromFavorite(favorite);
-    if (embedded) {
-      rooms.push(embedded);
-      continue;
-    }
-
-    const roomId = getFavoriteRoomId(favorite);
-    if (!roomId) continue;
-
-    try {
-      const detail = await roomApi.getById(roomId);
-      if (detail.data) {
-        rooms.push({ ...detail.data, _id: String(detail.data._id) });
-      }
-    } catch {
-      // Bỏ qua phòng không tải được chi tiết
-    }
-  }
-
-  return rooms;
-}
 
 type FavoritesContextValue = {
   favoriteIds: Set<string>;

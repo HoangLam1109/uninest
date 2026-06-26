@@ -17,6 +17,7 @@ import {
 } from "react-native-safe-area-context";
 
 import { BottomNavigation } from "@/components/bottom-navigation";
+import { AppLogo } from "@/components/app-logo";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
@@ -24,7 +25,7 @@ import { useAuth } from "@/context/auth-context";
 import { useTheme } from "@/hooks/use-theme";
 import { roomApi } from "@/api/room.api";
 import type { Room } from "@/types/room";
-import { formatPrice, formatRoomLocation } from "@/utils/room-display";
+import { formatPrice, formatRoomLocation, getRoomImageSource } from "@/utils/room-display";
 
 export default function HomePage() {
   const theme = useTheme();
@@ -68,12 +69,7 @@ export default function HomePage() {
         <View style={[styles.headerContainer, { top: insets.top }]}>
           <View style={styles.headerContent}>
             <View style={styles.leftGroup}>
-              <View style={styles.logoBox}>
-                <Image
-                  source={require("@/assets/images/icon.png")}
-                  style={styles.logoImage}
-                />
-              </View>
+              <AppLogo size={40} style={styles.logoBox} />
               <ThemedText type="smallBold" style={styles.brand}>
                 UniNest
               </ThemedText>
@@ -153,8 +149,10 @@ export default function HomePage() {
           </View>
 
           <Image
-            source={require("@/assets/images/tutorial-web.png")}
+            source={require("@/assets/images/home.jpg")}
             style={styles.heroImage}
+            resizeMode="cover"
+            accessibilityLabel="Không gian phòng trọ hiện đại"
           />
 
           <View style={styles.featuresSection}>
@@ -253,37 +251,16 @@ export default function HomePage() {
                 </ThemedText>
               ) : (
                 featuredRooms.map((room) => (
-                  <Pressable
+                  <FeaturedRoomCard
                     key={room._id}
-                    style={styles.listingCard}
+                    room={room}
                     onPress={() =>
                       router.push({
                         pathname: "/sv/detail_page",
                         params: { id: String(room._id) },
                       } as any)
                     }
-                  >
-                    <Image
-                      source={require("@/assets/images/tutorial-web.png")}
-                      style={styles.listingImage}
-                    />
-                    <View style={styles.listingBody}>
-                      <ThemedText type="smallBold" style={styles.listingTitle}>
-                        {room.title}
-                      </ThemedText>
-                      <View style={styles.priceRow}>
-                        <ThemedText style={styles.price}>
-                          {formatPrice(room.pricePerMonth)}
-                        </ThemedText>
-                        <ThemedText type="small" style={{ marginLeft: 6 }}>
-                          /tháng
-                        </ThemedText>
-                      </View>
-                      <ThemedText type="small" style={styles.listingLocation}>
-                        {formatRoomLocation(room)}
-                      </ThemedText>
-                    </View>
-                  </Pressable>
+                  />
                 ))
               )}
             </View>
@@ -325,10 +302,7 @@ export default function HomePage() {
           </View>
 
           <View style={styles.footer}>
-            <Image
-              source={require("@/assets/images/icon.png")}
-              style={styles.footerLogo}
-            />
+            <AppLogo size={36} withBackground={false} />
             <ThemedText type="smallBold">UniNest</ThemedText>
             <ThemedText type="small" style={styles.footerText}>
               © 2024 UniNest Student Housing. Bảo lưu mọi quyền.
@@ -351,6 +325,58 @@ export default function HomePage() {
         </View>
       </SafeAreaView>
     </ThemedView>
+  );
+}
+
+function FeaturedRoomCard({
+  room,
+  onPress,
+}: {
+  room: Room;
+  onPress: () => void;
+}) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void roomApi
+      .listImages(room._id)
+      .then((res) => {
+        if (cancelled) return;
+        const images = res.data ?? [];
+        const primary = images.find((img) => img.isPrimary) ?? images[0];
+        if (primary?.url) setImageUrl(primary.url);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [room._id]);
+
+  return (
+    <Pressable style={styles.listingCard} onPress={onPress}>
+      <Image
+        source={getRoomImageSource(imageUrl)}
+        style={styles.listingImage}
+      />
+      <View style={styles.listingBody}>
+        <ThemedText type="smallBold" style={styles.listingTitle}>
+          {room.title}
+        </ThemedText>
+        <View style={styles.priceRow}>
+          <ThemedText style={styles.price}>
+            {formatPrice(room.pricePerMonth)}
+          </ThemedText>
+          <ThemedText type="small" style={{ marginLeft: 6 }}>
+            /tháng
+          </ThemedText>
+        </View>
+        <ThemedText type="small" style={styles.listingLocation}>
+          {formatRoomLocation(room)}
+        </ThemedText>
+      </View>
+    </Pressable>
   );
 }
 
@@ -389,18 +415,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   logoBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: "#2F6F60",
-    alignItems: "center",
-    justifyContent: "center",
     marginRight: Spacing.two,
-  },
-  logoImage: {
-    width: 22,
-    height: 22,
-    resizeMode: "contain",
   },
   brand: {
     fontSize: 20,
@@ -664,11 +679,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.four,
     alignItems: "center",
     paddingVertical: Spacing.three,
-  },
-  footerLogo: {
-    width: 40,
-    height: 40,
-    marginBottom: Spacing.one,
   },
   footerText: {
     color: "#60646C",

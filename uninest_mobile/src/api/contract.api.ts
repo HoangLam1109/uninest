@@ -8,6 +8,7 @@ import type {
   RenewContractPayload,
   UpdateContractPayload,
 } from "@/types/contract";
+import { appendPdfToFormData } from "@/utils/contract-upload";
 
 function buildListQuery(params?: { page?: number; limit?: number }) {
   const query = new URLSearchParams();
@@ -16,10 +17,30 @@ function buildListQuery(params?: { page?: number; limit?: number }) {
   return query.toString();
 }
 
+async function buildContractFormData(
+  payload: CreateContractPayload | UpdateContractPayload | RenewContractPayload,
+) {
+  const formData = new FormData();
+  const { contractFile, ...rest } = payload;
+
+  Object.entries(rest).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    formData.append(key, String(value));
+  });
+
+  if (contractFile) {
+    await appendPdfToFormData(formData, "contractFile", contractFile);
+  }
+
+  return formData;
+}
+
 export const contractApi = {
   /** POST /api/contracts */
-  createFromBooking: (payload: CreateContractPayload) =>
-    api.post<ContractMutationResponse>("/contracts/", payload),
+  createFromBooking: async (payload: CreateContractPayload) => {
+    const formData = await buildContractFormData(payload);
+    return api.postForm<ContractMutationResponse>("/contracts/", formData);
+  },
 
   /** GET /api/contracts/tenant */
   listTenant: (params?: { page?: number; limit?: number }) =>
@@ -49,14 +70,24 @@ export const contractApi = {
     api.patch<ContractMutationResponse>(`/contracts/${contractId}/activate`),
 
   /** PUT /api/contracts/:id */
-  update: (contractId: string, payload: UpdateContractPayload) =>
-    api.put<ContractMutationResponse>(`/contracts/${contractId}`, payload),
+  update: async (contractId: string, payload: UpdateContractPayload) => {
+    const formData = await buildContractFormData(payload);
+    return api.putForm<ContractMutationResponse>(
+      `/contracts/${contractId}`,
+      formData,
+    );
+  },
 
   /** PATCH /api/contracts/:id/terminate */
   terminate: (contractId: string) =>
     api.patch<ContractMutationResponse>(`/contracts/${contractId}/terminate`),
 
   /** POST /api/contracts/:id/renew */
-  renew: (contractId: string, payload: RenewContractPayload) =>
-    api.post<ContractMutationResponse>(`/contracts/${contractId}/renew`, payload),
+  renew: async (contractId: string, payload: RenewContractPayload) => {
+    const formData = await buildContractFormData(payload);
+    return api.postForm<ContractMutationResponse>(
+      `/contracts/${contractId}/renew`,
+      formData,
+    );
+  },
 };

@@ -137,7 +137,7 @@ export default function LandlordMessagesPage() {
           )}
         </ScrollView>
 
-        <LandlordBottomNavigation activeTab="settings" />
+        <LandlordBottomNavigation activeTab="profile" />
       </SafeAreaView>
     </ThemedView>
   );
