@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   CreditCard,
   LayoutGrid,
   PackagePlus,
@@ -12,6 +13,7 @@ export const adminNavItems = [
   { label: 'Người dùng', href: '/quan-tri/nguoi-dung', icon: Users },
   { label: 'Kiểm duyệt', href: '/quan-tri/kiem-duyet', icon: ShieldCheck },
   { label: 'Thanh toán', href: '/quan-tri/thanh-toan', icon: CreditCard },
+  { label: 'Giao dịch', href: '/quan-tri/giao-dich', icon: ArrowLeftRight },
   { label: 'Gói dịch vụ', href: '/quan-tri/goi-dich-vu', icon: PackagePlus },
 ] as const
 

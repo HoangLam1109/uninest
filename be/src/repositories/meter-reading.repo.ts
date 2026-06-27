@@ -47,7 +47,7 @@ export const MeterReadingRepository = {
     const readings = await MeterReadingModel.find({
       contractId,
       meterType,
-      billingMonth: { $lt: billingMonth },
+      billingMonth: { $lte: billingMonth },
       deletedAt: null,
     })
       .sort({ billingMonth: -1, readingDate: -1, createdAt: -1 })
@@ -68,7 +68,7 @@ export const MeterReadingRepository = {
     const readings = await MeterReadingModel.find({
       roomId,
       meterType,
-      billingMonth: { $lt: billingMonth },
+      billingMonth: { $lte: billingMonth },
       deletedAt: null,
     })
       .sort({ billingMonth: -1, readingDate: -1, createdAt: -1 })

@@ -1,6 +1,7 @@
 import { PaymentRepository } from "../repositories/payment.repo.js";
 import { InvoiceRepository } from "../repositories/invoice.repo.js";
 import { BookingRepository } from "../repositories/booking.repo.js";
+import { LandlordBankInfoRepository } from "../repositories/landlord-bank-info.repo.js";
 import { ServicePackageRepository } from "../repositories/service-package.repo.js";
 import { ServiceSubscriptionRepository } from "../repositories/service-subscription.repo.js";
 import { SUBSCRIPTION_STATUS } from "../models/ServiceSubscription.model.js";
@@ -31,6 +32,7 @@ export class PaymentService {
     subscriptionPackageId?: string;
     returnUrl?: string;
     cancelUrl?: string;
+    payosKeys?: { clientId: string; apiKey: string; checksumKey: string };
   }) {
     const paymentData: any = {
       payerId: params.payerId,
@@ -57,13 +59,17 @@ export class PaymentService {
     }
 
     try {
-      const payosResult = await PayOSService.createPaymentLink({
+      const payosLinkParams: any = {
         paymentId: payment._id.toString(),
         amount: params.amount,
         description: params.description,
         returnUrl: params.returnUrl,
         cancelUrl: params.cancelUrl,
-      });
+      };
+      if (params.payosKeys) {
+        payosLinkParams.payosKeys = params.payosKeys;
+      }
+      const payosResult = await PayOSService.createPaymentLink(payosLinkParams);
 
       return {
         payment,
@@ -138,6 +144,36 @@ export class PaymentService {
     const landlordId =
       invoice.landlordId?._id?.toString() || invoice.landlordId.toString();
 
+    // Ngoài các payment của invoice hiện tại, còn cần dọn payment của
+    // các invoice cũ có cùng (bookingId, payerId) để tránh unique index conflict
+    const allBookingPayments = bookingId
+      ? await PaymentRepository.findByBookingAndPayer(bookingId, payerId)
+      : [];
+
+    for (const p of [...existingPayments, ...allBookingPayments]) {
+      if (p.status === PAYMENT_STATUS.PENDING) {
+        const orderCode = p.transactionRef?.toString();
+        if (orderCode) {
+          try { await PayOSService.cancelPayment(orderCode); } catch { /* ignore */ }
+        }
+        await PaymentRepository.update(p._id.toString(), {
+          status: PAYMENT_STATUS.CANCELLED,
+          bookingId: null,
+        });
+      } else if (p.status === PAYMENT_STATUS.CANCELLED || p.status === PAYMENT_STATUS.FAILED) {
+        await PaymentRepository.update(p._id.toString(), { bookingId: null });
+      }
+    }
+
+    // Xác minh landlord đã có bank info (số TK) để auto-disburse
+    const landlordBankInfo = await LandlordBankInfoRepository.findVerifiedByUserId(landlordId);
+    if (!landlordBankInfo) {
+      throw new Error(
+        "Chủ trọ chưa cung cấp thông tin tài khoản ngân hàng. Vui lòng liên hệ chủ trọ để cập nhật.",
+      );
+    }
+
+    // Luôn dùng system PayOS account (không còn landlord-specific keys)
     return this.processPayment({
       payerId,
       receiverId: landlordId,
@@ -176,6 +212,20 @@ export class PaymentService {
       existingDeposit.status === PAYMENT_STATUS.COMPLETED
     ) {
       throw new Error("Deposit has already been paid for this booking");
+    }
+
+    // Cancel any existing non-completed deposit payment & null bookingId to avoid unique index conflict
+    if (existingDeposit && existingDeposit.status !== PAYMENT_STATUS.COMPLETED) {
+      const orderCode = existingDeposit.transactionRef?.toString();
+      if (orderCode) {
+        try {
+          await PayOSService.cancelPayment(orderCode);
+        } catch { /* already cancelled */ }
+      }
+      await PaymentRepository.update(existingDeposit._id.toString(), {
+        status: PAYMENT_STATUS.CANCELLED,
+        bookingId: null,
+      });
     }
 
     const room = booking.roomId as any;

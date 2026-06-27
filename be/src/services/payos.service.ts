@@ -1,6 +1,7 @@
-import { payosClient, PAYOS_CONFIG } from "../config/payos.config.js";
+import { payosClient, createPayOSClient, PAYOS_CONFIG } from "../config/payos.config.js";
 import { PaymentRepository } from "../repositories/payment.repo.js";
 import { InvoiceRepository } from "../repositories/invoice.repo.js";
+import { BankAccountRepository } from "../repositories/bank-account.repo.js";
 import { ServiceSubscriptionRepository } from "../repositories/service-subscription.repo.js";
 import { ServicePackageRepository } from "../repositories/service-package.repo.js";
 import { userRepository } from "../repositories/index.js";
@@ -10,6 +11,8 @@ import { INVOICE_STATUS } from "../models/Invoice.model.js";
 import { USER_ROLES } from "../constants/role.constant.js";
 import { applyRoleUpgradeFromPayment } from "./role-upgrade.service.js";
 import { isPaidUpgradeRole } from "./role-upgrade.service.js";
+import { DisbursementService } from "./disbursement.service.js";
+import { AdminTransactionService } from "./admin-transaction.service.js";
 
 function extractSubscriptionPackageId(note?: string | null) {
   if (!note) return null;
@@ -69,10 +72,23 @@ export class PayOSService {
     description: string;
     returnUrl: string | undefined;
     cancelUrl: string | undefined;
+    /** Optional: landlord's PayOS keys for direct settlement */
+    payosKeys?: {
+      clientId: string;
+      apiKey: string;
+      checksumKey: string;
+    };
   }) {
-    const orderCode = Number(String(Date.now()).slice(-8));
+    const orderCode = Number(
+      String(Date.now()).slice(-6) + String(Math.floor(Math.random() * 100)).padStart(2, "0")
+    );
 
-    const paymentLink = await payosClient.paymentRequests.create({
+    // Use landlord-specific client if keys provided, otherwise default system client
+    const client = params.payosKeys
+      ? createPayOSClient(params.payosKeys)
+      : payosClient;
+
+    const paymentLink = await client.paymentRequests.create({
       orderCode,
       amount: params.amount,
       description: params.description.slice(0, 25),
@@ -123,6 +139,13 @@ export class PayOSService {
         },
       });
 
+      // Ghi transaction log
+      try {
+        await AdminTransactionService.logPayment(updated || payment);
+      } catch (logErr: any) {
+        console.error(`[PayOS] Transaction log failed: ${logErr.message}`);
+      }
+
       await this.executePostPayment(payment);
       return updated;
     } else if (pinfo.status === "CANCELLED") {
@@ -135,15 +158,28 @@ export class PayOSService {
         },
       });
 
+      try {
+        await AdminTransactionService.logPayment(updated || payment);
+      } catch (logErr: any) {
+        console.error(`[PayOS] Transaction log failed: ${logErr.message}`);
+      }
+
       return updated;
     } else {
-      await PaymentRepository.update(payment._id.toString(), {
+      const updated = await PaymentRepository.update(payment._id.toString(), {
         status: PAYMENT_STATUS.FAILED,
         gatewayResponse: {
           ...(payment.gatewayResponse || {}),
           payosStatus: pinfo.status,
         },
       });
+
+      try {
+        await AdminTransactionService.logPayment(updated || payment);
+      } catch (logErr: any) {
+        console.error(`[PayOS] Transaction log failed: ${logErr.message}`);
+      }
+
       throw new Error(`Payment failed with PayOS status: ${pinfo.status}`);
     }
   }
@@ -189,6 +225,13 @@ export class PayOSService {
     }
 
     await applyRoleUpgradeFromPayment(payment);
+
+    // Auto-disburse: chuyển tiền tự động cho landlord qua PayOS Payout API
+    try {
+      await DisbursementService.autoDisburse(payment);
+    } catch (err: any) {
+      console.error(`[PayOS] Auto-disburse failed: ${err.message}`);
+    }
   }
 
   static async syncPaymentStatus(orderCode: string) {
@@ -197,7 +240,10 @@ export class PayOSService {
       throw new Error(`Payment not found for orderCode: ${orderCode}`);
     }
 
-    const pinfo = await payosClient.paymentRequests.get(Number(orderCode));
+    // Determine which PayOS client to use (landlord-specific or system default)
+    const client = await this.resolvePayOSClient(payment);
+
+    const pinfo = await client.paymentRequests.get(Number(orderCode));
 
     if (payment.status === PAYMENT_STATUS.COMPLETED) {
       return { payment, payosStatus: pinfo.status };
@@ -248,7 +294,9 @@ export class PayOSService {
       return { payment, payosStatus: "PAID" };
     }
 
-    const pinfo = await payosClient.paymentRequests.get(Number(orderCode));
+    const client = await this.resolvePayOSClient(payment);
+
+    const pinfo = await client.paymentRequests.get(Number(orderCode));
     if (pinfo.status === "PAID") {
       const updated = await PaymentRepository.update(payment._id.toString(), {
         status: PAYMENT_STATUS.COMPLETED,
@@ -265,7 +313,7 @@ export class PayOSService {
     }
 
     if (pinfo.status !== "CANCELLED") {
-      await payosClient.paymentRequests.cancel(Number(orderCode));
+      await client.paymentRequests.cancel(Number(orderCode));
     }
 
     const updated = await PaymentRepository.update(payment._id.toString(), {
@@ -278,5 +326,29 @@ export class PayOSService {
     });
 
     return { payment: updated || payment, payosStatus: "CANCELLED" };
+  }
+
+  /**
+   * Resolve which PayOS client to use for a payment.
+   * If the payment's receiver (landlord) has verified PayOS keys, use those.
+   * Otherwise fall back to the system default client.
+   */
+  private static async resolvePayOSClient(payment: any) {
+    try {
+      const receiverId = payment.receiverId?.toString?.() || payment.receiverId;
+      if (receiverId) {
+        const bankAccount = await BankAccountRepository.findVerifiedByUserId(receiverId);
+        if (bankAccount?.payosClientId && bankAccount?.payosApiKey && bankAccount?.payosChecksumKey) {
+          return createPayOSClient({
+            clientId: bankAccount.payosClientId,
+            apiKey: bankAccount.payosApiKey,
+            checksumKey: bankAccount.payosChecksumKey,
+          });
+        }
+      }
+    } catch {
+      // Fall through to system client
+    }
+    return payosClient;
   }
 }

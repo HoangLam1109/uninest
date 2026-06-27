@@ -22,6 +22,26 @@ export type UploadAvatarResponse = {
   }
 }
 
+export type ProfileResponse = {
+  success: boolean
+  message?: string
+  data: {
+    _id: string
+    email: string
+    fullName: string
+    phone: string
+    avatarUrl?: string
+    role: string
+    isActive?: boolean
+    createdAt?: string
+  }
+}
+
+export type UpdateProfilePayload = {
+  fullName?: string
+  phone?: string
+}
+
 export const userApi = {
   list: () => api.get<UserListResponse>('/users/getAll'),
 
@@ -37,6 +57,12 @@ export const userApi = {
     api.put<UserResponse>(`/users/update/${id}`, payload),
 
   delete: (id: string) => api.delete<UserResponse>(`/users/delete/${id}`),
+
+  getProfile: () =>
+    api.get<ProfileResponse>('/users/profile'),
+
+  updateProfile: (payload: UpdateProfilePayload) =>
+    api.put<ProfileResponse>('/users/profile', payload),
 
   uploadAvatar: (file: File) => {
     const formData = new FormData()

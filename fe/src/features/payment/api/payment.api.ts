@@ -2,6 +2,7 @@ import { api } from '@/lib/axios'
 import type {
   AdminPaymentStatsResponse,
   AdminPaymentsResponse,
+  InvoicePaymentResponse,
   RoleUpgradePayload,
   RoleUpgradePaymentResponse,
   PayOSPaymentStatusResponse,
@@ -11,6 +12,12 @@ export const paymentApi = {
   createRoleUpgradePayment: (payload: RoleUpgradePayload) =>
     api.post<RoleUpgradePaymentResponse>('/payments/upgrade-role', {
       ...payload,
+      method: 'PAYOS',
+    }),
+
+  /** Tenant: Pay an invoice via PayOS */
+  payInvoice: (invoiceId: string) =>
+    api.post<InvoicePaymentResponse>(`/payments/pay-invoice/${invoiceId}`, {
       method: 'PAYOS',
     }),
 
