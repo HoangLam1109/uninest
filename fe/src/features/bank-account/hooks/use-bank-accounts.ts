@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { getApiErrorMessage } from '@/lib/api-error'
-import { bankAccountApi } from '../api/bank-account.api'
-import type { CreateBankAccountPayload, UpdateBankAccountPayload } from '../types/bank-account.type'
+import { bankAccountApi, bankInfoApi } from '../api/bank-account.api'
+import type { CreateBankAccountPayload, UpdateBankAccountPayload, CreateBankInfoPayload, UpdateBankInfoPayload } from '../types/bank-account.type'
 
 export const bankAccountKeys = {
   all: ['bank-accounts'] as const,
@@ -144,6 +144,17 @@ export function useRejectBankAccount() {
     },
   })
 }
+// ─── Bank Info hooks (mới) ───
+export const bankInfoKeys = { all: ['bank-info'] as const, my: () => [...bankInfoKeys.all, 'my'] as const, myVerified: () => [...bankInfoKeys.all, 'my-verified'] as const, admin: (s?: string) => [...bankInfoKeys.all, 'admin', s ?? 'all'] as const, banks: () => [...bankInfoKeys.all, 'banks'] as const }
+export function useGetBankList() { return useQuery({ queryKey: bankInfoKeys.banks(), queryFn: async () => { const { data } = await bankInfoApi.getBankList(); return data.data }, staleTime: 1000 * 60 * 60 }) }
+export function useGetMyBankInfos() { return useQuery({ queryKey: bankInfoKeys.my(), queryFn: async () => { const { data } = await bankInfoApi.getMy(); return data.data } }) }
+export function useGetMyVerifiedBankInfo() { return useQuery({ queryKey: bankInfoKeys.myVerified(), queryFn: async () => { const { data } = await bankInfoApi.getMyVerified(); return data.data } }) }
+export function useCreateBankInfo() { const qc = useQueryClient(); return useMutation({ mutationFn: async (p: CreateBankInfoPayload) => { const { data } = await bankInfoApi.create(p); return data.data }, onSuccess: () => { qc.invalidateQueries({ queryKey: bankInfoKeys.all }); toast.success('Đã lưu thông tin tài khoản') }, onError: (e) => toast.error('Lỗi', { description: getApiErrorMessage(e, 'Thử lại sau.') }) }) }
+export function useUpdateBankInfo() { const qc = useQueryClient(); return useMutation({ mutationFn: async ({ id, payload }: { id: string; payload: UpdateBankInfoPayload }) => { const { data } = await bankInfoApi.update(id, payload); return data.data }, onSuccess: () => { qc.invalidateQueries({ queryKey: bankInfoKeys.all }); toast.success('Đã cập nhật') }, onError: (e) => toast.error('Lỗi', { description: getApiErrorMessage(e, 'Thử lại sau.') }) }) }
+export function useVerifyBankInfo() { const qc = useQueryClient(); return useMutation({ mutationFn: async (id: string) => { const { data } = await bankInfoApi.adminVerify(id); return data.data }, onSuccess: () => { qc.invalidateQueries({ queryKey: bankInfoKeys.all }); toast.success('Đã duyệt') }, onError: (e) => toast.error('Lỗi', { description: getApiErrorMessage(e, 'Thử lại sau.') }) }) }
+export function useRejectBankInfo() { const qc = useQueryClient(); return useMutation({ mutationFn: async (id: string) => { const { data } = await bankInfoApi.adminReject(id); return data.data }, onSuccess: () => { qc.invalidateQueries({ queryKey: bankInfoKeys.all }); toast.success('Đã từ chối') }, onError: (e) => toast.error('Lỗi', { description: getApiErrorMessage(e, 'Thử lại sau.') }) }) }
+export function useGetAdminBankInfos(status?: string) { return useQuery({ queryKey: bankInfoKeys.admin(status), queryFn: async () => { const { data } = await bankInfoApi.adminList(status); return data.data } }) }
+
 /** Test PayOS connection with provided keys */
 export function useTestPayOSConnection() {
   return useMutation({

@@ -12,7 +12,7 @@ import {
 } from '@/features/booking/lib/booking-display'
 import { utilityInvoiceFormSchema } from '../schemas/invoice.schema'
 import { useGetPreviousReading } from '../hooks/use-invoices'
-import { useGetMyVerifiedBankAccount } from '@/features/bank-account/hooks/use-bank-accounts'
+import { useGetMyVerifiedBankInfo } from '@/features/bank-account/hooks/use-bank-accounts'
 
 type InvoiceFormState = {
   bookingId: string
@@ -128,10 +128,10 @@ export function InvoiceFormModal({
   const previousReadingQuery = useGetPreviousReading(bookingId || null, billingMonth || undefined)
   const previousReading = previousReadingQuery.data
 
-  // Check if landlord has verified PayOS account
-  const bankAccountQuery = useGetMyVerifiedBankAccount()
-  const hasBankAccount = !!bankAccountQuery.data
-  const bankAccountLoading = bankAccountQuery.isLoading
+  // Check if landlord has verified bank info
+  const bankInfoQuery = useGetMyVerifiedBankInfo()
+  const hasBankInfo = !!bankInfoQuery.data
+  const bankInfoLoading = bankInfoQuery.isLoading
 
   // Auto-fill old indices & rates from previous invoice
   useEffect(() => {
@@ -407,12 +407,12 @@ export function InvoiceFormModal({
           </div>
         </div>
 
-        {!bankAccountLoading && !hasBankAccount ? (
+        {!bankInfoLoading && !hasBankInfo ? (
           <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             <AlertCircle className="size-4 shrink-0 mt-0.5" />
             <span>
-              Bạn chưa có tài khoản PayOS được duyệt.{' '}
-              <strong>Vào Hồ sơ để thêm tài khoản PayOS</strong> trước khi tạo hóa đơn.
+              Bạn chưa có thông tin tài khoản ngân hàng.{' '}
+              <strong>Vào Hồ sơ để thêm tài khoản</strong> trước khi tạo hóa đơn.
             </span>
           </div>
         ) : null}
@@ -421,7 +421,7 @@ export function InvoiceFormModal({
           <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
             Hủy
           </Button>
-          <Button type="submit" disabled={isPending || !bookingId || !hasBankAccount}>
+          <Button type="submit" disabled={isPending || !bookingId || !hasBankInfo}>
             {isPending ? 'Đang tạo...' : 'Tạo hóa đơn nháp'}
           </Button>
         </div>

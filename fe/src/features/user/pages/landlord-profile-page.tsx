@@ -1,219 +1,58 @@
 import { useState } from 'react'
-import {
-  Building2,
-  Camera,
-  Loader2,
-  Mail,
-  Phone,
-  Save,
-  User,
-  X,
-  Zap,
-} from 'lucide-react'
+import { Building2, Camera, Loader2, Mail, Phone, Save, User, X, CheckCircle2, Clock3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth.store'
 import { useGetProfile, useUpdateProfile, useUploadAvatar } from '@/features/user/hooks/use-users'
-import {
-  useCreateBankAccount,
-  useGetMyBankAccounts,
-  useTestPayOSConnection,
-  useUpdateBankAccount,
-} from '@/features/bank-account/hooks/use-bank-accounts'
-import type { BankAccount, BankAccountStatus } from '@/features/bank-account/types/bank-account.type'
+import { useGetBankList, useGetMyBankInfos, useCreateBankInfo, useUpdateBankInfo } from '@/features/bank-account/hooks/use-bank-accounts'
+import type { LandlordBankInfo, BankInfoStatus, BankOption } from '@/features/bank-account/types/bank-account.type'
+
+const bankInfoLabels: Record<BankInfoStatus, string> = { PENDING_VERIFICATION: 'Chờ duyệt', VERIFIED: 'Đã xác nhận', REJECTED: 'Đã từ chối' }
+const bankInfoStyles: Record<BankInfoStatus, string> = { PENDING_VERIFICATION: 'bg-amber-50 text-amber-700 border-amber-200', VERIFIED: 'bg-emerald-50 text-emerald-700 border-emerald-200', REJECTED: 'bg-red-50 text-red-600 border-red-200' }
+
+function BankInfoSection() {
+  const { data: bankInfos, isLoading } = useGetMyBankInfos()
+  const { data: bankList } = useGetBankList()
+  const createM = useCreateBankInfo()
+  const updateM = useUpdateBankInfo()
+  const [show, setShow] = useState(false); const [editId, setEditId] = useState<string | null>(null)
+  const [bin, setBin] = useState(''); const [bName, setBName] = useState(''); const [accNum, setAccNum] = useState('')
+  const [accHolder, setAccHolder] = useState(''); const [br, setBr] = useState('')
+  const hasV = bankInfos?.some((a) => a.status === 'VERIFIED')
+  const reset = () => { setBin(''); setBName(''); setAccNum(''); setAccHolder(''); setBr(''); setEditId(null) }
+  const handleSelect = (b: string) => { setBin(b); const bk = bankList?.find((x: BankOption) => x.bin === b); if (bk) setBName(bk.shortName) }
+
+  if (isLoading) return <div className="flex items-center justify-center py-8"><Loader2 className="size-6 animate-spin text-primary" /></div>
+
+  return <div className="space-y-4">
+    <div className="flex items-center justify-between"><h3 className="text-lg font-bold text-slate-800">Tài khoản ngân hàng</h3>{hasV || show ? null : <Button size="sm" onClick={() => { reset(); setShow(true) }}><Building2 className="size-4" />Thêm</Button>}</div>
+    {bankInfos?.map((info) => (
+      <div key={info._id} className={cn('rounded-xl border p-4', bankInfoStyles[info.status])}>
+        <div className="flex items-start justify-between">
+          <div><p className="font-bold">{info.bankName}</p><p className="mt-0.5 text-sm">STK: {info.accountNumber}</p><p className="text-sm opacity-70">Chủ TK: {info.accountHolder}</p>{info.branch && <p className="text-sm opacity-70">CN: {info.branch}</p>}</div>
+          <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-bold', info.status === 'PENDING_VERIFICATION' ? 'bg-amber-100 text-amber-700' : info.status === 'VERIFIED' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600')}>{info.status === 'PENDING_VERIFICATION' ? <Clock3 className="mr-1 inline size-3" /> : info.status === 'VERIFIED' ? <CheckCircle2 className="mr-1 inline size-3" /> : null}{bankInfoLabels[info.status]}</span>
+        </div>
+        {info.status === 'REJECTED' && !show && <Button variant="outline" size="sm" className="mt-3" onClick={() => { setBin(info.bankBin); setBName(info.bankName); setAccNum(info.accountNumber); setAccHolder(info.accountHolder); setBr(info.branch ?? ''); setEditId(info._id); setShow(true) }}>Cập nhật lại</Button>}
+      </div>
+    ))}
+    {show && <form onSubmit={async (e) => { e.preventDefault(); if (!bin || !accNum || !accHolder) return; editId ? await updateM.mutateAsync({ id: editId, payload: { bankBin: bin, bankName: bName, accountNumber: accNum, accountHolder: accHolder, branch: br } }) : await createM.mutateAsync({ bankBin: bin, bankName: bName, accountNumber: accNum, accountHolder: accHolder, branch: br }); reset(); setShow(false) }} className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <div className="flex items-center justify-between"><h4 className="font-bold text-slate-700">{editId ? 'Cập nhật' : 'Thêm tài khoản ngân hàng'}</h4><button type="button" onClick={() => { reset(); setShow(false) }} className="flex size-6 items-center justify-center rounded-md text-slate-400 hover:bg-slate-200"><X className="size-4" /></button></div>
+      <div><label className="mb-1 block text-sm font-medium text-slate-600">Ngân hàng</label><select value={bin} onChange={(e) => handleSelect(e.target.value)} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary" required><option value="">-- Chọn ngân hàng --</option>{bankList?.map((b: BankOption) => <option key={b.bin} value={b.bin}>{b.shortName} ({b.bin})</option>)}</select></div>
+      <Input placeholder="Số tài khoản" value={accNum} onChange={(e) => setAccNum(e.target.value)} required />
+      <Input placeholder="Tên chủ tài khoản" value={accHolder} onChange={(e) => setAccHolder(e.target.value)} required />
+      <Input placeholder="Chi nhánh (không bắt buộc)" value={br} onChange={(e) => setBr(e.target.value)} />
+      <Button type="submit" className="w-full" disabled={createM.isPending || updateM.isPending}>{(createM.isPending || updateM.isPending) ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}{editId ? 'Cập nhật' : 'Lưu'}</Button>
+      <p className="text-xs text-slate-400">Hệ thống sẽ tự động chuyển tiền về tài khoản này sau khi tenant thanh toán.</p>
+    </form>}
+    {!bankInfos?.length && !show && <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center"><Building2 className="mx-auto size-8 text-slate-300" /><p className="mt-2 text-sm font-medium text-slate-500">Chưa có tài khoản ngân hàng</p><p className="mt-1 text-xs text-slate-400">Thêm tài khoản để nhận tiền tự động</p></div>}
+  </div>
+}
 
 // ─── Bank Account Status Badge ──────────────────────────────────────────
 const bankStatusLabels: Record<BankAccountStatus, string> = {
-  PENDING_VERIFICATION: 'Đang chờ duyệt',
-  VERIFIED: 'Đã duyệt',
-  REJECTED: 'Đã từ chối',
-}
-
-const bankStatusStyles: Record<BankAccountStatus, string> = {
-  PENDING_VERIFICATION: 'bg-amber-50 text-amber-700 border-amber-200',
-  VERIFIED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   REJECTED: 'bg-red-50 text-red-600 border-red-200',
-}
-
-// ─── Bank Account Section ────────────────────────────────────────────────
-function BankAccountSection() {
-  const { data: accounts, isLoading } = useGetMyBankAccounts()
-  const createMutation = useCreateBankAccount()
-  const updateMutation = useUpdateBankAccount()
-  const testConnection = useTestPayOSConnection()
-
-  const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [payosClientId, setPayosClientId] = useState('')
-  const [payosApiKey, setPayosApiKey] = useState('')
-  const [payosChecksumKey, setPayosChecksumKey] = useState('')
-
-  const hasVerified = accounts?.some((a) => a.status === 'VERIFIED')
-  const hasPending = accounts?.some((a) => a.status === 'PENDING_VERIFICATION')
-  const canAdd = !hasVerified && !hasPending
-
-  const resetForm = () => {
-    setPayosClientId('')
-    setPayosApiKey('')
-    setPayosChecksumKey('')
-    setEditingId(null)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!payosClientId || !payosApiKey || !payosChecksumKey) return
-
-    if (editingId) {
-      await updateMutation.mutateAsync({
-        id: editingId,
-        payload: { payosClientId, payosApiKey, payosChecksumKey },
-      })
-    } else {
-      await createMutation.mutateAsync({
-        payosClientId, payosApiKey, payosChecksumKey,
-      })
-    }
-    resetForm()
-    setShowForm(false)
-  }
-
-  const startEdit = (account: BankAccount) => {
-    setPayosClientId(account.payosClientId ?? '')
-    setPayosApiKey(account.payosApiKey ?? '')
-    setPayosChecksumKey(account.payosChecksumKey ?? '')
-    setEditingId(account._id)
-    setShowForm(true)
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="size-6 animate-spin text-primary" />
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-slate-800">Tài khoản ngân hàng</h3>
-        {canAdd && !showForm && (
-          <Button size="sm" onClick={() => { resetForm(); setShowForm(true) }}>
-            <Building2 className="size-4" />
-            Thêm
-          </Button>
-        )}
-      </div>
-
-      {/* Existing bank accounts */}
-      {accounts?.map((account) => (
-        <div
-          key={account._id}
-          className={cn('rounded-xl border p-4', bankStatusStyles[account.status])}
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="font-bold">PayOS Merchant</p>
-              <p className="mt-0.5 text-sm">Client ID: {(account.payosClientId ?? '').slice(0, 16)}...</p>
-              <p className="text-sm opacity-70">API Key: ••••••••••••••••</p>
-            </div>
-            <span className={cn(
-              'rounded-full px-2.5 py-0.5 text-xs font-bold',
-              account.status === 'PENDING_VERIFICATION' && 'bg-amber-100 text-amber-700',
-              account.status === 'VERIFIED' && 'bg-emerald-100 text-emerald-700',
-              account.status === 'REJECTED' && 'bg-red-100 text-red-600',
-            )}>
-              {bankStatusLabels[account.status]}
-            </span>
-          </div>
-
-          {account.status === 'REJECTED' && !showForm && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-3"
-              onClick={() => startEdit(account)}
-            >
-              Cập nhật lại
-            </Button>
-          )}
-        </div>
-      ))}
-
-      {/* Add / Edit Form */}
-      {showForm && (
-        <form onSubmit={handleSubmit} className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <div className="flex items-center justify-between">
-            <h4 className="font-bold text-slate-700">
-              {editingId ? 'Cập nhật tài khoản' : 'Thêm tài khoản mới'}
-            </h4>
-            <button
-              type="button"
-              onClick={() => { resetForm(); setShowForm(false) }}
-              className="flex size-6 items-center justify-center rounded-md text-slate-400 hover:bg-slate-200"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
-
-          <Input
-            placeholder="PayOS Client ID"
-            value={payosClientId}
-            onChange={(e) => setPayosClientId(e.target.value)}
-            required
-          />
-          <Input
-            placeholder="PayOS API Key"
-            value={payosApiKey}
-            onChange={(e) => setPayosApiKey(e.target.value)}
-            required
-          />
-          <Input
-            placeholder="PayOS Checksum Key"
-            value={payosChecksumKey}
-            onChange={(e) => setPayosChecksumKey(e.target.value)}
-            required
-          />
-
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={createMutation.isPending || updateMutation.isPending}
-          >
-            {(createMutation.isPending || updateMutation.isPending) ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Save className="size-4" />
-            )}
-            {editingId ? 'Cập nhật' : 'Gửi duyệt'}
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            disabled={!payosClientId || !payosApiKey || !payosChecksumKey || testConnection.isPending}
-            onClick={() =>
-              testConnection.mutate({ payosClientId, payosApiKey, payosChecksumKey })
-            }
-          >
-            {testConnection.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Zap className="size-4" />
-            )}
-            Kiểm tra kết nối
-          </Button>
-
-          <p className="text-xs text-slate-400">
-            Tài khoản sẽ được admin kiểm duyệt trước khi hiển thị trên hóa đơn.
-          </p>
-        </form>
-      )}
-    </div>
-  )
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────
@@ -367,7 +206,7 @@ export function LandlordProfilePage() {
 
       {/* Bank Account Section */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6">
-        <BankAccountSection />
+        <BankInfoSection />
       </div>
     </div>
   )

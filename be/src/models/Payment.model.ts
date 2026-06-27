@@ -115,7 +115,7 @@ const PaymentSchema = new Schema<IPayment>(
 );
 
 PaymentSchema.index(
-  { bookingId: 1, payerId: 1 },
+  { bookingId: 1, payerId: 1, type: 1, invoiceId: 1 },
   {
     unique: true,
     sparse: true,

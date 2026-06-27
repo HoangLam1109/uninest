@@ -22,6 +22,8 @@ export interface IInvoice extends Document {
   electricityAmount?: number;
   waterAmount?: number;
   additionalFees?: number;
+  /** Phí giải ngân tự động (PayOS Payout) - landlord chịu */
+  payoutFee?: number;
   totalAmount: number;
   status: INVOICE_STATUS;
   notes?: string;
@@ -89,6 +91,11 @@ const InvoiceSchema = new Schema<IInvoice>(
       min: 0,
     },
     additionalFees: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    payoutFee: {
       type: Number,
       default: 0,
       min: 0,

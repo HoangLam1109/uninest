@@ -1,10 +1,5 @@
 import { api } from '@/lib/axios'
-import type {
-  BankAccountListResponse,
-  BankAccountResponse,
-  CreateBankAccountPayload,
-  UpdateBankAccountPayload,
-} from '../types/bank-account.type'
+import type { BankAccountListResponse, BankAccountResponse, CreateBankAccountPayload, UpdateBankAccountPayload, CreateBankInfoPayload, UpdateBankInfoPayload, LandlordBankInfo, BankOption } from '../types/bank-account.type'
 
 export const bankAccountApi = {
   /** Landlord: Tạo tài khoản PayOS */
@@ -47,4 +42,17 @@ export const bankAccountApi = {
       '/bank-accounts/test-payos',
       payload,
     ),
+}
+
+// ─── Landlord Bank Info (mới) ───
+export const bankInfoApi = {
+  getBankList: () => api.get<{ success: boolean; data: BankOption[] }>('/bank-info/banks'),
+  create: (payload: CreateBankInfoPayload) => api.post<{ success: boolean; data: LandlordBankInfo }>('/bank-info', payload),
+  getMy: () => api.get<{ success: boolean; data: LandlordBankInfo[] }>('/bank-info/my'),
+  getMyVerified: () => api.get<{ success: boolean; data: LandlordBankInfo }>('/bank-info/my/verified'),
+  update: (id: string, payload: UpdateBankInfoPayload) => api.put<{ success: boolean; data: LandlordBankInfo }>(`/bank-info/${id}`, payload),
+  adminList: (status?: string) => api.get<{ success: boolean; data: LandlordBankInfo[] }>('/bank-info/admin', { params: status ? { status } : undefined }),
+  adminVerify: (id: string) => api.patch<{ success: boolean; data: LandlordBankInfo }>(`/bank-info/admin/${id}/verify`),
+  adminReject: (id: string) => api.patch<{ success: boolean; data: LandlordBankInfo }>(`/bank-info/admin/${id}/reject`),
+  getByLandlord: (landlordId: string) => api.get<{ success: boolean; data: LandlordBankInfo }>(`/bank-info/landlord/${landlordId}`),
 }

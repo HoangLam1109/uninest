@@ -3,12 +3,13 @@ import { InvoiceRepository, InvoiceDetailRepository } from "../repositories/invo
 import { MeterReadingRepository } from "../repositories/meter-reading.repo.js";
 import { BookingRepository } from "../repositories/booking.repo.js";
 import { ContractRepository } from "../repositories/contract.repo.js";
-import { BankAccountRepository } from "../repositories/bank-account.repo.js";
+import { LandlordBankInfoRepository } from "../repositories/landlord-bank-info.repo.js";
 import { InvoiceModel, INVOICE_STATUS } from "../models/Invoice.model.js";
 import type { IInvoice } from "../models/Invoice.model.js";
 import { InvoiceDetailModel } from "../models/InvoiceDetail.model.js";
 import type { IInvoiceDetail } from "../models/InvoiceDetail.model.js";
 import { MeterReadingModel, METER_TYPE, READING_SOURCE } from "../models/MeterReading.model.js";
+import { PayOSPayoutService } from "./payos-payout.service.js";
 
 // ============================================================
 // Types
@@ -99,13 +100,12 @@ export const UtilityInvoiceService = {
       throw new UtilityInvoiceError("You do not own this booking", "FORBIDDEN", 403);
     }
 
-    // ----- Step 1.5: Verify landlord has verified PayOS account -----
-    const verifiedBankAccount = await BankAccountRepository.findVerifiedByUserId(landlordId);
-    if (!verifiedBankAccount) {
+    // ----- Step 1.5: Verify landlord has verified bank info -----
+    const verifiedBankInfo = await LandlordBankInfoRepository.findVerifiedByUserId(landlordId);
+    if (!verifiedBankInfo) {
       throw new UtilityInvoiceError(
-        "Bạn cần có tài khoản PayOS đã được duyệt trước khi tạo hóa đơn. Vui lòng vào Hồ sơ để thêm.",
-        "NO_BANK_ACCOUNT",
-        400
+        "Bạn cần thêm thông tin tài khoản ngân hàng trước khi tạo hóa đơn.",
+        "NO_BANK_INFO", 400
       );
     }
 
@@ -200,8 +200,11 @@ export const UtilityInvoiceService = {
     const electricityAmount = electricityUsage * electricityRate;
     const waterAmount = waterUsage * waterRate;
     const additionalFees = input.additionalFees || 0;
-    const totalAmount =
-      input.rentAmount + electricityAmount + waterAmount + additionalFees;
+    const subtotal = input.rentAmount + electricityAmount + waterAmount + additionalFees;
+
+    let payoutFee = 0;
+    try { payoutFee = await PayOSPayoutService.calculatePayoutFee(subtotal, verifiedBankInfo.bankBin); } catch { payoutFee = 3300; }
+    const totalAmount = subtotal + payoutFee;
 
     // ----- Step 8: Transaction -----
     const session = await mongoose.startSession();
@@ -219,6 +222,7 @@ export const UtilityInvoiceService = {
         electricityAmount,
         waterAmount,
         additionalFees,
+        payoutFee,
         totalAmount,
         notes: input.notes,
         status: INVOICE_STATUS.DRAFT,

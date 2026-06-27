@@ -183,6 +183,13 @@ export function TenantInvoiceDetailPage() {
                 value={formatPrice(invoice.additionalFees!)}
               />
             ) : null}
+            {(invoice.payoutFee ?? 0) > 0 ? (
+              <CostRow
+                icon={<Banknote className="size-4" />}
+                label="Phí giải ngân"
+                value={formatPrice(invoice.payoutFee!)}
+              />
+            ) : null}
           </div>
 
           <div className="mt-4 border-t border-slate-200 pt-4">

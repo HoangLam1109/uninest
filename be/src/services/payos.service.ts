@@ -11,6 +11,8 @@ import { INVOICE_STATUS } from "../models/Invoice.model.js";
 import { USER_ROLES } from "../constants/role.constant.js";
 import { applyRoleUpgradeFromPayment } from "./role-upgrade.service.js";
 import { isPaidUpgradeRole } from "./role-upgrade.service.js";
+import { DisbursementService } from "./disbursement.service.js";
+import { AdminTransactionService } from "./admin-transaction.service.js";
 
 function extractSubscriptionPackageId(note?: string | null) {
   if (!note) return null;
@@ -137,6 +139,13 @@ export class PayOSService {
         },
       });
 
+      // Ghi transaction log
+      try {
+        await AdminTransactionService.logPayment(updated || payment);
+      } catch (logErr: any) {
+        console.error(`[PayOS] Transaction log failed: ${logErr.message}`);
+      }
+
       await this.executePostPayment(payment);
       return updated;
     } else if (pinfo.status === "CANCELLED") {
@@ -149,15 +158,28 @@ export class PayOSService {
         },
       });
 
+      try {
+        await AdminTransactionService.logPayment(updated || payment);
+      } catch (logErr: any) {
+        console.error(`[PayOS] Transaction log failed: ${logErr.message}`);
+      }
+
       return updated;
     } else {
-      await PaymentRepository.update(payment._id.toString(), {
+      const updated = await PaymentRepository.update(payment._id.toString(), {
         status: PAYMENT_STATUS.FAILED,
         gatewayResponse: {
           ...(payment.gatewayResponse || {}),
           payosStatus: pinfo.status,
         },
       });
+
+      try {
+        await AdminTransactionService.logPayment(updated || payment);
+      } catch (logErr: any) {
+        console.error(`[PayOS] Transaction log failed: ${logErr.message}`);
+      }
+
       throw new Error(`Payment failed with PayOS status: ${pinfo.status}`);
     }
   }
@@ -203,6 +225,13 @@ export class PayOSService {
     }
 
     await applyRoleUpgradeFromPayment(payment);
+
+    // Auto-disburse: chuyển tiền tự động cho landlord qua PayOS Payout API
+    try {
+      await DisbursementService.autoDisburse(payment);
+    } catch (err: any) {
+      console.error(`[PayOS] Auto-disburse failed: ${err.message}`);
+    }
   }
 
   static async syncPaymentStatus(orderCode: string) {
