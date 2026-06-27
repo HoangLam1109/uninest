@@ -14,13 +14,12 @@ import {
   Eye,
   Ban,
   Wallet,
-  Building2,
 } from 'lucide-react'
 import { Pagination } from '@/components/common/pagination'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { adminTransactionApi, type TransactionLog, type TxDirection, type TxCategory, type TxStatus } from '../api/admin-transaction.api'
+import { adminTransactionApi, type TransactionLog, type TxCategory, type TxStatus } from '../api/admin-transaction.api'
 
 type TabFilter = 'ALL' | 'PACKAGE_UPGRADE' | 'INVOICE_RENT' | 'INVOICE_DISBURSEMENT' | 'FAILED'
 
@@ -40,12 +39,6 @@ const categoryLabels: Record<TxCategory, string> = {
   INVOICE_DISBURSEMENT: 'Chi giải ngân',
   DEPOSIT: 'Đặt cọc',
   OTHER: 'Khác',
-}
-
-const directionLabels: Record<TxDirection, string> = { IN: 'Thu', OUT: 'Chi' }
-const directionColors: Record<TxDirection, string> = {
-  IN: 'text-green-600 bg-green-500/10',
-  OUT: 'text-blue-600 bg-blue-500/10',
 }
 
 const statusLabels: Record<TxStatus, string> = {
@@ -384,7 +377,7 @@ export function AdminTransactionPage() {
       {pagination && pagination.totalPages > 1 && (
         <div className="flex justify-center">
           <Pagination
-            currentPage={pagination.page}
+            page={pagination.page}
             totalPages={pagination.totalPages}
             onPageChange={setPage}
           />

@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth.store'
 import { useGetProfile, useUpdateProfile, useUploadAvatar } from '@/features/user/hooks/use-users'
 import { useGetBankList, useGetMyBankInfos, useCreateBankInfo, useUpdateBankInfo } from '@/features/bank-account/hooks/use-bank-accounts'
-import type { LandlordBankInfo, BankInfoStatus, BankOption } from '@/features/bank-account/types/bank-account.type'
+import type { BankInfoStatus, BankOption } from '@/features/bank-account/types/bank-account.type'
 
 const bankInfoLabels: Record<BankInfoStatus, string> = { PENDING_VERIFICATION: 'Chờ duyệt', VERIFIED: 'Đã xác nhận', REJECTED: 'Đã từ chối' }
 const bankInfoStyles: Record<BankInfoStatus, string> = { PENDING_VERIFICATION: 'bg-amber-50 text-amber-700 border-amber-200', VERIFIED: 'bg-emerald-50 text-emerald-700 border-emerald-200', REJECTED: 'bg-red-50 text-red-600 border-red-200' }
@@ -48,11 +48,6 @@ function BankInfoSection() {
     </form>}
     {!bankInfos?.length && !show && <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center"><Building2 className="mx-auto size-8 text-slate-300" /><p className="mt-2 text-sm font-medium text-slate-500">Chưa có tài khoản ngân hàng</p><p className="mt-1 text-xs text-slate-400">Thêm tài khoản để nhận tiền tự động</p></div>}
   </div>
-}
-
-// ─── Bank Account Status Badge ──────────────────────────────────────────
-const bankStatusLabels: Record<BankAccountStatus, string> = {
-  REJECTED: 'bg-red-50 text-red-600 border-red-200',
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────
