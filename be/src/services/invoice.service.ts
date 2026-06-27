@@ -1,6 +1,8 @@
 import { InvoiceRepository, InvoiceDetailRepository } from "../repositories/invoice.repo.js";
 import { BookingRepository } from "../repositories/booking.repo.js";
+import { LandlordBankInfoRepository } from "../repositories/landlord-bank-info.repo.js";
 import { INVOICE_STATUS } from "../models/Invoice.model.js";
+import { PayOSPayoutService } from "./payos-payout.service.js";
 
 export const InvoiceService = {
   createInvoice: async (
@@ -27,6 +29,12 @@ export const InvoiceService = {
       throw new Error("You do not own this booking");
     }
 
+    // Verify landlord has verified bank info (for auto-disburse)
+    const verifiedBankInfo = await LandlordBankInfoRepository.findVerifiedByUserId(landlordId);
+    if (!verifiedBankInfo) {
+      throw new Error("Bạn cần thêm thông tin tài khoản ngân hàng trước khi tạo hóa đơn.");
+    }
+
     // Check if invoice already exists for this month
     const existingInvoice = await InvoiceRepository.findByBookingAndMonth(
       bookingId,
@@ -42,8 +50,11 @@ export const InvoiceService = {
     const electricityAmount = invoiceData.electricityAmount || 0;
     const waterAmount = invoiceData.waterAmount || 0;
     const additionalFees = invoiceData.additionalFees || 0;
-    const totalAmount =
-      invoiceData.rentAmount + electricityAmount + waterAmount + additionalFees;
+    const subtotal = invoiceData.rentAmount + electricityAmount + waterAmount + additionalFees;
+
+    let payoutFee = 0;
+    try { payoutFee = await PayOSPayoutService.calculatePayoutFee(subtotal, verifiedBankInfo.bankBin); } catch { payoutFee = 3300; }
+    const totalAmount = subtotal + payoutFee;
 
     // Create invoice
     const invoice = await InvoiceRepository.create({
@@ -56,6 +67,7 @@ export const InvoiceService = {
       electricityAmount,
       waterAmount,
       additionalFees,
+      payoutFee,
       totalAmount,
       notes: invoiceData.notes,
       status: INVOICE_STATUS.DRAFT,
@@ -140,21 +152,26 @@ export const InvoiceService = {
 
     // Recalculate total if amounts changed
     let newTotal = invoice.totalAmount;
+    let payoutFee = invoice.payoutFee || 0;
     if (
       updateData.rentAmount ||
-      updateData.electricityAmount ||
-      updateData.waterAmount ||
-      updateData.additionalFees
+      updateData.electricityAmount !== undefined ||
+      updateData.waterAmount !== undefined ||
+      updateData.additionalFees !== undefined
     ) {
       const rent = updateData.rentAmount || invoice.rentAmount;
-      const electricity = updateData.electricityAmount || invoice.electricityAmount || 0;
-      const water = updateData.waterAmount || invoice.waterAmount || 0;
-      const fees = updateData.additionalFees || invoice.additionalFees || 0;
-      newTotal = rent + electricity + water + fees;
+      const electricity = updateData.electricityAmount !== undefined ? updateData.electricityAmount : invoice.electricityAmount || 0;
+      const water = updateData.waterAmount !== undefined ? updateData.waterAmount : invoice.waterAmount || 0;
+      const fees = updateData.additionalFees !== undefined ? updateData.additionalFees : invoice.additionalFees || 0;
+      const subtotal = rent + electricity + water + fees;
+      const bankInfo = await LandlordBankInfoRepository.findVerifiedByUserId(landlordId);
+      if (bankInfo) { try { payoutFee = await PayOSPayoutService.calculatePayoutFee(subtotal, bankInfo.bankBin); } catch { payoutFee = 3300; } }
+      newTotal = subtotal + payoutFee;
     }
 
     const updatePayload = {
       ...updateData,
+      payoutFee,
       totalAmount: newTotal,
     };
 

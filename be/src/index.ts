@@ -12,6 +12,9 @@ import bookingRouter from "./routes/booking.route.js";
 import contractRouter from "./routes/contract.route.js";
 import identityRouter from "./routes/identity.route.js";
 import invoiceRouter from "./routes/invoice.route.js";
+import bankAccountRouter from "./routes/bank-account.route.js";
+import landlordBankInfoRouter from "./routes/landlord-bank-info.route.js";
+import disbursementRouter from "./routes/disbursement.route.js";
 import meterReadingRouter from "./routes/meter-reading.route.js";
 import reviewRouter from "./routes/review.route.js";
 import chatRouter from "./routes/chat.route.js";
@@ -21,6 +24,7 @@ import paymentRouter from "./routes/payment.route.js";
 import servicePackageRouter from "./routes/service-package.route.js";
 import serviceSubscriptionRouter from "./routes/service-subscription.route.js";
 import payosRouter from "./routes/payos.route.js";
+import adminTransactionRouter from "./routes/admin-transaction.route.js";
 import connectDB from "./config/database.config.js";
 import {
   allowedFrontendOrigins,
@@ -61,6 +65,9 @@ app.use("/api/bookings", bookingRouter);
 app.use("/api/contracts", contractRouter);
 app.use("/api/identities", identityRouter);
 app.use("/api/invoices", invoiceRouter);
+app.use("/api/bank-accounts", bankAccountRouter);
+app.use("/api/bank-info", landlordBankInfoRouter);
+app.use("/api/disbursements", disbursementRouter);
 app.use("/api/meter-readings", meterReadingRouter);
 app.use("/api/reviews", reviewRouter);
 app.use("/api/chats", chatRouter);
@@ -70,6 +77,7 @@ app.use("/api/payments", paymentRouter);
 app.use("/api/service-packages", servicePackageRouter);
 app.use("/api/service-subscriptions", serviceSubscriptionRouter);
 app.use("/api/payos", payosRouter);
+app.use("/api/admin/transactions", adminTransactionRouter);
 
 setupSwagger(app);
 

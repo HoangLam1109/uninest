@@ -30,6 +30,7 @@ export type Invoice = {
   electricityAmount?: number
   waterAmount?: number
   additionalFees?: number
+  payoutFee?: number
   totalAmount: number
   status: InvoiceStatus
   notes?: string

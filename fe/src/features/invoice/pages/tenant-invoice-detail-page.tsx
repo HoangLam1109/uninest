@@ -5,11 +5,13 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  CreditCard,
   Home,
   Zap,
   Droplets,
   Banknote,
   CircleDollarSign,
+  Loader2,
   User,
   ReceiptText,
 } from 'lucide-react'
@@ -18,6 +20,7 @@ import {
   useGetInvoiceById,
   useGetInvoiceDetail,
 } from '../hooks/use-invoices'
+import { usePayInvoice } from '@/features/payment/hooks/use-role-upgrade-payment'
 import {
   formatBillingMonth,
   formatInvoiceDate,
@@ -39,6 +42,7 @@ export function TenantInvoiceDetailPage() {
 
   const invoiceQuery = useGetInvoiceById(id ?? null)
   const detailQuery = useGetInvoiceDetail(id ?? null)
+  const payInvoice = usePayInvoice()
 
   const invoice = invoiceQuery.data
   const detail = detailQuery.data
@@ -179,6 +183,13 @@ export function TenantInvoiceDetailPage() {
                 value={formatPrice(invoice.additionalFees!)}
               />
             ) : null}
+            {(invoice.payoutFee ?? 0) > 0 ? (
+              <CostRow
+                icon={<Banknote className="size-4" />}
+                label="Phí giải ngân"
+                value={formatPrice(invoice.payoutFee!)}
+              />
+            ) : null}
           </div>
 
           <div className="mt-4 border-t border-slate-200 pt-4">
@@ -289,18 +300,33 @@ export function TenantInvoiceDetailPage() {
         </div>
       ) : null}
 
-      {/* Pay hint */}
+      {/* Pay Action (for SENT or OVERDUE invoices) */}
       {(invoice.status === 'SENT' || invoice.status === 'OVERDUE') ? (
-        <div className="flex items-start gap-4 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-6">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-100">
-            <Clock className="size-5 text-amber-600" />
+        <div className="flex flex-col gap-4 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/20">
+              <CreditCard className="size-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-slate-800">Thanh toán hóa đơn</p>
+              <p className="mt-1 text-sm text-slate-500">
+                Thanh toán qua PayOS - an toàn, nhanh chóng. Bạn sẽ được chuyển đến cổng thanh toán để hoàn tất.
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="font-bold text-amber-800">Cần thanh toán</p>
-            <p className="mt-1 text-sm text-amber-600">
-              Vui lòng thanh toán trước hạn. Liên hệ chủ nhà nếu cần xác nhận đã chuyển khoản.
-            </p>
-          </div>
+          <Button
+            size="lg"
+            className="w-full text-base font-bold"
+            onClick={() => payInvoice.mutate(invoice._id)}
+            disabled={payInvoice.isPending}
+          >
+            {payInvoice.isPending ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (
+              <CreditCard className="size-5" />
+            )}
+            Thanh toán {formatPrice(invoice.totalAmount)}
+          </Button>
         </div>
       ) : null}
 
