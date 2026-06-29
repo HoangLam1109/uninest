@@ -57,7 +57,6 @@ export function RoomListCard({ room }: RoomListCardProps) {
           <span>{room.areaSqm ?? 0} m2</span>
           <span>{room.maxOccupants} người</span>
           <span>{formatRoomType(room.roomType)}</span>
-          <span>{room.status}</span>
         </div>
 
         {amenityNames.length > 0 ? (
