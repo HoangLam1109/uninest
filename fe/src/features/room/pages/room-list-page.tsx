@@ -8,6 +8,7 @@ import {
   Search,
   Users,
 } from 'lucide-react'
+import { Pagination } from '@/components/common/pagination'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { MainLayout } from '@/layouts/main-layout'
@@ -93,6 +94,7 @@ function formatPriceRange(minPrice?: number, maxPrice?: number) {
 
 export function RoomListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const currentPage = Math.max(1, getNumberParam(searchParams.get('page')) ?? 1)
   const initialKeyword = searchParams.get('q') ?? ''
   const initialCity = searchParams.get('city') ?? ''
   const initialDistrict = searchParams.get('district') ?? ''
@@ -116,7 +118,7 @@ export function RoomListPage() {
     const roomType = getRoomTypeParam(searchParams.get('roomType'))
 
     return {
-      page: 1,
+      page: currentPage,
       limit: 10,
       status: 'AVAILABLE',
       q,
@@ -126,13 +128,14 @@ export function RoomListPage() {
       maxPrice: maxPriceParam,
       roomType,
     }
-  }, [searchParams])
+  }, [currentPage, searchParams])
 
   const activeQuery = useRoomSearch(searchQueryParams)
   const visibleRooms = useMemo(
     () => activeQuery.data?.data ?? [],
     [activeQuery.data?.data],
   )
+  const pagination = activeQuery.data?.pagination
   const totalRoomsQuery = useGetRooms({
     page: 1,
     limit: 1,
@@ -215,10 +218,20 @@ export function RoomListPage() {
     setSearchParams(nextParams)
   }
 
+  function setPageParam(page: number) {
+    const nextParams = new URLSearchParams(searchParams)
+
+    if (page <= 1) nextParams.delete('page')
+    else nextParams.set('page', String(page))
+
+    commitFilters(nextParams)
+  }
+
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('page')
     const trimmedKeyword = keyword.trim()
     const trimmedCity = city.trim()
     const trimmedDistrict = district.trim()
@@ -251,6 +264,7 @@ export function RoomListPage() {
     setSelectedRoomType(nextValue)
 
     const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('page')
     if (nextValue) nextParams.set('roomType', nextValue)
     else nextParams.delete('roomType')
 
@@ -265,6 +279,7 @@ export function RoomListPage() {
     setMaxPrice(nextMaxPrice)
 
     const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('page')
     if (nextMinPrice) nextParams.set('minPrice', nextMinPrice)
     else nextParams.delete('minPrice')
 
@@ -539,11 +554,23 @@ export function RoomListPage() {
               {!activeQuery.isLoading &&
               !activeQuery.isError &&
               visibleRooms.length > 0 ? (
-                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                  {visibleRooms.map((room) => (
-                    <RoomListCard key={room._id} room={room} />
-                  ))}
-                </div>
+                <>
+                  <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                    {visibleRooms.map((room) => (
+                      <RoomListCard key={room._id} room={room} />
+                    ))}
+                  </div>
+
+                  {pagination ? (
+                    <Pagination
+                      page={pagination.page}
+                      totalPages={pagination.totalPages}
+                      isDisabled={activeQuery.isFetching}
+                      className="justify-center pt-2 lg:justify-end"
+                      onPageChange={setPageParam}
+                    />
+                  ) : null}
+                </>
               ) : null}
             </div>
           </div>
