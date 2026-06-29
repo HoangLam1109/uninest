@@ -26,3 +26,23 @@ export function useRoleUpgradePayment() {
     },
   })
 }
+
+export function usePayInvoice() {
+  return useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const { data } = await paymentApi.payInvoice(invoiceId)
+      return data.data
+    },
+    onSuccess: (payment) => {
+      toast.success('Đã tạo thanh toán', {
+        description: 'Bạn sẽ được chuyển sang cổng thanh toán PayOS.',
+      })
+      window.location.assign(payment.checkoutUrl)
+    },
+    onError: (error) => {
+      toast.error('Không thể tạo thanh toán', {
+        description: getApiErrorMessage(error, 'Vui lòng thử lại sau.'),
+      })
+    },
+  })
+}

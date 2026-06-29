@@ -166,25 +166,25 @@ export function RoomListPage() {
 
   const seoTitle = useMemo(() => {
     if (searchQueryParams.district) {
-      return `Phong cho thue tai ${searchQueryParams.district} | UniNest`
+      return `Phòng cho thuê tại ${searchQueryParams.district} | UniNest`
     }
 
     if (searchQueryParams.roomType) {
       return `${formatRoomType(searchQueryParams.roomType)} cho thue tai TP.HCM | UniNest`
     }
 
-    return 'Phong cho thue tai TP.HCM | UniNest'
+    return 'Phòng cho thuê tại TP.HCM | UniNest'
   }, [searchQueryParams.district, searchQueryParams.roomType])
 
   const seoDescription = useMemo(() => {
     const base =
-      'Kham pha danh sach phong tro, studio, phong ghep va can ho dang mo tren UniNest.'
+      'Khám phá danh sách phòng trọ, studio, phòng ghép và căn hộ sẵn có trên UniNest.'
 
     if (activeFilterLabels.length === 0) {
-      return `${base} Loc theo gia, khu vuc va loai phong de tim lua chon phu hop.`
+      return `${base} Lọc theo giá, khu vực và loại phòng phù hợp.`
     }
 
-    return `${base} Bo loc dang ap dung: ${activeFilterLabels.join(', ')}.`
+    return `${base} Bộ lọc đang áp dụng: ${activeFilterLabels.join(', ')}.`
   }, [activeFilterLabels])
 
   const structuredData = useMemo(() => {
@@ -197,12 +197,12 @@ export function RoomListPage() {
 
     return [
       createBreadcrumbSchema([
-        { name: 'Trang chu', path: '/' },
-        { name: 'Phong cho thue', path: '/phong' },
+        { name: 'Trang chủ', path: '/' },
+        { name: 'Phòng cho thuê', path: '/phong' },
       ]),
       {
         '@type': 'CollectionPage',
-        name: 'Danh sach phong cho thue',
+        name: 'Danh sách phòng cho thuê',
         url: toAbsoluteUrl('/phong'),
         description: seoDescription,
         mainEntity: {

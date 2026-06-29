@@ -44,6 +44,10 @@ export const PaymentRepository = {
       .populate("receiverId", "fullName email phone")
       .sort({ createdAt: -1 }),
 
+  findByBookingAndPayer: (bookingId: string, payerId: string) =>
+    PaymentModel.find({ bookingId, payerId })
+      .sort({ createdAt: -1 }),
+
   findByPayerId: (payerId: string, skip: number, limit: number) =>
     PaymentModel.find({ payerId })
       .populate("bookingId")

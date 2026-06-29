@@ -230,12 +230,12 @@ export function useDeleteInvoice() {
   })
 }
 
-export function useGetPreviousReading(bookingId: string | null) {
+export function useGetPreviousReading(bookingId: string | null, billingMonth?: string) {
   return useQuery({
-    queryKey: invoiceKeys.previousReading(bookingId ?? ''),
+    queryKey: [...invoiceKeys.previousReading(bookingId ?? ''), billingMonth],
     enabled: Boolean(bookingId),
     queryFn: async () => {
-      const { data } = await invoiceApi.getPreviousReadingByBooking(bookingId as string)
+      const { data } = await invoiceApi.getPreviousReadingByBooking(bookingId as string, billingMonth)
       return data.data as PreviousReadingData
     },
   })

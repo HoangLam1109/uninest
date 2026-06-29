@@ -63,6 +63,8 @@ export const invoiceApi = {
 
   // ---- Previous Reading (kiểm tra hóa đơn trước) ----
 
-  getPreviousReadingByBooking: (bookingId: string) =>
-    api.get<PreviousReadingResponse>(`/invoices/booking/${bookingId}/previous-reading`),
+  getPreviousReadingByBooking: (bookingId: string, billingMonth?: string) =>
+    api.get<PreviousReadingResponse>(`/invoices/booking/${bookingId}/previous-reading`, {
+      params: billingMonth ? { billingMonth } : undefined,
+    }),
 }

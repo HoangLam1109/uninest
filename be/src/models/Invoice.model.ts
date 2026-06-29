@@ -14,12 +14,16 @@ export interface IInvoice extends Document {
   contractId?: Types.ObjectId;
   landlordId: Types.ObjectId;
   tenantId: Types.ObjectId;
+  /** Reference to landlord's verified bank account (snapshot at creation time) */
+  bankAccountId?: Types.ObjectId;
   billingMonth: string; // YYYY-MM format
   dueDate: Date;
   rentAmount: number;
   electricityAmount?: number;
   waterAmount?: number;
   additionalFees?: number;
+  /** Phí giải ngân tự động (PayOS Payout) - landlord chịu */
+  payoutFee?: number;
   totalAmount: number;
   status: INVOICE_STATUS;
   notes?: string;
@@ -56,6 +60,11 @@ const InvoiceSchema = new Schema<IInvoice>(
       required: [true, "Tenant ID is required"],
       index: true,
     },
+    bankAccountId: {
+      type: Schema.Types.ObjectId,
+      ref: "BankAccount",
+      default: null,
+    },
     billingMonth: {
       type: String,
       required: [true, "Billing month is required"], // YYYY-MM
@@ -82,6 +91,11 @@ const InvoiceSchema = new Schema<IInvoice>(
       min: 0,
     },
     additionalFees: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    payoutFee: {
       type: Number,
       default: 0,
       min: 0,
