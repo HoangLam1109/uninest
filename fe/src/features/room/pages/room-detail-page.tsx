@@ -62,19 +62,19 @@ export function RoomDetailPage() {
     : '/hero.jpg'
   const reviewStats = reviewsQuery.data?.statistics
   const seoTitle = room
-    ? `${room.title} | Phong cho thue tai ${formatRoomLocation(room)} | UniNest`
-    : 'Chi tiet phong cho thue | UniNest'
+    ? `${room.title} | Phòng cho thuê tại ${formatRoomLocation(room)} | UniNest`
+    : 'Chi tiết phòng cho thuê | UniNest'
   const seoDescription = room
     ? `${room.title} tai ${formatRoomFullLocation(room)}. Gia ${formatRoomCurrency(
         room.pricePerMonth,
-      )}/thang, suc chua toi da ${room.maxOccupants} nguoi. Xem anh, tien ich va danh gia tren UniNest.`
-    : 'Xem chi tiet phong cho thue, hinh anh, gia thue, tien ich va vi tri tren UniNest.'
+      )}/tháng, sức chứa tối đa ${room.maxOccupants} người. Xem ảnh, tiện ích và đánh giá trên UniNest.`
+    : 'Xem chi tiet phòng cho thuê, hình ảnh, giá thuê, tiện ích và vị trí trên UniNest.'
   const structuredData = room
     ? [
         createBreadcrumbSchema([
-          { name: 'Trang chu', path: '/' },
-          { name: 'Phong cho thue', path: '/phong' },
-          { name: room.title, path: `/phong/${room._id}` },
+          { name: 'Trang chủ', path: '/' },
+          { name: 'Phòng cho thuê', path: '/phòng' },
+          { name: room.title, path: `/phòng/${room._id}` },
         ]),
         {
           '@type': 'Product',
@@ -99,17 +99,17 @@ export function RoomDetailPage() {
           additionalProperty: [
             {
               '@type': 'PropertyValue',
-              name: 'Dia chi',
+              name: 'Địa chỉ',
               value: formatRoomFullLocation(room),
             },
             {
               '@type': 'PropertyValue',
-              name: 'Dien tich',
+              name: 'Diện tích',
               value: room.areaSqm ? `${room.areaSqm} m2` : 'Dang cap nhat',
             },
             {
               '@type': 'PropertyValue',
-              name: 'Suc chua',
+              name: 'Sức chứa',
               value: room.maxOccupants,
             },
           ],
