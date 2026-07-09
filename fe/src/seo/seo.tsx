@@ -154,6 +154,8 @@ export function RouteRobots() {
     const pathname = location.pathname
     const isPublicRoute =
       pathname === '/' ||
+      pathname === '/blog' ||
+      pathname.startsWith('/blog/') ||
       pathname === '/phong' ||
       pathname.startsWith('/phong/')
 

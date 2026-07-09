@@ -64,4 +64,7 @@ export const identityApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
+
+  delete: (id: string) =>
+    api.delete<IdentityResponse>(`/identities/${id}`),
 }

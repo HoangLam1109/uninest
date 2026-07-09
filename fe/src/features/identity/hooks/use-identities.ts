@@ -51,6 +51,29 @@ export function useUpdateIdentity() {
   })
 }
 
+export function useDeleteIdentity() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await identityApi.delete(id)
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: identityKeys.my() })
+      toast.success('Đã xóa hồ sơ định danh')
+    },
+    onError: (error) => {
+      toast.error('Không thể xóa hồ sơ định danh', {
+        description: getApiErrorMessage(
+          error,
+          'Hồ sơ có thể đang được sử dụng hoặc đã phát sinh lỗi hệ thống.',
+        ),
+      })
+    },
+  })
+}
+
 export function useGetMyIdentities() {
   return useQuery({
     queryKey: identityKeys.my(),

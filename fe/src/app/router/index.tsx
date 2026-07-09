@@ -24,6 +24,16 @@ const DashboardRedirectPage = lazy(() =>
 const HomePage = lazy(() =>
   import('@/pages/home').then((module) => ({ default: module.HomePage })),
 )
+const BlogListPage = lazy(() =>
+  import('@/features/blog/pages/blog-list-page').then((module) => ({
+    default: module.BlogListPage,
+  })),
+)
+const BlogDetailPage = lazy(() =>
+  import('@/features/blog/pages/blog-detail-page').then((module) => ({
+    default: module.BlogDetailPage,
+  })),
+)
 const AiRoomFinderPage = lazy(() =>
   import('@/features/ai/pages/ai-room-finder-page').then((module) => ({
     default: module.AiRoomFinderPage,
@@ -62,6 +72,11 @@ const AdminTransactionPage = lazy(() =>
 const AdminUserManagementPage = lazy(() =>
   import('@/features/admin/pages/admin-user-management-page').then((module) => ({
     default: module.AdminUserManagementPage,
+  })),
+)
+const AdminBlogManagementPage = lazy(() =>
+  import('@/features/blog/pages/admin-blog-management-page').then((module) => ({
+    default: module.AdminBlogManagementPage,
   })),
 )
 const LandlordPlaceholderPage = lazy(() =>
@@ -177,6 +192,8 @@ export function AppRouter() {
     <Suspense fallback={<Loading />}>
       <Routes>
         <Route path={paths.home} element={<HomePage />} />
+        <Route path={paths.blog} element={<BlogListPage />} />
+        <Route path={paths.blogDetail} element={<BlogDetailPage />} />
         <Route path={paths.rooms} element={<RoomListPage />} />
         <Route path={paths.roomDetail} element={<RoomDetailPage />} />
         <Route path={paths.login} element={<LoginPage />} />
@@ -243,6 +260,7 @@ export function AppRouter() {
               <Route path="kiem-duyet" element={<AdminModerationPage />} />
               <Route path="thanh-toan" element={<AdminPaymentManagementPage />} />
               <Route path="giao-dich" element={<AdminTransactionPage />} />
+              <Route path="blog" element={<AdminBlogManagementPage />} />
               <Route path="goi-dich-vu" element={<AdminPackageManagementPage />} />
             </Route>
           </Route>

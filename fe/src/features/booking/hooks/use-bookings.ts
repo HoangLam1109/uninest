@@ -10,7 +10,7 @@ import type {
 export const bookingKeys = {
   all: ['bookings'] as const,
   tenantLists: () => [...bookingKeys.all, 'tenant-list'] as const,
-  tenantList: (params: Pick<BookingListParams, 'page' | 'limit'>) =>
+  tenantList: (params: BookingListParams) =>
     [...bookingKeys.tenantLists(), params] as const,
   landlordLists: () => [...bookingKeys.all, 'landlord-list'] as const,
   landlordList: (params: BookingListParams) =>
@@ -39,7 +39,7 @@ export function useCreateBooking() {
 }
 
 export function useGetTenantBookings(
-  params: Pick<BookingListParams, 'page' | 'limit'>,
+  params: BookingListParams,
 ) {
   return useQuery({
     queryKey: bookingKeys.tenantList(params),

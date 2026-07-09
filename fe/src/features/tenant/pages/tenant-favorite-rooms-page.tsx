@@ -1,15 +1,26 @@
 import { useMemo, useState } from 'react'
-import { Grid3X3, List, Search } from 'lucide-react'
+import { CheckCircle2, Clock3, Grid3X3, Heart, List, Search } from 'lucide-react'
 import { Pagination } from '@/components/common/pagination'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { useGetTenantFavoriteRooms } from '@/features/room/hooks/use-rooms'
 import { useFilteredRooms } from '@/features/room/hooks/use-filtered-rooms'
-import type { RoomFavorite, RoomFavoriteRoom } from '@/features/room/types/room.type'
+import type {
+  RoomFavorite,
+  RoomFavoriteRoom,
+  RoomStatus,
+} from '@/features/room/types/room.type'
 import {
   FavoriteRoomCard,
   type FavoriteRoomsView,
 } from '../components/favorite-room-card'
+
+const defaultSummary: Record<RoomStatus, number> = {
+  AVAILABLE: 0,
+  DEPOSITED: 0,
+  RENTED: 0,
+  MAINTENANCE: 0,
+}
 
 function getFavoriteRoom(favorite: RoomFavorite) {
   return typeof favorite.roomId === 'string' ? null : favorite.roomId
@@ -31,6 +42,48 @@ export function TenantFavoriteRoomsPage() {
     [favorites],
   )
   const visibleRooms = useFilteredRooms(favoriteRooms, search)
+  const summary = useMemo(
+    () =>
+      visibleRooms.reduce(
+        (acc, room) => {
+          acc[room.status] += 1
+          return acc
+        },
+        { ...defaultSummary },
+      ),
+    [visibleRooms],
+  )
+
+  const summaryItems = [
+    {
+      label: 'Đã lưu',
+      value: pagination?.total ?? favoriteRooms.length,
+      icon: Heart,
+      valueClassName: 'text-slate-900',
+      iconClassName: 'bg-primary/10 text-primary',
+    },
+    {
+      label: 'Khớp tìm kiếm',
+      value: visibleRooms.length,
+      icon: Search,
+      valueClassName: 'text-slate-900',
+      iconClassName: 'bg-slate-200 text-slate-700',
+    },
+    {
+      label: 'Còn trống',
+      value: summary.AVAILABLE,
+      icon: CheckCircle2,
+      valueClassName: 'text-green-700',
+      iconClassName: 'bg-green-500/10 text-green-700',
+    },
+    {
+      label: 'Chưa thể đặt ngay',
+      value: summary.DEPOSITED + summary.RENTED + summary.MAINTENANCE,
+      icon: Clock3,
+      valueClassName: 'text-amber-700',
+      iconClassName: 'bg-amber-500/10 text-amber-700',
+    },
+  ]
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8 2xl:mx-0 2xl:max-w-none">
@@ -85,6 +138,53 @@ export function TenantFavoriteRoomsPage() {
           </div>
         </div>
       </header>
+
+      {!favoritesQuery.isError ? (
+        <section className="rounded-[32px] border border-primary/10 bg-white p-5 shadow-sm sm:p-6">
+          <div>
+            <h2 className="text-lg font-bold text-slate-950">Tổng hợp phòng yêu thích</h2>
+            {!favoritesQuery.isLoading ? (
+              <p className="mt-1 text-sm text-slate-500">
+                Số liệu được tính theo danh sách đang hiển thị hiện tại.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {favoritesQuery.isLoading
+              ? Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="h-28 animate-pulse rounded-2xl bg-border/60"
+                  />
+                ))
+              : summaryItems.map((item) => {
+                  const Icon = item.icon
+
+                  return (
+                    <article
+                      key={item.label}
+                      className="rounded-2xl border border-primary/10 bg-slate-50 p-4"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                          {item.label}
+                        </p>
+                        <span
+                          className={`flex size-9 items-center justify-center rounded-xl ${item.iconClassName}`}
+                        >
+                          <Icon className="size-4" />
+                        </span>
+                      </div>
+                      <p className={`mt-3 text-2xl font-bold ${item.valueClassName}`}>
+                        {item.value}
+                      </p>
+                    </article>
+                  )
+                })}
+          </div>
+        </section>
+      ) : null}
 
       {favoritesQuery.isLoading ? (
         <div

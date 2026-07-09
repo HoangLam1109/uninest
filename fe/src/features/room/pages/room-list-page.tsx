@@ -119,7 +119,7 @@ export function RoomListPage() {
 
     return {
       page: currentPage,
-      limit: 10,
+      limit: 9,
       status: 'AVAILABLE',
       q,
       city: cityParam,
@@ -188,7 +188,7 @@ export function RoomListPage() {
   }, [activeFilterLabels])
 
   const structuredData = useMemo(() => {
-    const items = visibleRooms.slice(0, 10).map((room, index) => ({
+    const items = visibleRooms.slice(0, 9).map((room, index) => ({
       '@type': 'ListItem',
       position: index + 1,
       url: toAbsoluteUrl(`/phong/${room._id}`),

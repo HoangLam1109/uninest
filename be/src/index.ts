@@ -25,6 +25,7 @@ import servicePackageRouter from "./routes/service-package.route.js";
 import serviceSubscriptionRouter from "./routes/service-subscription.route.js";
 import payosRouter from "./routes/payos.route.js";
 import adminTransactionRouter from "./routes/admin-transaction.route.js";
+import blogPostRouter from "./routes/blog-post.route.js";
 import connectDB from "./config/database.config.js";
 import {
   allowedFrontendOrigins,
@@ -78,6 +79,7 @@ app.use("/api/service-packages", servicePackageRouter);
 app.use("/api/service-subscriptions", serviceSubscriptionRouter);
 app.use("/api/payos", payosRouter);
 app.use("/api/admin/transactions", adminTransactionRouter);
+app.use("/api/blogs", blogPostRouter);
 
 setupSwagger(app);
 

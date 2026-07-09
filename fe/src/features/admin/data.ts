@@ -2,6 +2,7 @@ import {
   ArrowLeftRight,
   CreditCard,
   LayoutGrid,
+  Newspaper,
   PackagePlus,
   ShieldCheck,
   UserPlus,
@@ -14,6 +15,7 @@ export const adminNavItems = [
   { label: 'Kiểm duyệt', href: '/quan-tri/kiem-duyet', icon: ShieldCheck },
   { label: 'Thanh toán', href: '/quan-tri/thanh-toan', icon: CreditCard },
   { label: 'Giao dịch', href: '/quan-tri/giao-dich', icon: ArrowLeftRight },
+  { label: 'Blog', href: '/quan-tri/blog', icon: Newspaper },
   { label: 'Gói dịch vụ', href: '/quan-tri/goi-dich-vu', icon: PackagePlus },
 ] as const
 
@@ -24,4 +26,3 @@ export const adminSidebarConfig = {
   navItems: adminNavItems,
   ctaIcon: UserPlus,
 }
-

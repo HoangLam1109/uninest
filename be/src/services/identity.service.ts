@@ -102,6 +102,22 @@ export const IdentityService = {
     return IdentityRepository.update(id, cleanData);
   },
 
+  deleteIdentity: async (id: string, userId: string) => {
+    const identity = await IdentityRepository.findById(id);
+    if (!identity) throw new Error("Identity not found");
+
+    if (identity.userId._id.toString() !== userId) {
+      throw new Error("You do not own this identity");
+    }
+
+    const bookings = await BookingRepository.findByIdentityIds([id]);
+    if (bookings.length > 0) {
+      throw new Error("Cannot delete identity that is being used in a booking");
+    }
+
+    return IdentityRepository.softDelete(id);
+  },
+
   /**
    * Verify identity from the admin moderation queue.
    */

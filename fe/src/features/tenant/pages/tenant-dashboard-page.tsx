@@ -1,5 +1,5 @@
-import { TenantDashboard } from '../components/tenant-dashboard'
+// import { TenantDashboard } from '../components/tenant-dashboard'
 
-export function TenantDashboardPage() {
-  return <TenantDashboard />
-}
+// export function TenantDashboardPage() {
+//   return <TenantDashboard />
+// }
