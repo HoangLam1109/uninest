@@ -1,6 +1,5 @@
 import { LandlordCharts } from './landlord-charts'
 import { LandlordDashboardHeader } from './landlord-dashboard-header'
-import { LandlordPaymentsTable } from './landlord-payments-table'
 import { LandlordStatCards } from './landlord-stat-cards'
 
 export function LandlordDashboardPage() {
@@ -9,7 +8,6 @@ export function LandlordDashboardPage() {
       <LandlordDashboardHeader />
       <LandlordStatCards />
       <LandlordCharts />
-      <LandlordPaymentsTable />
     </div>
   )
 }

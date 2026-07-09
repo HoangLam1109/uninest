@@ -1,10 +1,49 @@
 import { InvoiceRepository, InvoiceDetailRepository } from "../repositories/invoice.repo.js";
 import { BookingRepository } from "../repositories/booking.repo.js";
-import { LandlordBankInfoRepository } from "../repositories/landlord-bank-info.repo.js";
-import { INVOICE_STATUS } from "../models/Invoice.model.js";
-import { PayOSPayoutService } from "./payos-payout.service.js";
+import { LandlordPaymentInfoRepository } from "../repositories/landlord-payment-info.repo.js";
+import { INVOICE_STATUS, INVOICE_PAYMENT_STATUS } from "../models/Invoice.model.js";
+import { PAYMENT_INFO_STATUS } from "../models/LandlordPaymentInfo.model.js";
+
+function buildPaymentNote(template: string, invoiceCode: string): string {
+  return template.replace(/\{invoiceCode\}/g, invoiceCode);
+}
 
 export const InvoiceService = {
+  /**
+   * Validate that a landlord has APPROVED payment info.
+   * Returns the payment info if valid, throws otherwise.
+   */
+  validateLandlordPaymentInfo: async (landlordId: string) => {
+    const paymentInfo = await LandlordPaymentInfoRepository.findByUserId(landlordId);
+
+    if (!paymentInfo) {
+      throw new Error(
+        "Vui lòng cập nhật thông tin thanh toán trong hồ sơ trước khi tạo hóa đơn."
+      );
+    }
+
+    if (paymentInfo.status === PAYMENT_INFO_STATUS.PENDING) {
+      throw new Error(
+        "Thông tin thanh toán của bạn đang chờ admin duyệt. Vui lòng đợi đến khi được duyệt trước khi tạo hóa đơn."
+      );
+    }
+
+    if (paymentInfo.status === PAYMENT_INFO_STATUS.REJECTED) {
+      const reason = paymentInfo.rejectionReason || "không rõ lý do";
+      throw new Error(
+        `Thông tin thanh toán của bạn đã bị từ chối: ${reason}. Vui lòng cập nhật lại.`
+      );
+    }
+
+    if (!paymentInfo.bankName || !paymentInfo.bankAccountNumber || !paymentInfo.bankAccountHolder) {
+      throw new Error(
+        "Vui lòng cập nhật đầy đủ thông tin thanh toán (tên ngân hàng, số tài khoản, chủ tài khoản) trong hồ sơ trước khi tạo hóa đơn."
+      );
+    }
+
+    return paymentInfo;
+  },
+
   createInvoice: async (
     bookingId: string,
     landlordId: string,
@@ -29,11 +68,8 @@ export const InvoiceService = {
       throw new Error("You do not own this booking");
     }
 
-    // Verify landlord has verified bank info (for auto-disburse)
-    const verifiedBankInfo = await LandlordBankInfoRepository.findVerifiedByUserId(landlordId);
-    if (!verifiedBankInfo) {
-      throw new Error("Bạn cần thêm thông tin tài khoản ngân hàng trước khi tạo hóa đơn.");
-    }
+    // Validate landlord has payment info configured (manual bank transfer)
+    const paymentInfo = await InvoiceService.validateLandlordPaymentInfo(landlordId);
 
     // Check if invoice already exists for this month
     const existingInvoice = await InvoiceRepository.findByBookingAndMonth(
@@ -46,17 +82,18 @@ export const InvoiceService = {
       );
     }
 
-    // Calculate total amount
+    // Calculate total amount (no payout fee in manual flow)
     const electricityAmount = invoiceData.electricityAmount || 0;
     const waterAmount = invoiceData.waterAmount || 0;
     const additionalFees = invoiceData.additionalFees || 0;
-    const subtotal = invoiceData.rentAmount + electricityAmount + waterAmount + additionalFees;
+    const totalAmount = invoiceData.rentAmount + electricityAmount + waterAmount + additionalFees;
 
-    let payoutFee = 0;
-    try { payoutFee = await PayOSPayoutService.calculatePayoutFee(subtotal, verifiedBankInfo.bankBin); } catch { payoutFee = 3300; }
-    const totalAmount = subtotal + payoutFee;
+    // Build payment note from template
+    const paymentNoteTemplate = paymentInfo.paymentNoteTemplate || "THANHTOAN {invoiceCode}";
+    // We'll fill invoiceCode after creation, use placeholder
+    const paymentNote = buildPaymentNote(paymentNoteTemplate, "{{invoiceCode}}");
 
-    // Create invoice
+    // Create invoice with payment info snapshot
     const invoice = await InvoiceRepository.create({
       bookingId,
       landlordId,
@@ -67,11 +104,27 @@ export const InvoiceService = {
       electricityAmount,
       waterAmount,
       additionalFees,
-      payoutFee,
+      payoutFee: 0, // No PayOS payout fee
       totalAmount,
       notes: invoiceData.notes,
       status: INVOICE_STATUS.DRAFT,
+      // Payment info snapshot (manual bank transfer)
+      paymentBankName: paymentInfo.bankName,
+      paymentAccountNumber: paymentInfo.bankAccountNumber,
+      paymentAccountHolder: paymentInfo.bankAccountHolder,
+      paymentQrUrl: paymentInfo.paymentQrUrl || "",
+      paymentNote,
+      paymentMethodType: "manual_bank_transfer",
+      paymentStatus: INVOICE_PAYMENT_STATUS.UNPAID,
     });
+
+    // Update payment note with actual invoice code
+    const invoiceCode = (invoice as any)._id.toString().slice(-8).toUpperCase();
+    const finalPaymentNote = buildPaymentNote(paymentNoteTemplate, invoiceCode);
+    if (finalPaymentNote !== paymentNote) {
+      await InvoiceRepository.update(invoice._id.toString(), { paymentNote: finalPaymentNote });
+      invoice.paymentNote = finalPaymentNote;
+    }
 
     // Create invoice detail if provided
     if (invoiceData.detailData) {
@@ -104,11 +157,12 @@ export const InvoiceService = {
   getInvoicesByLandlord: async (
     landlordId: string,
     skip: number,
-    limit: number
+    limit: number,
+    paymentStatusFilter?: string
   ) => {
     const [invoices, total] = await Promise.all([
-      InvoiceRepository.findByLandlordId(landlordId, skip, limit),
-      InvoiceRepository.countByLandlordId(landlordId),
+      InvoiceRepository.findByLandlordId(landlordId, skip, limit, paymentStatusFilter),
+      InvoiceRepository.countByLandlordId(landlordId, paymentStatusFilter),
     ]);
 
     return { invoices, total };
@@ -150,9 +204,8 @@ export const InvoiceService = {
       throw new Error("You do not own this invoice");
     }
 
-    // Recalculate total if amounts changed
+    // Recalculate total if amounts changed (no payout fee)
     let newTotal = invoice.totalAmount;
-    let payoutFee = invoice.payoutFee || 0;
     if (
       updateData.rentAmount ||
       updateData.electricityAmount !== undefined ||
@@ -163,15 +216,12 @@ export const InvoiceService = {
       const electricity = updateData.electricityAmount !== undefined ? updateData.electricityAmount : invoice.electricityAmount || 0;
       const water = updateData.waterAmount !== undefined ? updateData.waterAmount : invoice.waterAmount || 0;
       const fees = updateData.additionalFees !== undefined ? updateData.additionalFees : invoice.additionalFees || 0;
-      const subtotal = rent + electricity + water + fees;
-      const bankInfo = await LandlordBankInfoRepository.findVerifiedByUserId(landlordId);
-      if (bankInfo) { try { payoutFee = await PayOSPayoutService.calculatePayoutFee(subtotal, bankInfo.bankBin); } catch { payoutFee = 3300; } }
-      newTotal = subtotal + payoutFee;
+      newTotal = rent + electricity + water + fees;
     }
 
     const updatePayload = {
       ...updateData,
-      payoutFee,
+      payoutFee: 0,
       totalAmount: newTotal,
     };
 
@@ -190,20 +240,42 @@ export const InvoiceService = {
       throw new Error("You do not own this invoice");
     }
 
+    // Re-validate payment info at send time (landlord might have changed it)
+    const paymentInfo = await LandlordPaymentInfoRepository.findByUserId(landlordId);
+    if (!paymentInfo || paymentInfo.status !== PAYMENT_INFO_STATUS.APPROVED || !paymentInfo.bankName) {
+      throw new Error(
+        "Thông tin thanh toán của bạn chưa được duyệt hoặc chưa đầy đủ. Vui lòng kiểm tra lại."
+      );
+    }
+
     // Only allow sending from DRAFT status
     if (invoice.status !== INVOICE_STATUS.DRAFT) {
       throw new Error(`Cannot send invoice with status: ${invoice.status}`);
     }
 
+    // Refresh payment info snapshot
+    const paymentNoteTemplate = paymentInfo.paymentNoteTemplate || "THANHTOAN {invoiceCode}";
+    const invoiceCode = invoice._id.toString().slice(-8).toUpperCase();
+    const paymentNote = buildPaymentNote(paymentNoteTemplate, invoiceCode);
+
     const updated = await InvoiceRepository.update(invoiceId, {
       status: INVOICE_STATUS.SENT,
       sentAt: new Date(),
+      paymentStatus: INVOICE_PAYMENT_STATUS.UNPAID,
+      paymentBankName: paymentInfo.bankName,
+      paymentAccountNumber: paymentInfo.bankAccountNumber,
+      paymentAccountHolder: paymentInfo.bankAccountHolder,
+      paymentQrUrl: paymentInfo.paymentQrUrl || "",
+      paymentNote,
     });
 
     return updated;
   },
 
-  markAsPaid: async (invoiceId: string, landlordId: string) => {
+  /**
+   * Landlord manually marks invoice as PAID (manual bank transfer confirmation)
+   */
+  markAsPaid: async (invoiceId: string, landlordId: string, landlordNote?: string) => {
     const invoice = await InvoiceRepository.findById(invoiceId);
     if (!invoice) {
       throw new Error("Invoice not found");
@@ -214,23 +286,110 @@ export const InvoiceService = {
       throw new Error("You do not own this invoice");
     }
 
-    // Only allow marking paid from SENT or OVERDUE status
-    if (![INVOICE_STATUS.SENT, INVOICE_STATUS.OVERDUE].includes(invoice.status)) {
+    // Only allow marking paid from SENT, OVERDUE, or PENDING_CONFIRMATION
+    const allowedStatuses = [INVOICE_STATUS.SENT, INVOICE_STATUS.OVERDUE];
+    if (!allowedStatuses.includes(invoice.status)) {
       throw new Error(
         `Cannot mark invoice as paid with status: ${invoice.status}`
       );
     }
 
+    const now = new Date();
     const updated = await InvoiceRepository.update(invoiceId, {
       status: INVOICE_STATUS.PAID,
-      paidAt: new Date(),
+      paidAt: now,
+      paymentStatus: INVOICE_PAYMENT_STATUS.PAID,
+      markedPaidBy: landlordId,
+      landlordPaymentNote: landlordNote || "",
     });
 
     return updated;
   },
 
+  /**
+   * Landlord reverts invoice payment status back to UNPAID
+   */
+  markAsUnpaid: async (invoiceId: string, landlordId: string) => {
+    const invoice = await InvoiceRepository.findById(invoiceId);
+    if (!invoice) {
+      throw new Error("Invoice not found");
+    }
+
+    // Verify landlord ownership
+    if (invoice.landlordId._id.toString() !== landlordId) {
+      throw new Error("You do not own this invoice");
+    }
+
+    // Only allow reverting from PAID status
+    if (invoice.status !== INVOICE_STATUS.PAID) {
+      throw new Error(
+        `Cannot mark invoice as unpaid with status: ${invoice.status}`
+      );
+    }
+
+    const updated = await InvoiceRepository.update(invoiceId, {
+      status: INVOICE_STATUS.SENT, // revert to SENT
+      paidAt: null,
+      paymentStatus: INVOICE_PAYMENT_STATUS.UNPAID,
+      markedPaidBy: null,
+      landlordPaymentNote: "",
+    });
+
+    return updated;
+  },
+
+  /**
+   * Tenant marks "Tôi đã chuyển khoản" → PENDING_CONFIRMATION
+   */
+  markPendingConfirmation: async (invoiceId: string, tenantId: string) => {
+    const invoice = await InvoiceRepository.findById(invoiceId);
+    if (!invoice) {
+      throw new Error("Invoice not found");
+    }
+
+    // Verify tenant is the one on this invoice
+    if (invoice.tenantId._id.toString() !== tenantId) {
+      throw new Error("You are not the tenant for this invoice");
+    }
+
+    if (![INVOICE_STATUS.SENT, INVOICE_STATUS.OVERDUE].includes(invoice.status)) {
+      throw new Error(
+        `Cannot confirm payment transfer with status: ${invoice.status}`
+      );
+    }
+
+    const updated = await InvoiceRepository.update(invoiceId, {
+      paymentStatus: INVOICE_PAYMENT_STATUS.PENDING_CONFIRMATION,
+    });
+
+    return updated;
+  },
+
+  /**
+   * Cancel an invoice (landlord only)
+   */
+  cancelInvoice: async (invoiceId: string, landlordId: string) => {
+    const invoice = await InvoiceRepository.findById(invoiceId);
+    if (!invoice) {
+      throw new Error("Invoice not found");
+    }
+
+    // Verify landlord ownership
+    if (invoice.landlordId._id.toString() !== landlordId) {
+      throw new Error("You do not own this invoice");
+    }
+
+    if (invoice.status === INVOICE_STATUS.PAID) {
+      throw new Error("Cannot cancel a paid invoice");
+    }
+
+    return await InvoiceRepository.update(invoiceId, {
+      status: INVOICE_STATUS.CANCELLED,
+      paymentStatus: INVOICE_PAYMENT_STATUS.CANCELLED,
+    });
+  },
+
   checkAndMarkOverdue: async () => {
-    // Mark invoices as overdue if due date has passed
     const now = new Date();
     const result = await InvoiceRepository.findOverdueInvoices(0, 1000);
 
@@ -238,6 +397,7 @@ export const InvoiceService = {
       if (invoice.status === INVOICE_STATUS.SENT && invoice.dueDate < now) {
         await InvoiceRepository.update(invoice._id.toString(), {
           status: INVOICE_STATUS.OVERDUE,
+          paymentStatus: INVOICE_PAYMENT_STATUS.OVERDUE,
         });
       }
     }
@@ -251,19 +411,16 @@ export const InvoiceService = {
       throw new Error("Invoice not found");
     }
 
-    // Verify landlord ownership
     if (invoice.landlordId._id.toString() !== landlordId) {
       throw new Error("You do not own this invoice");
     }
 
-    // Only allow deletion of DRAFT invoices
     if (invoice.status !== INVOICE_STATUS.DRAFT) {
       throw new Error(
         `Cannot delete invoice with status: ${invoice.status}`
       );
     }
 
-    // Soft delete
     return await InvoiceRepository.softDelete(invoiceId);
   },
 
@@ -278,3 +435,4 @@ export const InvoiceService = {
     return await InvoiceDetailRepository.update(invoiceId, detailData);
   },
 };
+

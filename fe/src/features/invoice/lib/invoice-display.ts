@@ -23,6 +23,7 @@ export const invoiceStatusLabels: Record<InvoiceStatus, string> = {
   SENT: 'Chờ thanh toán',
   PAID: 'Đã thanh toán',
   OVERDUE: 'Quá hạn',
+  CANCELLED: 'Đã hủy',
 }
 
 export const invoiceStatusStyles: Record<InvoiceStatus, string> = {
@@ -30,6 +31,7 @@ export const invoiceStatusStyles: Record<InvoiceStatus, string> = {
   SENT: 'bg-amber-50 text-amber-700',
   PAID: 'bg-emerald-50 text-emerald-700',
   OVERDUE: 'bg-red-50 text-red-700',
+  CANCELLED: 'bg-slate-100 text-slate-500 line-through',
 }
 
 export function isInvoiceUnpaid(status: InvoiceStatus) {

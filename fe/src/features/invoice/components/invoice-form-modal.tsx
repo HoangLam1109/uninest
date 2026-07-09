@@ -11,8 +11,7 @@ import {
   getBookingTenant,
 } from '@/features/booking/lib/booking-display'
 import { utilityInvoiceFormSchema } from '../schemas/invoice.schema'
-import { useGetPreviousReading } from '../hooks/use-invoices'
-import { useGetMyVerifiedBankInfo } from '@/features/bank-account/hooks/use-bank-accounts'
+import { useGetPreviousReading, useGetMyPaymentInfo } from '../hooks/use-invoices'
 
 type InvoiceFormState = {
   bookingId: string
@@ -128,10 +127,11 @@ export function InvoiceFormModal({
   const previousReadingQuery = useGetPreviousReading(bookingId || null, billingMonth || undefined)
   const previousReading = previousReadingQuery.data
 
-  // Check if landlord has verified bank info
-  const bankInfoQuery = useGetMyVerifiedBankInfo()
-  const hasBankInfo = !!bankInfoQuery.data
-  const bankInfoLoading = bankInfoQuery.isLoading
+  // Check if landlord has APPROVED payment info
+  const paymentInfoQuery = useGetMyPaymentInfo()
+  const paymentInfo = paymentInfoQuery.data
+  const hasPaymentInfo = !!(paymentInfo?.status === 'APPROVED' && paymentInfo?.bankName && paymentInfo?.bankAccountNumber && paymentInfo?.bankAccountHolder)
+  const paymentInfoLoading = paymentInfoQuery.isLoading
 
   // Auto-fill old indices & rates from previous invoice
   useEffect(() => {
@@ -407,12 +407,17 @@ export function InvoiceFormModal({
           </div>
         </div>
 
-        {!bankInfoLoading && !hasBankInfo ? (
+        {!paymentInfoLoading && !hasPaymentInfo ? (
           <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             <AlertCircle className="size-4 shrink-0 mt-0.5" />
             <span>
-              Bạn chưa có thông tin tài khoản ngân hàng.{' '}
-              <strong>Vào Hồ sơ để thêm tài khoản</strong> trước khi tạo hóa đơn.
+              {!paymentInfo
+                ? 'Bạn chưa có thông tin thanh toán. Vào Hồ sơ → Thông tin thanh toán để cập nhật.'
+                : paymentInfo.status === 'PENDING'
+                ? 'Thông tin thanh toán đang chờ admin duyệt. Vui lòng đợi đến khi được duyệt.'
+                : paymentInfo.status === 'REJECTED'
+                ? `Thông tin thanh toán đã bị từ chối: ${paymentInfo.rejectionReason || 'không rõ lý do'}. Vào Hồ sơ để cập nhật lại.`
+                : 'Vui lòng cập nhật đầy đủ thông tin thanh toán trong Hồ sơ.'}
             </span>
           </div>
         ) : null}
@@ -421,7 +426,7 @@ export function InvoiceFormModal({
           <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
             Hủy
           </Button>
-          <Button type="submit" disabled={isPending || !bookingId || !hasBankInfo}>
+          <Button type="submit" disabled={isPending || !bookingId || !hasPaymentInfo}>
             {isPending ? 'Đang tạo...' : 'Tạo hóa đơn nháp'}
           </Button>
         </div>

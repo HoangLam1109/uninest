@@ -1,5 +1,6 @@
-import { CalendarDays, CheckCircle2, Trash2, Send } from 'lucide-react'
+import { CalendarDays, CheckCircle2, Trash2, Send, XCircle, RotateCcw, Copy, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import type { Invoice } from '../types/invoice.type'
 import {
@@ -18,6 +19,8 @@ type InvoiceCardProps = {
   isActionPending?: boolean
   onSend?: (invoice: Invoice) => void
   onMarkPaid?: (invoice: Invoice) => void
+  onMarkUnpaid?: (invoice: Invoice) => void
+  onCancel?: (invoice: Invoice) => void
   onDelete?: (invoice: Invoice) => void
   onClick?: (invoice: Invoice) => void
 }
@@ -28,6 +31,8 @@ export function InvoiceCard({
   isActionPending,
   onSend,
   onMarkPaid,
+  onMarkUnpaid,
+  onCancel,
   onDelete,
   onClick,
 }: InvoiceCardProps) {
@@ -100,6 +105,24 @@ export function InvoiceCard({
               {invoice.notes}
             </p>
           ) : null}
+
+          {/* Payment note (nội dung chuyển khoản) cho landlord */}
+          {mode === 'landlord' && invoice.paymentNote ? (
+            <div className="mt-2 flex items-center gap-1.5 text-xs">
+              <FileText className="size-3 text-slate-400" />
+              <span className="font-mono text-slate-500">{invoice.paymentNote}</span>
+              <button
+                className="ml-1 rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  navigator.clipboard.writeText(invoice.paymentNote!)
+                  toast.success('Đã sao chép nội dung chuyển khoản')
+                }}
+              >
+                <Copy className="size-3" />
+              </button>
+            </div>
+          ) : null}
         </div>
 
         {/* Actions */}
@@ -134,16 +157,44 @@ export function InvoiceCard({
               </>
             ) : null}
             {invoice.status === 'SENT' || invoice.status === 'OVERDUE' ? (
+              <>
+                <Button
+                  className="h-8 min-w-0 px-3 text-xs"
+                  disabled={isActionPending}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onMarkPaid?.(invoice)
+                  }}
+                >
+                  <CheckCircle2 className="size-3.5" />
+                  Đã thu
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-8 min-w-0 px-3 text-xs text-red-600 hover:text-red-700"
+                  disabled={isActionPending}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onCancel?.(invoice)
+                  }}
+                >
+                  <XCircle className="size-3.5" />
+                  Hủy
+                </Button>
+              </>
+            ) : null}
+            {invoice.status === 'PAID' ? (
               <Button
-                className="h-8 min-w-0 px-3 text-xs"
+                variant="outline"
+                className="h-8 min-w-0 px-3 text-xs text-amber-600 hover:text-amber-700"
                 disabled={isActionPending}
                 onClick={(e) => {
                   e.stopPropagation()
-                  onMarkPaid?.(invoice)
+                  onMarkUnpaid?.(invoice)
                 }}
               >
-                <CheckCircle2 className="size-3.5" />
-                Đã thu
+                <RotateCcw className="size-3.5" />
+                Chưa TT
               </Button>
             ) : null}
           </div>

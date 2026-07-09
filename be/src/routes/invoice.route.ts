@@ -10,6 +10,9 @@ import {
   getPreviousReadingByBooking,
   getTenantInvoices,
   markInvoiceAsPaid,
+  markInvoiceAsUnpaid,
+  cancelInvoice,
+  markPendingConfirmation,
   sendInvoice,
   updateInvoice,
   updateInvoiceDetail,
@@ -42,6 +45,9 @@ router.get("/:id", getInvoiceById);
 router.put("/:id", updateInvoice);
 router.patch("/:id/send", sendInvoice);
 router.patch("/:id/mark-paid", markInvoiceAsPaid);
+router.patch("/:id/mark-unpaid", markInvoiceAsUnpaid);
+router.patch("/:id/cancel", cancelInvoice);
+router.patch("/:id/pending-confirmation", markPendingConfirmation);
 router.delete("/:id", deleteInvoice);
 
 // Invoice details
