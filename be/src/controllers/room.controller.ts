@@ -6,6 +6,7 @@ import mongoose from "mongoose";
 import { configureCloudinary } from "../config/cloudinary.config.js";
 import { RoomService } from "../services/room.service.js";
 import { UserService } from "../services/user.service.js";
+import { buildPublicPathUrl } from "../utils/request-url.utils.js";
 
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -89,7 +90,7 @@ async function saveRoomImageLocally(
 
   const publicPath = `/uploads/rooms/${roomId}/${fileName}`;
   return {
-    secure_url: `${req.protocol}://${req.get("host")}${publicPath}`,
+    secure_url: buildPublicPathUrl(req, publicPath),
   };
 }
 
