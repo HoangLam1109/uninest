@@ -58,7 +58,7 @@ function FeaturedRoomCard({ room, fallbackImage }: FeaturedRoomCardProps) {
             <span className="text-lg font-bold text-primary">
               {formatRoomCurrency(room.pricePerMonth)}
             </span>
-            <span className="text-xs text-muted-foreground">/thang</span>
+            <span className="text-xs text-muted-foreground">/tháng</span>
           </p>
           <Button asChild variant="ghost" size="icon" className="bg-border/60">
             <Link to={`/phong/${room._id}`} aria-label="Xem chi tiet">

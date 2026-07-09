@@ -1,11 +1,15 @@
 import { useState } from 'react'
-import { Eye, FileText, Mail, Phone, Plus, Shield } from 'lucide-react'
+import { Eye, FileText, Mail, Phone, Plus, Shield, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
 import { AvatarUpload } from '@/components/ui/avatar-upload'
 import { useAuth } from '@/hooks/use-auth'
 import { useAuthStore } from '@/stores/auth.store'
-import { useGetMyIdentities } from '@/features/identity/hooks/use-identities'
+import { DeleteIdentityConfirmModal } from '@/features/tenant/components/delete-identity-confirm-modal'
+import {
+  useDeleteIdentity,
+  useGetMyIdentities,
+} from '@/features/identity/hooks/use-identities'
 import { IdentityFormModal } from '@/features/identity/components/identity-form-modal'
 import { IdentityDetail } from '@/features/identity/components/identity-detail'
 import { userApi } from '@/features/user/api/user.api'
@@ -16,9 +20,12 @@ export function TenantProfilePage() {
   const { user } = useAuth()
   const setUser = useAuthStore((s) => s.setUser)
   const { data: identities = [], isLoading } = useGetMyIdentities()
+  const deleteIdentity = useDeleteIdentity()
 
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [viewingIdentity, setViewingIdentity] = useState<Identity | null>(null)
+  const [identityToDelete, setIdentityToDelete] = useState<Identity | null>(null)
+  const [deletingIdentityId, setDeletingIdentityId] = useState<string | null>(null)
 
   async function handleAvatarUpload(file: File) {
     const { data } = await userApi.uploadAvatar(file)
@@ -28,163 +35,211 @@ export function TenantProfilePage() {
     return { avatarUrl: data.data.avatarUrl }
   }
 
+  function handleDeleteIdentity(identity: Identity) {
+    setIdentityToDelete(identity)
+  }
+
+  function handleConfirmDeleteIdentity() {
+    if (!identityToDelete) return
+
+    setDeletingIdentityId(identityToDelete._id)
+    deleteIdentity.mutate(identityToDelete._id, {
+      onSuccess: () => {
+        if (viewingIdentity?._id === identityToDelete._id) {
+          setViewingIdentity(null)
+        }
+        setIdentityToDelete(null)
+      },
+      onSettled: () => {
+        setDeletingIdentityId(null)
+      },
+    })
+  }
+
   return (
-  <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-4 sm:px-6 lg:px-8">
-    <header>
-      <h1 className="text-xl font-bold text-slate-950 sm:text-2xl md:text-3xl">
-        Hồ sơ cá nhân
-      </h1>
-      <p className="mt-1 text-sm text-slate-500">
-        Quản lý thông tin cá nhân và hồ sơ định danh của bạn.
-      </p>
-    </header>
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-4 sm:px-6 lg:px-8">
+      <header>
+        <h1 className="text-xl font-bold text-slate-950 sm:text-2xl md:text-3xl">
+          Hồ sơ cá nhân
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Quản lý thông tin cá nhân và hồ sơ định danh của bạn.
+        </p>
+      </header>
 
-    <div className="grid gap-6 lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start">
-      <div className="rounded-xl border border-primary/10 bg-white p-4 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start lg:flex-col">
-          <AvatarUpload
-            name={user?.fullName ?? ''}
-            src={user?.avatarUrl}
-            onUpload={handleAvatarUpload}
-          />
+      <div className="grid gap-6 lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start">
+        <div className="rounded-xl border border-primary/10 bg-white p-4 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start lg:flex-col">
+            <AvatarUpload
+              name={user?.fullName ?? ''}
+              src={user?.avatarUrl}
+              onUpload={handleAvatarUpload}
+            />
 
-          <div className="min-w-0 pt-1">
-            <h2 className="truncate text-lg font-bold text-slate-950">
-              {user?.fullName}
-            </h2>
+            <div className="min-w-0 pt-1">
+              <h2 className="truncate text-lg font-bold text-slate-950">
+                {user?.fullName}
+              </h2>
 
-            <div className="mt-1.5 flex min-w-0 flex-col gap-1 text-sm text-slate-500">
-              {user?.email ? (
-                <span className="inline-flex min-w-0 items-center gap-1.5">
-                  <Mail className="size-3.5 shrink-0" />
-                  <span className="truncate">{user.email}</span>
-                </span>
-              ) : null}
+              <div className="mt-1.5 flex min-w-0 flex-col gap-1 text-sm text-slate-500">
+                {user?.email ? (
+                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                    <Mail className="size-3.5 shrink-0" />
+                    <span className="truncate">{user.email}</span>
+                  </span>
+                ) : null}
 
-              {user?.phone ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <Phone className="size-3.5 shrink-0" />
-                  {user.phone}
-                </span>
-              ) : null}
+                {user?.phone ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Phone className="size-3.5 shrink-0" />
+                    {user.phone}
+                  </span>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="min-w-0 space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <h2 className="text-lg font-bold text-slate-950">Hồ sơ định danh</h2>
-            <p className="text-sm text-slate-500">
-              Hồ sơ định danh giúp chủ trọ xác minh danh tính khi bạn đặt phòng.
-            </p>
-          </div>
-
-          <Button
-            className="w-full shrink-0 gap-1.5 sm:w-auto"
-            onClick={() => setShowCreateForm(true)}
-          >
-            <Plus className="size-4" />
-            Tạo hồ sơ
-          </Button>
-        </div>
-
-        {isLoading ? (
-          <div className="grid gap-3">
-            {Array.from({ length: 2 }).map((_, i) => (
-              <div key={i} className="h-28 animate-pulse rounded-xl bg-border/60" />
-            ))}
-          </div>
-        ) : identities.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border bg-surface p-5 text-center sm:p-8">
-            <Shield className="mx-auto size-10 text-slate-300" />
-            <p className="mt-3 text-sm font-semibold text-slate-600">
-              Bạn chưa có hồ sơ định danh nào
-            </p>
-            <p className="mt-1 text-sm text-slate-400">
-              Tạo hồ sơ định danh để có thể đặt phòng và ký hợp đồng thuê.
-            </p>
+        <div className="min-w-0 space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold text-slate-950">Hồ sơ định danh</h2>
+              <p className="text-sm text-slate-500">
+                Hồ sơ định danh giúp chủ trọ xác minh danh tính khi bạn đặt phòng.
+              </p>
+            </div>
 
             <Button
-              variant="outline"
-              className="mt-4 w-full gap-1.5 sm:w-auto"
+              className="w-full shrink-0 gap-1.5 sm:w-auto"
               onClick={() => setShowCreateForm(true)}
             >
               <Plus className="size-4" />
-              Tạo hồ sơ ngay
+              Tạo hồ sơ
             </Button>
           </div>
-        ) : (
-          <div className="grid gap-3">
-            {identities.map((identity) => (
-              <div
-                key={identity._id}
-                className="flex flex-col gap-3 rounded-xl border border-primary/10 bg-white p-4 shadow-sm transition hover:border-primary/30 sm:flex-row sm:items-center"
+
+          {isLoading ? (
+            <div className="grid gap-3">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="h-28 animate-pulse rounded-xl bg-border/60" />
+              ))}
+            </div>
+          ) : identities.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border bg-surface p-5 text-center sm:p-8">
+              <Shield className="mx-auto size-10 text-slate-300" />
+              <p className="mt-3 text-sm font-semibold text-slate-600">
+                Bạn chưa có hồ sơ định danh nào
+              </p>
+              <p className="mt-1 text-sm text-slate-400">
+                Tạo hồ sơ định danh để có thể đặt phòng và ký hợp đồng thuê.
+              </p>
+
+              <Button
+                variant="outline"
+                className="mt-4 w-full gap-1.5 sm:w-auto"
+                onClick={() => setShowCreateForm(true)}
               >
-                <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <FileText className="size-6 text-primary" />
-                </div>
+                <Plus className="size-4" />
+                Tạo hồ sơ ngay
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {identities.map((identity) => (
+                <div
+                  key={identity._id}
+                  className="flex flex-col gap-3 rounded-xl border border-primary/10 bg-white p-4 shadow-sm transition hover:border-primary/30 sm:flex-row sm:items-center"
+                >
+                  <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                    <FileText className="size-6 text-primary" />
+                  </div>
 
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-bold text-foreground">
-                    {identity.fullName}
-                  </p>
-                  <p className="break-words text-sm text-slate-500">
-                    CCCD: {identity.cccdNumber} • {identity.phone}
-                  </p>
-                </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-bold text-foreground">
+                      {identity.fullName}
+                    </p>
+                    <p className="break-words text-sm text-slate-500">
+                      CCCD: {identity.cccdNumber} • {identity.phone}
+                    </p>
+                  </div>
 
-                <div className="flex items-center justify-between gap-2 sm:justify-end">
-                  <span
-                    className={cn(
-                      'shrink-0 rounded-full px-3 py-1 text-xs font-bold',
-                      identity.status === 'VERIFIED'
-                        ? 'bg-green-500/10 text-green-600'
+                  <div className="flex items-center justify-between gap-2 sm:justify-end">
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-full px-3 py-1 text-xs font-bold',
+                        identity.status === 'VERIFIED'
+                          ? 'bg-green-500/10 text-green-600'
+                          : identity.status === 'REJECTED'
+                            ? 'bg-red-500/10 text-red-600'
+                            : 'bg-amber-500/10 text-amber-600',
+                      )}
+                    >
+                      {identity.status === 'VERIFIED'
+                        ? 'Đã xác minh'
                         : identity.status === 'REJECTED'
-                          ? 'bg-red-500/10 text-red-600'
-                          : 'bg-amber-500/10 text-amber-600',
-                    )}
-                  >
-                    {identity.status === 'VERIFIED'
-                      ? 'Đã xác minh'
-                      : identity.status === 'REJECTED'
-                        ? 'Từ chối'
-                        : 'Chờ xác minh'}
-                  </span>
+                          ? 'Từ chối'
+                          : 'Chờ xác minh'}
+                    </span>
 
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="shrink-0 gap-1 text-xs"
-                    onClick={() => setViewingIdentity(identity)}
-                  >
-                    <Eye className="size-3.5" />
-                    Xem
-                  </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 gap-1 text-xs"
+                      onClick={() => setViewingIdentity(identity)}
+                    >
+                      <Eye className="size-3.5" />
+                      Xem
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 gap-1 text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
+                      disabled={
+                        deleteIdentity.isPending && deletingIdentityId === identity._id
+                      }
+                      onClick={() => handleDeleteIdentity(identity)}
+                    >
+                      <Trash2 className="size-3.5" />
+                      {deleteIdentity.isPending && deletingIdentityId === identity._id
+                        ? 'Đang xóa...'
+                        : 'Xóa'}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
+      <IdentityFormModal
+        open={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        hideUserSearch
+      />
+
+      <Modal
+        open={Boolean(viewingIdentity)}
+        onClose={() => setViewingIdentity(null)}
+        title="Chi tiết hồ sơ định danh"
+        className="max-w-lg"
+      >
+        {viewingIdentity ? <IdentityDetail identity={viewingIdentity} /> : null}
+      </Modal>
+
+      <DeleteIdentityConfirmModal
+        identity={identityToDelete}
+        open={Boolean(identityToDelete)}
+        isPending={deleteIdentity.isPending}
+        onClose={() => {
+          if (!deleteIdentity.isPending) {
+            setIdentityToDelete(null)
+          }
+        }}
+        onConfirm={handleConfirmDeleteIdentity}
+      />
     </div>
-
-    <IdentityFormModal
-      open={showCreateForm}
-      onClose={() => setShowCreateForm(false)}
-      hideUserSearch
-    />
-
-    <Modal
-      open={Boolean(viewingIdentity)}
-      onClose={() => setViewingIdentity(null)}
-      title="Chi tiết hồ sơ định danh"
-      className="max-w-lg"
-    >
-      {viewingIdentity ? <IdentityDetail identity={viewingIdentity} /> : null}
-    </Modal>
-  </div>
-)
+  )
 }

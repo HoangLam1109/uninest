@@ -1,6 +1,7 @@
 import express from "express";
 import {
   createIdentity,
+  deleteIdentity,
   getAdminIdentities,
   getIdentitiesByUserId,
   getIdentityById,
@@ -64,5 +65,7 @@ router.put(
   ]),
   updateIdentity
 );
+
+router.delete("/:id", deleteIdentity);
 
 export default router;
