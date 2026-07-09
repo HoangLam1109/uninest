@@ -1,11 +1,11 @@
 import { useParams, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import {
   ArrowLeft,
   BarChart3,
   Calendar,
   CheckCircle2,
   Clock,
-  CreditCard,
   Home,
   Zap,
   Droplets,
@@ -14,13 +14,17 @@ import {
   Loader2,
   User,
   ReceiptText,
+  Building2,
+  Copy,
+  QrCode,
+  Send,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   useGetInvoiceById,
   useGetInvoiceDetail,
+  useMarkPendingConfirmation,
 } from '../hooks/use-invoices'
-import { usePayInvoice } from '@/features/payment/hooks/use-role-upgrade-payment'
 import {
   formatBillingMonth,
   formatInvoiceDate,
@@ -30,6 +34,7 @@ import {
   invoiceStatusStyles,
 } from '../lib/invoice-display'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 function amountOrDash(value?: number) {
   if (value === undefined || value === null) return '\u2014'
@@ -42,7 +47,7 @@ export function TenantInvoiceDetailPage() {
 
   const invoiceQuery = useGetInvoiceById(id ?? null)
   const detailQuery = useGetInvoiceDetail(id ?? null)
-  const payInvoice = usePayInvoice()
+  const markPending = useMarkPendingConfirmation()
 
   const invoice = invoiceQuery.data
   const detail = detailQuery.data
@@ -300,32 +305,83 @@ export function TenantInvoiceDetailPage() {
         </div>
       ) : null}
 
-      {/* Pay Action (for SENT or OVERDUE invoices) */}
+      {/* Manual Bank Transfer Info — for SENT or OVERDUE invoices */}
       {(invoice.status === 'SENT' || invoice.status === 'OVERDUE') ? (
-        <div className="flex flex-col gap-4 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/20">
-              <CreditCard className="size-5 text-primary" />
+        <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/20">
+              <Building2 className="size-5 text-primary" />
             </div>
-            <div className="flex-1">
-              <p className="font-bold text-slate-800">Thanh toán hóa đơn</p>
-              <p className="mt-1 text-sm text-slate-500">
-                Thanh toán qua PayOS - an toàn, nhanh chóng. Bạn sẽ được chuyển đến cổng thanh toán để hoàn tất.
-              </p>
-            </div>
+            <h2 className="text-base font-bold text-slate-800">Thông tin thanh toán</h2>
           </div>
+
+          <p className="mb-4 text-sm text-slate-500">
+            Vui lòng chuyển khoản trực tiếp cho chủ trọ theo thông tin dưới đây.
+            Hệ thống <strong>không</strong> xử lý giao dịch thanh toán.
+          </p>
+
+          {invoice.paymentBankName ? (
+            <div className="space-y-3 rounded-xl bg-white p-4">
+              <PaymentInfoRow
+                label="Ngân hàng"
+                value={invoice.paymentBankName}
+                icon={<Building2 className="size-4" />}
+              />
+              <PaymentInfoRow
+                label="Số tài khoản"
+                value={invoice.paymentAccountNumber || ''}
+                icon={<Banknote className="size-4" />}
+                copyable
+              />
+              <PaymentInfoRow
+                label="Chủ tài khoản"
+                value={invoice.paymentAccountHolder || ''}
+                icon={<User className="size-4" />}
+              />
+              {invoice.paymentNote ? (
+                <PaymentInfoRow
+                  label="Nội dung chuyển khoản"
+                  value={invoice.paymentNote}
+                  icon={<ReceiptText className="size-4" />}
+                  copyable
+                  highlight
+                />
+              ) : null}
+              {invoice.paymentQrUrl ? (
+                <div className="flex flex-col items-center gap-2 pt-2">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                    <QrCode className="size-3.5" />
+                    Quét mã QR để chuyển khoản
+                  </div>
+                  <img
+                    src={invoice.paymentQrUrl}
+                    alt="QR chuyển khoản"
+                    className="h-48 w-48 rounded-xl border object-contain"
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="rounded-xl bg-white p-4 text-center text-sm text-slate-400">
+              Chưa có thông tin thanh toán. Vui lòng liên hệ chủ trọ.
+            </div>
+          )}
+
+          {/* "I have transferred" button */}
           <Button
-            size="lg"
-            className="w-full text-base font-bold"
-            onClick={() => payInvoice.mutate(invoice._id)}
-            disabled={payInvoice.isPending}
+            variant="outline"
+            className="mt-4 w-full"
+            onClick={() => markPending.mutate(invoice._id)}
+            disabled={markPending.isPending || invoice.paymentStatus === 'pending_confirmation'}
           >
-            {payInvoice.isPending ? (
-              <Loader2 className="size-5 animate-spin" />
+            {markPending.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              <CreditCard className="size-5" />
+              <Send className="size-4" />
             )}
-            Thanh toán {formatPrice(invoice.totalAmount)}
+            {invoice.paymentStatus === 'pending_confirmation'
+              ? 'Đã gửi xác nhận, chờ chủ trọ kiểm tra'
+              : 'Tôi đã chuyển khoản'}
           </Button>
         </div>
       ) : null}
@@ -336,11 +392,26 @@ export function TenantInvoiceDetailPage() {
           <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100">
             <CheckCircle2 className="size-5 text-emerald-600" />
           </div>
-          <div>
+          <div className="flex-1">
             <p className="font-bold text-emerald-800">Đã thanh toán</p>
             <p className="mt-1 text-sm text-emerald-600">
               Hóa đơn này đã được thanh toán vào {formatInvoiceDate(invoice.paidAt!)}.
             </p>
+            {invoice.paymentNote ? (
+              <div className="mt-3 flex items-center gap-2 rounded-lg bg-white/60 px-3 py-2">
+                <span className="text-xs text-emerald-600">Nội dung CK:</span>
+                <span className="text-sm font-mono font-bold text-emerald-800">{invoice.paymentNote}</span>
+                <button
+                  className="ml-auto rounded p-1 text-emerald-400 hover:bg-emerald-100 hover:text-emerald-600"
+                  onClick={() => {
+                    navigator.clipboard.writeText(invoice.paymentNote!)
+                    toast.success('Đã sao chép')
+                  }}
+                >
+                  <Copy className="size-3.5" />
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -383,6 +454,52 @@ function MeterRow({
       <span className="font-semibold text-slate-700">
         {value.toLocaleString('vi-VN')} {unit}
       </span>
+    </div>
+  )
+}
+
+function PaymentInfoRow({
+  label,
+  value,
+  icon,
+  copyable,
+  highlight,
+}: {
+  label: string
+  value: string
+  icon?: React.ReactNode
+  copyable?: boolean
+  highlight?: boolean
+}) {
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text)
+    toast.success('Đã sao chép')
+  }
+
+  return (
+    <div className={cn(
+      'flex items-center justify-between rounded-lg px-3 py-2',
+      highlight && 'bg-amber-50 border border-amber-200',
+    )}>
+      <div className="flex items-center gap-2 text-sm text-slate-600">
+        {icon ? <span className="text-slate-400">{icon}</span> : null}
+        <span>{label}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className={cn('text-sm font-semibold', highlight ? 'text-amber-800' : 'text-slate-800')}>
+          {value}
+        </span>
+        {copyable ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={() => handleCopy(value)}
+          >
+            <Copy className="size-3.5" />
+          </Button>
+        ) : null}
+      </div>
     </div>
   )
 }

@@ -340,18 +340,28 @@ export class PaymentService {
     return { payments, total };
   }
 
-  static async getAdminPayments(skip: number, limit: number) {
+  static async getAdminPayments(skip: number, limit: number, typeFilter?: string) {
+    const filter: any = {};
+    if (typeFilter) {
+      const types = typeFilter.split(",");
+      filter.type = { $in: types };
+    }
     const [payments, total] = await Promise.all([
-      PaymentRepository.findAll(skip, limit),
-      PaymentRepository.countAll(),
+      PaymentRepository.findAll(skip, limit, filter),
+      PaymentRepository.countAll(filter),
     ]);
     return { payments, total };
   }
 
-  static async getAdminPaymentStats() {
+  static async getAdminPaymentStats(typeFilter?: string) {
+    const filter: any = {};
+    if (typeFilter) {
+      const types = typeFilter.split(",");
+      filter.type = { $in: types };
+    }
     const [rows, total] = await Promise.all([
-      PaymentRepository.getStats(),
-      PaymentRepository.countAll(),
+      PaymentRepository.getStats(filter),
+      PaymentRepository.countAll(filter),
     ]);
     let totalAmount = 0;
     let pendingAmount = 0;

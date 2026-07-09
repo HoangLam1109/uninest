@@ -1,4 +1,5 @@
-export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE'
+export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE' | 'CANCELLED'
+export type InvoicePaymentStatus = 'unpaid' | 'pending_confirmation' | 'paid' | 'overdue' | 'cancelled'
 
 export type InvoiceUser = {
   _id?: string
@@ -38,6 +39,16 @@ export type Invoice = {
   paidAt?: string | null
   createdAt?: string
   updatedAt?: string
+  // Manual bank transfer payment fields
+  paymentBankName?: string
+  paymentAccountNumber?: string
+  paymentAccountHolder?: string
+  paymentQrUrl?: string
+  paymentNote?: string
+  paymentMethodType?: string
+  paymentStatus?: InvoicePaymentStatus
+  markedPaidBy?: string | { _id: string; fullName?: string; email?: string }
+  landlordPaymentNote?: string
 }
 
 export type InvoiceDetail = {
@@ -134,6 +145,7 @@ export type UpdateInvoicePayload = {
 export type InvoiceListParams = {
   page?: number
   limit?: number
+  paymentStatus?: InvoicePaymentStatus | 'all'
 }
 
 // ---- MeterReading ----

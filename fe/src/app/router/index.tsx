@@ -44,19 +44,14 @@ const AdminModerationPage = lazy(() =>
     default: module.AdminModerationPage,
   })),
 )
-const AdminPaymentManagementPage = lazy(() =>
-  import('@/features/payment/pages/admin-payment-management-page').then((module) => ({
-    default: module.AdminPaymentManagementPage,
-  })),
-)
 const AdminPackageManagementPage = lazy(() =>
   import('@/features/payment/pages/admin-package-management-page').then((module) => ({
     default: module.AdminPackageManagementPage,
   })),
 )
-const AdminTransactionPage = lazy(() =>
-  import('@/features/payment/pages/admin-transaction-page').then((module) => ({
-    default: module.AdminTransactionPage,
+const AdminPackageRevenuePage = lazy(() =>
+  import('@/features/payment/pages/admin-package-revenue-page').then((module) => ({
+    default: module.AdminPackageRevenuePage,
   })),
 )
 const AdminUserManagementPage = lazy(() =>
@@ -241,9 +236,8 @@ export function AppRouter() {
               <Route index element={<AdminDashboardPage />} />
               <Route path="nguoi-dung" element={<AdminUserManagementPage />} />
               <Route path="kiem-duyet" element={<AdminModerationPage />} />
-              <Route path="thanh-toan" element={<AdminPaymentManagementPage />} />
-              <Route path="giao-dich" element={<AdminTransactionPage />} />
               <Route path="goi-dich-vu" element={<AdminPackageManagementPage />} />
+              <Route path="doanh-thu" element={<AdminPackageRevenuePage />} />
             </Route>
           </Route>
 

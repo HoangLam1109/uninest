@@ -8,6 +8,15 @@ export enum INVOICE_STATUS {
   CANCELLED = "CANCELLED",
 }
 
+/** Payment status for manual bank transfer flow */
+export enum INVOICE_PAYMENT_STATUS {
+  UNPAID = "unpaid",
+  PENDING_CONFIRMATION = "pending_confirmation",
+  PAID = "paid",
+  OVERDUE = "overdue",
+  CANCELLED = "cancelled",
+}
+
 export interface IInvoice extends Document {
   bookingId: Types.ObjectId;
   /** Reference to the active contract at the time of billing */
@@ -22,7 +31,7 @@ export interface IInvoice extends Document {
   electricityAmount?: number;
   waterAmount?: number;
   additionalFees?: number;
-  /** Phí giải ngân tự động (PayOS Payout) - landlord chịu */
+  /** Phí giải ngân tự động (PayOS Payout) - landlord chịu (DEPRECATED: không dùng PayOS nữa) */
   payoutFee?: number;
   totalAmount: number;
   status: INVOICE_STATUS;
@@ -30,6 +39,22 @@ export interface IInvoice extends Document {
   sentAt?: Date;
   paidAt?: Date;
   deletedAt?: Date;
+
+  // === Manual Bank Transfer Payment Fields ===
+  /** Snapshot of landlord's bank info at invoice creation time */
+  paymentBankName?: string;
+  paymentAccountNumber?: string;
+  paymentAccountHolder?: string;
+  paymentQrUrl?: string;
+  paymentNote?: string;
+  paymentMethodType?: string; // "manual_bank_transfer"
+  /** Payment tracking for manual flow */
+  paymentStatus?: INVOICE_PAYMENT_STATUS;
+  /** Who marked as paid (landlordId) */
+  markedPaidBy?: Types.ObjectId;
+  /** Internal note from landlord when confirming payment */
+  landlordPaymentNote?: string;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -124,6 +149,53 @@ const InvoiceSchema = new Schema<IInvoice>(
     deletedAt: {
       type: Date,
       default: null,
+    },
+    // === Manual Bank Transfer Payment Fields ===
+    paymentBankName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    paymentAccountNumber: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    paymentAccountHolder: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    paymentQrUrl: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    paymentNote: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    paymentMethodType: {
+      type: String,
+      trim: true,
+      default: "manual_bank_transfer",
+    },
+    paymentStatus: {
+      type: String,
+      enum: Object.values(INVOICE_PAYMENT_STATUS),
+      default: INVOICE_PAYMENT_STATUS.UNPAID,
+      index: true,
+    },
+    markedPaidBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    landlordPaymentNote: {
+      type: String,
+      trim: true,
+      default: "",
     },
   },
   {

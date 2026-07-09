@@ -1,14 +1,14 @@
 import { useState } from 'react'
-import { Building2, ShieldCheck } from 'lucide-react'
+import { CreditCard, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AdminIdentityModerationPage } from '@/features/identity/pages/admin-identity-moderation-page'
-import { AdminBankAccountModerationPage } from '@/features/bank-account/pages/admin-bank-account-moderation-page'
+import { AdminPaymentInfoModerationPage } from './admin-payment-info-moderation-page'
 
-type ModerationTab = 'cccd' | 'bank'
+type ModerationTab = 'cccd' | 'payment-info'
 
 const tabs: Array<{ key: ModerationTab; label: string; icon: typeof ShieldCheck }> = [
   { key: 'cccd', label: 'CCCD', icon: ShieldCheck },
-  { key: 'bank', label: 'Ngân hàng', icon: Building2 },
+  { key: 'payment-info', label: 'TT Thanh toán', icon: CreditCard },
 ]
 
 export function AdminModerationPage() {
@@ -16,7 +16,6 @@ export function AdminModerationPage() {
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-4 md:px-6 md:pt-6 lg:px-8 lg:pt-8">
-      {/* Tab Bar */}
       <div className="flex gap-1.5 rounded-xl bg-slate-100 p-1 w-fit">
         {tabs.map((tab) => (
           <button
@@ -35,11 +34,10 @@ export function AdminModerationPage() {
         ))}
       </div>
 
-      {/* Tab Content */}
       {activeTab === 'cccd' ? (
         <AdminIdentityModerationPage />
       ) : (
-        <AdminBankAccountModerationPage />
+        <AdminPaymentInfoModerationPage />
       )}
     </div>
   )

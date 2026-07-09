@@ -11,19 +11,33 @@ import {
   useDeleteInvoice,
   useGetLandlordInvoices,
   useMarkInvoicePaid,
+  useMarkInvoiceUnpaid,
+  useCancelInvoice,
   useSendInvoice,
 } from '../hooks/use-invoices'
-import type { Invoice } from '../types/invoice.type'
+import type { Invoice, InvoicePaymentStatus } from '../types/invoice.type'
 import { sumPaidAmount, sumUnpaidAmount, formatPrice } from '../lib/invoice-display'
+import { cn } from '@/lib/utils'
+
+const PAYMENT_STATUS_TABS: { label: string; value: InvoicePaymentStatus | 'all' }[] = [
+  { label: 'Tất cả', value: 'all' },
+  { label: 'Chưa thanh toán', value: 'unpaid' },
+  { label: 'Đã thanh toán', value: 'paid' },
+  { label: 'Quá hạn', value: 'overdue' },
+  { label: 'Đã hủy', value: 'cancelled' },
+]
 
 export function LandlordInvoicesPage() {
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<InvoicePaymentStatus | 'all'>('all')
 
-  const invoicesQuery = useGetLandlordInvoices({ page, limit: 10 })
+  const invoicesQuery = useGetLandlordInvoices({ page, limit: 10, paymentStatus: paymentStatusFilter })
   const createUtility = useCreateUtilityInvoice()
   const sendInvoice = useSendInvoice()
   const markPaid = useMarkInvoicePaid()
+  const markUnpaid = useMarkInvoiceUnpaid()
+  const cancelInvoice = useCancelInvoice()
   const deleteInvoice = useDeleteInvoice()
 
   const bookingsQuery = useGetLandlordBookings(
@@ -39,6 +53,8 @@ export function LandlordInvoicesPage() {
     createUtility.isPending ||
     sendInvoice.isPending ||
     markPaid.isPending ||
+    markUnpaid.isPending ||
+    cancelInvoice.isPending ||
     deleteInvoice.isPending
 
   const stats = {
@@ -55,7 +71,17 @@ export function LandlordInvoicesPage() {
 
   function handleMarkPaid(invoice: Invoice) {
     if (!confirm(`Xác nhận đã thu tiền hóa đơn ${invoice.billingMonth}?`)) return
-    markPaid.mutate(invoice._id)
+    markPaid.mutate({ id: invoice._id })
+  }
+
+  function handleMarkUnpaid(invoice: Invoice) {
+    if (!confirm(`Đánh dấu hóa đơn ${invoice.billingMonth} là chưa thanh toán?`)) return
+    markUnpaid.mutate(invoice._id)
+  }
+
+  function handleCancel(invoice: Invoice) {
+    if (!confirm(`Hủy hóa đơn ${invoice.billingMonth}?`)) return
+    cancelInvoice.mutate(invoice._id)
   }
 
   function handleDelete(invoice: Invoice) {
@@ -97,12 +123,30 @@ export function LandlordInvoicesPage() {
       {/* Header + Create button */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-slate-900">
-          Danh sách hóa đơn
+          Quản lý thanh toán
         </h2>
         <Button onClick={() => setModalOpen(true)}>
           <Plus className="size-4" />
           Tạo hóa đơn
         </Button>
+      </div>
+
+      {/* Payment Status Filter Tabs */}
+      <div className="flex flex-wrap gap-2">
+        {PAYMENT_STATUS_TABS.map((tab) => (
+          <Button
+            key={tab.value}
+            variant={paymentStatusFilter === tab.value ? 'default' : 'outline'}
+            size="sm"
+            className="h-8 text-xs"
+            onClick={() => {
+              setPaymentStatusFilter(tab.value)
+              setPage(1)
+            }}
+          >
+            {tab.label}
+          </Button>
+        ))}
       </div>
 
       {/* Invoice list */}
@@ -125,6 +169,8 @@ export function LandlordInvoicesPage() {
               isActionPending={isPending}
               onSend={handleSend}
               onMarkPaid={handleMarkPaid}
+              onMarkUnpaid={handleMarkUnpaid}
+              onCancel={handleCancel}
               onDelete={handleDelete}
             />
           ))}
