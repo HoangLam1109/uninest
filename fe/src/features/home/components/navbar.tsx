@@ -13,17 +13,22 @@ import { images } from '@/assets/images'
 import { Button } from '@/components/ui/button'
 import { paths } from '@/config/constants'
 import { USER_ROLES } from '@/constants/roles'
+import { useLogout } from '@/features/auth/hooks/use-logout'
 import { navLinks } from '@/features/home/data'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 import { NavbarUserMenu } from './navbar-user-menu'
 
 export function Navbar() {
-  const { user, isLoggedIn } = useAuth()
+  const { user, isLoggedIn, dashboardLabel, dashboardPath } = useAuth()
+  const logout = useLogout()
   const navbarRef = useRef<HTMLElement>(null)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const canCreateRoom = user?.role === USER_ROLES.LANDLORD
+  const showDashboardLink = Boolean(
+    isLoggedIn && dashboardLabel && dashboardPath !== paths.home,
+  )
 
   useLayoutEffect(() => {
     const navbar = navbarRef.current
@@ -78,7 +83,7 @@ export function Navbar() {
     }
 
     function handleResize() {
-      if (window.innerWidth >= 1024) {
+      if (window.innerWidth >= 768) {
         setIsMobileMenuOpen(false)
       }
     }
@@ -170,47 +175,107 @@ export function Navbar() {
           className="flex items-center justify-end gap-3 md:shrink-0"
           data-navbar-actions
         >
-          {isLoggedIn && user ? (
-            <>
-              <Button
-                variant="outline"
-                size="default"
-                className="min-w-0 px-4 sm:px-5"
-                asChild
-              >
-                <Link
-                  to={paths.createRoom}
-                  onClick={handleCreateRoomClick}
-                  aria-disabled={!canCreateRoom}
-                  className={cn(
-                    !canCreateRoom &&
-                      'cursor-not-allowed opacity-60 hover:bg-transparent',
-                  )}
-                >
-                  Đăng tin
-                </Link>
-              </Button>
-              <NavbarUserMenu user={user} />
-            </>
-          ) : (
-            <>
-              <div className="relative lg:hidden" ref={mobileMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsMobileMenuOpen((value) => !value)}
-                  className="flex size-10 items-center justify-center rounded-xl border border-primary/15 text-primary transition-colors hover:bg-primary/10"
-                  aria-expanded={isMobileMenuOpen}
-                  aria-haspopup="menu"
-                  aria-label="Mở menu tài khoản"
-                >
-                  <Menu className="size-5" />
-                </button>
+          <div className="relative md:hidden" ref={mobileMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen((value) => !value)}
+              className="flex size-10 items-center justify-center rounded-xl border border-primary/15 text-primary transition-colors hover:bg-primary/10"
+              aria-expanded={isMobileMenuOpen}
+              aria-haspopup="menu"
+              aria-label="Mở menu điều hướng"
+            >
+              <Menu className="size-5" />
+            </button>
 
-                {isMobileMenuOpen ? (
-                  <div
-                    role="menu"
-                    className="absolute right-0 top-full z-50 mt-3 flex w-56 flex-col gap-2 rounded-2xl border border-border bg-white p-3 shadow-xl"
-                  >
+            {isMobileMenuOpen ? (
+              <div
+                role="menu"
+                className="absolute right-0 top-full z-50 mt-3 flex w-[min(18rem,calc(100vw-3rem))] flex-col gap-3 rounded-2xl border border-border bg-white p-3 shadow-xl"
+              >
+                <div className="flex flex-col gap-1 border-b border-border pb-3">
+                  {navLinks.map((link) => (
+                    <NavLink
+                      key={link.label}
+                      to={link.href}
+                      onClick={(event) => {
+                        closeMobileMenu()
+                        handleNavClick(event, link.href)
+                      }}
+                      className={({ isActive }) =>
+                        cn(
+                          'rounded-xl px-3 py-2 text-sm font-semibold transition-colors hover:bg-surface',
+                          isActive
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-foreground',
+                        )
+                      }
+                    >
+                      {link.label}
+                    </NavLink>
+                  ))}
+                </div>
+
+                {isLoggedIn && user ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="rounded-xl bg-surface px-3 py-3">
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        {user.fullName}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+
+                    {showDashboardLink ? (
+                      <Button
+                        variant="outline"
+                        size="default"
+                        className="w-full"
+                        asChild
+                      >
+                        <Link to={dashboardPath} onClick={closeMobileMenu}>
+                          {dashboardLabel}
+                        </Link>
+                      </Button>
+                    ) : null}
+
+                    <Button
+                      variant="outline"
+                      size="default"
+                      className="w-full"
+                      asChild
+                    >
+                      <Link
+                        to={paths.createRoom}
+                        onClick={(event) => {
+                          closeMobileMenu()
+                          handleCreateRoomClick(event)
+                        }}
+                        aria-disabled={!canCreateRoom}
+                        className={cn(
+                          !canCreateRoom &&
+                            'cursor-not-allowed opacity-60 hover:bg-transparent',
+                        )}
+                      >
+                        Đăng tin
+                      </Link>
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="default"
+                      className="w-full"
+                      disabled={logout.isPending}
+                      onClick={() => {
+                        closeMobileMenu()
+                        logout.mutate()
+                      }}
+                    >
+                      {logout.isPending ? 'Đang đăng xuất...' : 'Đăng xuất'}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
                     <Button
                       variant="outline"
                       size="default"
@@ -248,41 +313,65 @@ export function Navbar() {
                       </Link>
                     </Button>
                   </div>
-                ) : null}
+                )}
               </div>
+            ) : null}
+          </div>
 
-              <div className="hidden items-center gap-3 lg:flex">
-                <Button
-                  variant="outline"
-                  size="default"
-                  className="min-w-0 px-4 sm:px-5"
-                  asChild
+          {isLoggedIn && user ? (
+            <div className="hidden items-center gap-3 md:flex">
+              <Button
+                variant="outline"
+                size="default"
+                className="min-w-0 px-4 sm:px-5"
+                asChild
+              >
+                <Link
+                  to={paths.createRoom}
+                  onClick={handleCreateRoomClick}
+                  aria-disabled={!canCreateRoom}
+                  className={cn(
+                    !canCreateRoom &&
+                      'cursor-not-allowed opacity-60 hover:bg-transparent',
+                  )}
                 >
-                  <Link
-                    to={paths.createRoom}
-                    onClick={handleCreateRoomClick}
-                    aria-disabled={!canCreateRoom}
-                    className={cn(
-                      !canCreateRoom &&
-                        'cursor-not-allowed opacity-60 hover:bg-transparent',
-                    )}
-                  >
-                    Đăng tin
-                  </Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="default"
-                  className="min-w-0 px-4 sm:px-5"
-                  asChild
+                  Đăng tin
+                </Link>
+              </Button>
+              <NavbarUserMenu user={user} />
+            </div>
+          ) : (
+            <div className="hidden items-center gap-3 md:flex">
+              <Button
+                variant="outline"
+                size="default"
+                className="min-w-0 px-4 sm:px-5"
+                asChild
+              >
+                <Link
+                  to={paths.createRoom}
+                  onClick={handleCreateRoomClick}
+                  aria-disabled={!canCreateRoom}
+                  className={cn(
+                    !canCreateRoom &&
+                      'cursor-not-allowed opacity-60 hover:bg-transparent',
+                  )}
                 >
-                  <Link to={paths.login}>Đăng nhập</Link>
-                </Button>
-                <Button size="default" className="min-w-0 px-4 sm:px-5" asChild>
-                  <Link to={paths.register}>Đăng ký</Link>
-                </Button>
-              </div>
-            </>
+                  Đăng tin
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                size="default"
+                className="min-w-0 px-4 sm:px-5"
+                asChild
+              >
+                <Link to={paths.login}>Đăng nhập</Link>
+              </Button>
+              <Button size="default" className="min-w-0 px-4 sm:px-5" asChild>
+                <Link to={paths.register}>Đăng ký</Link>
+              </Button>
+            </div>
           )}
         </div>
       </div>

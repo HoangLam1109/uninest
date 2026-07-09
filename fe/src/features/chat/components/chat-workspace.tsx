@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -14,9 +15,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { USER_ROLES } from '@/constants/roles'
 import { LandlordDashboardHeader } from '@/features/landlord'
-import { formatRoomCurrency, formatRoomFullLocation } from '@/utils/room-display'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth.store'
+import { formatRoomCurrency, formatRoomFullLocation } from '@/utils/room-display'
 import {
   chatKeys,
   useChatSocket,
@@ -26,7 +27,6 @@ import {
   useSendChatMessage,
 } from '../hooks/use-chat'
 import type { ChatConversation, ChatMessage } from '../types/chat.type'
-import { useQueryClient } from '@tanstack/react-query'
 
 function getUserId(value: { _id?: string; id?: string } | null | undefined) {
   return value?._id ?? value?.id ?? ''
@@ -142,14 +142,19 @@ function MessageBubble({
       ) : null}
       <div
         className={cn(
-          'max-w-[min(78%,42rem)] rounded-lg px-4 py-3 shadow-sm',
+          'max-w-[88%] rounded-lg px-3 py-2.5 shadow-sm sm:max-w-[80%] sm:px-4 sm:py-3 xl:max-w-[42rem]',
           isMine
             ? 'bg-primary text-white shadow-primary/15'
             : 'border border-primary/10 bg-white text-foreground',
         )}
       >
         <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
-        <p className={cn('mt-1 text-right text-[11px]', isMine ? 'text-white/75' : 'text-slate-400')}>
+        <p
+          className={cn(
+            'mt-1 text-right text-[11px]',
+            isMine ? 'text-white/75' : 'text-slate-400',
+          )}
+        >
           {formatMessageTime(message.createdAt)}
         </p>
       </div>
@@ -162,6 +167,7 @@ export function ChatWorkspace() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [draft, setDraft] = useState('')
   const [keyword, setKeyword] = useState('')
+  const deferredKeyword = useDeferredValue(keyword)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const queryClient = useQueryClient()
   const user = useAuthStore((state) => state.user)
@@ -171,11 +177,9 @@ export function ChatWorkspace() {
     () => conversationsQuery.data ?? [],
     [conversationsQuery.data],
   )
-  const selectedConversationId =
-    searchParams.get('conversationId') ?? conversations[0]?._id ?? null
+  const selectedConversationId = searchParams.get('conversationId')
   const selectedConversation =
-    conversations.find((conversation) => conversation._id === selectedConversationId) ??
-    null
+    conversations.find((conversation) => conversation._id === selectedConversationId) ?? null
   const messagesQuery = useGetChatMessages(selectedConversationId)
   const sendMessageMutation = useSendChatMessage(selectedConversationId)
   const { mutate: markConversationAsRead } =
@@ -183,7 +187,7 @@ export function ChatWorkspace() {
   const chatSocket = useChatSocket(selectedConversationId)
 
   const filteredConversations = useMemo(() => {
-    const normalizedKeyword = keyword.trim().toLowerCase()
+    const normalizedKeyword = deferredKeyword.trim().toLowerCase()
     if (!normalizedKeyword) return conversations
 
     return conversations.filter((conversation) => {
@@ -191,13 +195,7 @@ export function ChatWorkspace() {
       const roomTitle = (conversation.roomId?.title || '').toLowerCase()
       return name.includes(normalizedKeyword) || roomTitle.includes(normalizedKeyword)
     })
-  }, [conversations, currentUserId, keyword])
-
-  useEffect(() => {
-    if (!selectedConversationId && conversations[0]?._id) {
-      setSearchParams({ conversationId: conversations[0]._id }, { replace: true })
-    }
-  }, [conversations, selectedConversationId, setSearchParams])
+  }, [conversations, currentUserId, deferredKeyword])
 
   useEffect(() => {
     if (!selectedConversationId) return
@@ -224,12 +222,30 @@ export function ChatWorkspace() {
     queryClient.invalidateQueries({ queryKey: chatKeys.conversations() })
   }
 
+  function handleConversationSelect(conversationId: string) {
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.set('conversationId', conversationId)
+    setSearchParams(nextParams)
+  }
+
+  function handleBackToConversations() {
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('conversationId')
+    setSearchParams(nextParams)
+  }
+
   const messages = messagesQuery.data?.data ?? []
   const participant = selectedConversation
     ? getParticipant(selectedConversation, currentUserId)
     : null
   const room = selectedConversation?.roomId
   const isLandlordMessagesPage = pathname.startsWith('/chu-nha/tin-nhan')
+  const activeConversation =
+    selectedConversation && participant && room
+      ? { conversation: selectedConversation, participant, room }
+      : null
+  const showConversationDetail = Boolean(activeConversation)
+  const showConversationList = !showConversationDetail
 
   return (
     <section
@@ -246,27 +262,32 @@ export function ChatWorkspace() {
           subtitle="Trao đổi với người thuê về lịch xem phòng, chi phí và điều kiện thuê."
         />
       ) : (
-      <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="flex items-center gap-2 text-sm font-semibold text-primary">
-            <MessageCircle className="size-4" />
-            Tin nhắn
-          </p>
-          <h1 className="mt-1 text-2xl font-bold text-foreground md:text-3xl">
-            Trò chuyện thuê phòng
-          </h1>
-        </div>
-        <Button asChild variant="outline" className="w-fit">
-          <Link to={user?.role === USER_ROLES.LANDLORD ? '/chu-nha' : '/phong'}>
-            <ArrowLeft className="size-4" />
-            Quay lại
-          </Link>
-        </Button>
-      </header>
+        <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-semibold text-primary">
+              <MessageCircle className="size-4" />
+              Tin nhắn
+            </p>
+            <h1 className="mt-1 text-2xl font-bold text-foreground md:text-3xl">
+              Trò chuyện thuê phòng
+            </h1>
+          </div>
+          <Button asChild variant="outline" className="w-fit">
+            <Link to={user?.role === USER_ROLES.LANDLORD ? '/chu-nha' : '/phong'}>
+              <ArrowLeft className="size-4" />
+              Quay lại
+            </Link>
+          </Button>
+        </header>
       )}
 
-      <div className="grid min-h-[680px] flex-1 overflow-hidden rounded-xl border border-primary/10 bg-white shadow-sm lg:grid-cols-[22rem_minmax(0,1fr)]">
-        <aside className="border-b border-primary/10 bg-white lg:border-b-0 lg:border-r">
+      <div className="grid min-h-[70svh] flex-1 grid-cols-1 overflow-hidden rounded-xl border border-primary/10 bg-white shadow-sm xl:min-h-[680px] xl:grid-cols-[22rem_minmax(0,1fr)]">
+        <aside
+          className={cn(
+            'min-h-0 flex-col border-primary/10 bg-white xl:flex xl:border-b-0 xl:border-r',
+            showConversationList ? 'flex' : 'hidden',
+          )}
+        >
           <div className="border-b border-primary/10 p-4">
             <div className="relative">
               <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
@@ -279,7 +300,7 @@ export function ChatWorkspace() {
             </div>
           </div>
 
-          <div className="max-h-[21rem] space-y-1 overflow-y-auto p-3 lg:max-h-[calc(100svh-13rem)]">
+          <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
             {conversationsQuery.isLoading ? (
               Array.from({ length: 5 }).map((_, index) => (
                 <div
@@ -307,47 +328,76 @@ export function ChatWorkspace() {
                 conversation={conversation}
                 currentUserId={currentUserId}
                 selected={conversation._id === selectedConversationId}
-                onSelect={() => setSearchParams({ conversationId: conversation._id })}
+                onSelect={() => handleConversationSelect(conversation._id)}
               />
             ))}
           </div>
         </aside>
 
-        <div className="flex min-h-0 flex-col bg-surface">
-          {selectedConversation && participant && room ? (
+        <div
+          className={cn(
+            'min-h-0 flex-col bg-surface xl:flex',
+            showConversationDetail ? 'flex' : 'hidden xl:flex',
+          )}
+        >
+          {activeConversation ? (
             <>
               <div className="border-b border-primary/10 bg-white p-4">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <Avatar
-                      name={participant.fullName || participant.email || 'UniNest'}
-                      src={participant.avatarUrl}
-                      className="bg-primary text-white"
-                    />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h2 className="truncate text-base font-bold text-foreground">
-                          {participant.fullName || participant.email || 'Người dùng UniNest'}
-                        </h2>
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600">
-                          <Circle className="size-2 fill-current" />
-                          Đang hoạt động
-                        </span>
-                      </div>
-                      <p className="mt-1 truncate text-xs text-slate-500">
-                        {participant.phone || participant.email || 'Liên hệ qua UniNest'}
-                      </p>
-                    </div>
+                <div className="flex flex-col gap-4">
+                  <div className="xl:hidden">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="min-w-0 px-3"
+                      onClick={handleBackToConversations}
+                    >
+                      <ArrowLeft className="size-4" />
+                      Danh sách chat
+                    </Button>
                   </div>
 
-                  <div className="rounded-lg border border-primary/10 bg-primary/5 px-4 py-3">
-                    <p className="flex items-center gap-2 text-sm font-bold text-foreground">
-                      <Home className="size-4 text-primary" />
-                      {room.title}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {formatRoomFullLocation(room)} · {formatRoomCurrency(room.pricePerMonth)}
-                    </p>
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Avatar
+                        name={
+                          activeConversation.participant.fullName ||
+                          activeConversation.participant.email ||
+                          'UniNest'
+                        }
+                        src={activeConversation.participant.avatarUrl}
+                        className="bg-primary text-white"
+                      />
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="truncate text-base font-bold text-foreground">
+                            {activeConversation.participant.fullName ||
+                              activeConversation.participant.email ||
+                              'Người dùng UniNest'}
+                          </h2>
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600">
+                            <Circle className="size-2 fill-current" />
+                            Đang hoạt động
+                          </span>
+                        </div>
+                        <p className="mt-1 truncate text-xs text-slate-500">
+                          {activeConversation.participant.phone ||
+                            activeConversation.participant.email ||
+                            'Liên hệ qua UniNest'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-primary/10 bg-primary/5 px-4 py-3 md:max-w-sm">
+                      <p className="flex items-center gap-2 text-sm font-bold text-foreground">
+                        <Home className="size-4 shrink-0 text-primary" />
+                        <span className="truncate">{activeConversation.room.title}</span>
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">
+                        {formatRoomFullLocation(activeConversation.room)} ·{' '}
+                        {formatRoomCurrency(activeConversation.room.pricePerMonth)}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -389,7 +439,7 @@ export function ChatWorkspace() {
                 onSubmit={handleSubmit}
                 className="border-t border-primary/10 bg-white p-3 md:p-4"
               >
-                <div className="flex items-end gap-3">
+                <div className="flex items-end gap-2 md:gap-3">
                   <textarea
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
@@ -401,13 +451,14 @@ export function ChatWorkspace() {
                     }}
                     rows={1}
                     placeholder="Nhập tin nhắn..."
-                    className="max-h-32 min-h-11 flex-1 resize-none rounded-lg bg-slate-50 px-4 py-3 text-sm leading-5 text-foreground outline-none ring-1 ring-transparent placeholder:text-slate-400 focus:ring-primary"
+                    className="max-h-32 min-h-11 flex-1 resize-none rounded-lg bg-slate-50 px-3 py-3 text-sm leading-5 text-foreground outline-none ring-1 ring-transparent placeholder:text-slate-400 focus:ring-primary md:px-4"
                   />
                   <Button
                     type="submit"
                     size="icon"
                     disabled={!draft.trim() || sendMessageMutation.isPending}
                     aria-label="Gửi tin nhắn"
+                    className="shrink-0"
                   >
                     <Send className="size-4" />
                   </Button>

@@ -66,7 +66,7 @@ export function BookingCard({
   return (
     <>
       <article className="flex h-full flex-col rounded-[28px] border border-primary/10 bg-white p-5 shadow-sm transition-shadow hover:shadow-md sm:p-6">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span
@@ -84,13 +84,13 @@ export function BookingCard({
               ) : null}
             </div>
 
-            <h2 className="mt-4 line-clamp-2 text-xl font-bold text-slate-950">
-              {room?.title ?? 'Phong khong kha dung'}
+            <h2 className="mt-4 break-words text-xl font-bold text-slate-950">
+              {room?.title ?? 'Phòng chưa có tiêu đề'}
             </h2>
           </div>
 
           {room?.pricePerMonth ? (
-            <div className="shrink-0 rounded-2xl bg-primary/10 px-4 py-3 text-right">
+            <div className="w-full rounded-2xl bg-primary/10 px-4 py-3 text-left sm:w-auto sm:shrink-0 sm:text-right">
               <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-primary">
                 Giá phòng
               </p>
@@ -102,7 +102,7 @@ export function BookingCard({
         </div>
 
         <div className="mt-4 rounded-2xl bg-surface px-4 py-3">
-          <p className="flex min-w-0 items-start gap-2 text-sm text-slate-500">
+          <p className="flex min-w-0 items-start gap-2 break-words text-sm text-slate-500">
             <Home className="mt-0.5 size-4 shrink-0 text-primary" />
             {room
               ? [room.address, room.district, room.city].filter(Boolean).join(', ')
@@ -110,7 +110,7 @@ export function BookingCard({
           </p>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
           <div className="rounded-2xl border border-slate-200/70 bg-white px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
               Ngày đến xem phòng
@@ -125,7 +125,7 @@ export function BookingCard({
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
               {mode === 'landlord' ? 'Người thuê' : 'Trạng thái hiện tại'}
             </p>
-            <p className="mt-2 font-bold text-slate-950">
+            <p className="mt-2 break-words font-bold text-slate-950">
               {mode === 'landlord'
                 ? tenant?.fullName ?? tenant?.email ?? 'Chưa có thông tin'
                 : bookingStatusLabels[booking.status]}
@@ -141,13 +141,13 @@ export function BookingCard({
             </div>
             <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-600">
               {tenant.email ? (
-                <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5">
+                <span className="inline-flex max-w-full items-center gap-2 break-all rounded-full bg-white px-3 py-1.5">
                   <Mail className="size-4 text-primary" />
                   {tenant.email}
                 </span>
               ) : null}
               {tenant.phone ? (
-                <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5">
+                <span className="inline-flex max-w-full items-center gap-2 break-all rounded-full bg-white px-3 py-1.5">
                   <Phone className="size-4 text-primary" />
                   {tenant.phone}
                 </span>
@@ -172,7 +172,7 @@ export function BookingCard({
                 return (
                   <div
                     key={id}
-                    className="flex items-center justify-between gap-3 rounded-2xl bg-white px-3 py-3 text-sm"
+                    className="flex flex-col items-start gap-3 rounded-2xl bg-white px-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0">
                       <p className="truncate font-bold text-foreground">{name}</p>
@@ -185,7 +185,7 @@ export function BookingCard({
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-8 min-w-0 shrink-0 gap-1 px-2 text-xs text-primary"
+                      className="h-8 min-w-0 gap-1 self-start px-2 text-xs text-primary sm:shrink-0"
                       onClick={() => {
                         setViewingIdentityId(id)
                         setShowIdentity(true)
@@ -208,6 +208,7 @@ export function BookingCard({
                 <Button
                   type="button"
                   variant="outline"
+                  className="w-full sm:w-auto"
                   disabled={isActionPending}
                   onClick={() => onCancel?.(booking._id)}
                 >
@@ -221,6 +222,7 @@ export function BookingCard({
                   <Button
                     type="button"
                     variant="outline"
+                    className="w-full sm:w-auto"
                     disabled={isActionPending}
                     onClick={() => onReject?.(booking._id)}
                   >
@@ -229,6 +231,7 @@ export function BookingCard({
                   </Button>
                   <Button
                     type="button"
+                    className="w-full sm:w-auto"
                     disabled={isActionPending}
                     onClick={() => onApprove?.(booking._id)}
                   >
