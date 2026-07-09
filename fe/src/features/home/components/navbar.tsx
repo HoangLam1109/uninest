@@ -83,7 +83,7 @@ export function Navbar() {
     }
 
     function handleResize() {
-      if (window.innerWidth >= 768) {
+      if (window.innerWidth >= 1024) {
         setIsMobileMenuOpen(false)
       }
     }
@@ -127,7 +127,7 @@ export function Navbar() {
       className="sticky top-0 z-50 border-b border-border bg-surface/95 backdrop-blur-md"
     >
       <div
-        className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-4 lg:px-10 xl:px-20"
+        className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:gap-6 lg:px-10 xl:px-20"
         data-navbar-animate
       >
         <Link
@@ -148,7 +148,7 @@ export function Navbar() {
         </Link>
 
         <nav
-          className="hidden flex-1 items-center justify-center gap-10 md:flex"
+          className="hidden flex-1 items-center justify-center gap-6 lg:flex xl:gap-10"
           aria-label="Chính"
           data-navbar-nav
         >
@@ -172,10 +172,10 @@ export function Navbar() {
         </nav>
 
         <div
-          className="flex items-center justify-end gap-3 md:shrink-0"
+          className="flex items-center justify-end gap-3 lg:shrink-0"
           data-navbar-actions
         >
-          <div className="relative md:hidden" ref={mobileMenuRef}>
+          <div className="relative lg:hidden" ref={mobileMenuRef}>
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen((value) => !value)}
@@ -319,11 +319,11 @@ export function Navbar() {
           </div>
 
           {isLoggedIn && user ? (
-            <div className="hidden items-center gap-3 md:flex">
+            <div className="hidden items-center gap-3 lg:flex">
               <Button
                 variant="outline"
                 size="default"
-                className="min-w-0 px-4 sm:px-5"
+                className="min-w-0 px-4"
                 asChild
               >
                 <Link
@@ -341,11 +341,11 @@ export function Navbar() {
               <NavbarUserMenu user={user} />
             </div>
           ) : (
-            <div className="hidden items-center gap-3 md:flex">
+            <div className="hidden items-center gap-3 lg:flex">
               <Button
                 variant="outline"
                 size="default"
-                className="min-w-0 px-4 sm:px-5"
+                className="min-w-0 px-4"
                 asChild
               >
                 <Link
@@ -363,12 +363,12 @@ export function Navbar() {
               <Button
                 variant="outline"
                 size="default"
-                className="min-w-0 px-4 sm:px-5"
+                className="min-w-0 px-4"
                 asChild
               >
                 <Link to={paths.login}>Đăng nhập</Link>
               </Button>
-              <Button size="default" className="min-w-0 px-4 sm:px-5" asChild>
+              <Button size="default" className="min-w-0 px-4" asChild>
                 <Link to={paths.register}>Đăng ký</Link>
               </Button>
             </div>
