@@ -2,12 +2,12 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Building2,
   CalendarDays,
-  FileText,
   LogOut,
   MessageCircle,
   ScrollText,
   UserCircle,
   Users,
+  Banknote,
 } from 'lucide-react'
 
 export type LandlordNavItem = {
@@ -22,7 +22,7 @@ export const landlordNavItems: LandlordNavItem[] = [
   { label: 'Hợp đồng', href: '/chu-nha/hop-dong', icon: ScrollText },
   { label: 'Tin nhắn', href: '/chu-nha/tin-nhan', icon: MessageCircle },
   { label: 'Người thuê', href: '/chu-nha/nguoi-thue', icon: Users },
-  { label: 'Hóa đơn', href: '/chu-nha/hoa-don', icon: FileText },
+  { label: 'Quản lý tiền', href: '/chu-nha/hoa-don', icon: Banknote },
   { label: 'Hồ sơ', href: '/chu-nha/ho-so', icon: UserCircle },
 ]
 

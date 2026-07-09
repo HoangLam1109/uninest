@@ -1,4 +1,4 @@
-import { InvoiceModel, INVOICE_STATUS } from "../models/Invoice.model.js";
+import { InvoiceModel, INVOICE_STATUS, INVOICE_PAYMENT_STATUS } from "../models/Invoice.model.js";
 import { InvoiceDetailModel } from "../models/InvoiceDetail.model.js";
 import mongoose from "mongoose";
 
@@ -10,19 +10,31 @@ export const InvoiceRepository = {
       .populate("bookingId")
       .populate("landlordId", "fullName email phone")
       .populate("tenantId", "fullName email phone")
-      .populate("bankAccountId"),
+      .populate("bankAccountId")
+      .populate("markedPaidBy", "fullName email"),
 
-  findByLandlordId: (landlordId: string, skip: number, limit: number) =>
-    InvoiceModel.find({ landlordId, deletedAt: null })
+  findByLandlordId: (landlordId: string, skip: number, limit: number, paymentStatusFilter?: string) => {
+    const query: any = { landlordId, deletedAt: null };
+    if (paymentStatusFilter && paymentStatusFilter !== "all") {
+      query.paymentStatus = paymentStatusFilter;
+    }
+    return InvoiceModel.find(query)
       .populate("tenantId", "fullName email phone")
       .populate("bookingId", "roomId")
       .populate("bankAccountId")
+      .populate("markedPaidBy", "fullName email")
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit),
+      .limit(limit);
+  },
 
-  countByLandlordId: (landlordId: string) =>
-    InvoiceModel.countDocuments({ landlordId, deletedAt: null }),
+  countByLandlordId: (landlordId: string, paymentStatusFilter?: string) => {
+    const query: any = { landlordId, deletedAt: null };
+    if (paymentStatusFilter && paymentStatusFilter !== "all") {
+      query.paymentStatus = paymentStatusFilter;
+    }
+    return InvoiceModel.countDocuments(query);
+  },
 
   findByTenantId: (tenantId: string, skip: number, limit: number) =>
     InvoiceModel.find({ tenantId, deletedAt: null })

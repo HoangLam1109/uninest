@@ -14,6 +14,12 @@ import type {
   UpdateInvoicePayload,
   UtilityInvoiceResponse,
 } from '../types/invoice.type'
+import type {
+  LandlordPaymentInfoResponse,
+  LandlordPaymentInfoListResponse,
+  LandlordPaymentInfoCheckResponse,
+  LandlordPaymentInfoPayload,
+} from '../types/landlord-payment-info.type'
 
 export const invoiceApi = {
   // ---- Invoice CRUD ----
@@ -39,8 +45,17 @@ export const invoiceApi = {
   send: (id: string) =>
     api.patch<InvoiceMutationResponse>(`/invoices/${id}/send`),
 
-  markPaid: (id: string) =>
-    api.patch<InvoiceMutationResponse>(`/invoices/${id}/mark-paid`),
+  markPaid: (id: string, landlordPaymentNote?: string) =>
+    api.patch<InvoiceMutationResponse>(`/invoices/${id}/mark-paid`, { landlordPaymentNote }),
+
+  markUnpaid: (id: string) =>
+    api.patch<InvoiceMutationResponse>(`/invoices/${id}/mark-unpaid`),
+
+  cancelInvoice: (id: string) =>
+    api.patch<InvoiceMutationResponse>(`/invoices/${id}/cancel`),
+
+  markPendingConfirmation: (id: string) =>
+    api.patch<InvoiceMutationResponse>(`/invoices/${id}/pending-confirmation`),
 
   delete: (id: string) =>
     api.delete<InvoiceMutationResponse>(`/invoices/${id}`),
@@ -61,10 +76,31 @@ export const invoiceApi = {
   getMeterReadingsByContract: (contractId: string, params?: { meterType?: string; page?: number; limit?: number }) =>
     api.get<MeterReadingListResponse>(`/meter-readings/contract/${contractId}`, { params }),
 
-  // ---- Previous Reading (kiểm tra hóa đơn trước) ----
+  // ---- Previous Reading ----
 
   getPreviousReadingByBooking: (bookingId: string, billingMonth?: string) =>
     api.get<PreviousReadingResponse>(`/invoices/booking/${bookingId}/previous-reading`, {
       params: billingMonth ? { billingMonth } : undefined,
     }),
+
+  // ---- Landlord Payment Info ----
+
+  getMyPaymentInfo: () =>
+    api.get<LandlordPaymentInfoResponse>('/landlord-payment-info/my'),
+
+  upsertMyPaymentInfo: (payload: LandlordPaymentInfoPayload) =>
+    api.put<LandlordPaymentInfoResponse>('/landlord-payment-info/my', payload),
+
+  checkPaymentInfo: () =>
+    api.get<LandlordPaymentInfoCheckResponse>('/landlord-payment-info/my/check'),
+
+  // ---- Admin: Landlord Payment Info ----
+  adminGetPaymentInfos: (params?: { status?: string }) =>
+    api.get<LandlordPaymentInfoListResponse>('/landlord-payment-info/admin/all', { params }),
+
+  adminApprovePaymentInfo: (id: string) =>
+    api.patch<LandlordPaymentInfoResponse>(`/landlord-payment-info/admin/${id}/approve`),
+
+  adminRejectPaymentInfo: (id: string, reason?: string) =>
+    api.patch<LandlordPaymentInfoResponse>(`/landlord-payment-info/admin/${id}/reject`, { reason }),
 }

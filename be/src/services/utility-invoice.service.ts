@@ -3,13 +3,13 @@ import { InvoiceRepository, InvoiceDetailRepository } from "../repositories/invo
 import { MeterReadingRepository } from "../repositories/meter-reading.repo.js";
 import { BookingRepository } from "../repositories/booking.repo.js";
 import { ContractRepository } from "../repositories/contract.repo.js";
-import { LandlordBankInfoRepository } from "../repositories/landlord-bank-info.repo.js";
-import { InvoiceModel, INVOICE_STATUS } from "../models/Invoice.model.js";
+import { LandlordPaymentInfoRepository } from "../repositories/landlord-payment-info.repo.js";
+import { InvoiceModel, INVOICE_STATUS, INVOICE_PAYMENT_STATUS } from "../models/Invoice.model.js";
+import { PAYMENT_INFO_STATUS } from "../models/LandlordPaymentInfo.model.js";
 import type { IInvoice } from "../models/Invoice.model.js";
 import { InvoiceDetailModel } from "../models/InvoiceDetail.model.js";
 import type { IInvoiceDetail } from "../models/InvoiceDetail.model.js";
 import { MeterReadingModel, METER_TYPE, READING_SOURCE } from "../models/MeterReading.model.js";
-import { PayOSPayoutService } from "./payos-payout.service.js";
 
 // ============================================================
 // Types
@@ -100,12 +100,31 @@ export const UtilityInvoiceService = {
       throw new UtilityInvoiceError("You do not own this booking", "FORBIDDEN", 403);
     }
 
-    // ----- Step 1.5: Verify landlord has verified bank info -----
-    const verifiedBankInfo = await LandlordBankInfoRepository.findVerifiedByUserId(landlordId);
-    if (!verifiedBankInfo) {
+    // ----- Step 1.5: Verify landlord has APPROVED payment info -----
+    const paymentInfo = await LandlordPaymentInfoRepository.findByUserId(landlordId);
+    if (!paymentInfo) {
       throw new UtilityInvoiceError(
-        "Bạn cần thêm thông tin tài khoản ngân hàng trước khi tạo hóa đơn.",
-        "NO_BANK_INFO", 400
+        "Vui lòng cập nhật thông tin thanh toán trong hồ sơ trước khi tạo hóa đơn.",
+        "NO_PAYMENT_INFO", 400
+      );
+    }
+    if (paymentInfo.status === PAYMENT_INFO_STATUS.PENDING) {
+      throw new UtilityInvoiceError(
+        "Thông tin thanh toán đang chờ admin duyệt. Vui lòng đợi đến khi được duyệt.",
+        "PAYMENT_INFO_PENDING", 400
+      );
+    }
+    if (paymentInfo.status === PAYMENT_INFO_STATUS.REJECTED) {
+      const reason = paymentInfo.rejectionReason || "không rõ lý do";
+      throw new UtilityInvoiceError(
+        `Thông tin thanh toán đã bị từ chối: ${reason}. Vui lòng cập nhật lại.`,
+        "PAYMENT_INFO_REJECTED", 400
+      );
+    }
+    if (!paymentInfo.bankName || !paymentInfo.bankAccountNumber || !paymentInfo.bankAccountHolder) {
+      throw new UtilityInvoiceError(
+        "Vui lòng cập nhật đầy đủ thông tin thanh toán.",
+        "NO_PAYMENT_INFO", 400
       );
     }
 
@@ -201,10 +220,10 @@ export const UtilityInvoiceService = {
     const waterAmount = waterUsage * waterRate;
     const additionalFees = input.additionalFees || 0;
     const subtotal = input.rentAmount + electricityAmount + waterAmount + additionalFees;
+    const totalAmount = subtotal; // No payout fee in manual transfer flow
 
-    let payoutFee = 0;
-    try { payoutFee = await PayOSPayoutService.calculatePayoutFee(subtotal, verifiedBankInfo.bankBin); } catch { payoutFee = 3300; }
-    const totalAmount = subtotal + payoutFee;
+    // Build payment note from template
+    const paymentNoteTemplate = paymentInfo.paymentNoteTemplate || "THANHTOAN {invoiceCode}";
 
     // ----- Step 8: Transaction -----
     const session = await mongoose.startSession();
@@ -222,10 +241,18 @@ export const UtilityInvoiceService = {
         electricityAmount,
         waterAmount,
         additionalFees,
-        payoutFee,
+        payoutFee: 0,
         totalAmount,
         notes: input.notes,
         status: INVOICE_STATUS.DRAFT,
+        // Payment info snapshot (manual bank transfer)
+        paymentBankName: paymentInfo.bankName,
+        paymentAccountNumber: paymentInfo.bankAccountNumber,
+        paymentAccountHolder: paymentInfo.bankAccountHolder,
+        paymentQrUrl: paymentInfo.paymentQrUrl || "",
+        paymentNote: paymentNoteTemplate,
+        paymentMethodType: "manual_bank_transfer",
+        paymentStatus: INVOICE_PAYMENT_STATUS.UNPAID,
       };
       if (contractId) {
         invoicePayload.contractId = contractId;

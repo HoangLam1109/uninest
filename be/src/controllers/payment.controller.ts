@@ -239,14 +239,15 @@ export const getReceivedPayments = async (req: Request, res: Response) => {
 
 export const getAdminPayments = async (req: Request, res: Response) => {
   try {
-    const { page = 1, limit = 100 } = req.query;
+    const { page = 1, limit = 100, type } = req.query;
     const pageNumber = Math.max(1, Number(page));
     const limitNumber = Math.min(500, Math.max(1, Number(limit)));
     const skip = (pageNumber - 1) * limitNumber;
 
     const { payments, total } = await PaymentService.getAdminPayments(
       skip,
-      limitNumber
+      limitNumber,
+      type as string | undefined
     );
 
     return res.json({
@@ -266,7 +267,8 @@ export const getAdminPayments = async (req: Request, res: Response) => {
 
 export const getAdminPaymentStats = async (req: Request, res: Response) => {
   try {
-    const stats = await PaymentService.getAdminPaymentStats();
+    const { type } = req.query;
+    const stats = await PaymentService.getAdminPaymentStats(type as string | undefined);
 
     return res.json({ success: true, data: stats });
   } catch (err: any) {

@@ -108,7 +108,7 @@ export const getLandlordInvoices = async (req: Request, res: Response) => {
     if (!landlordId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, paymentStatus } = req.query;
 
     const pageNumber = Number(page);
     const limitNumber = Number(limit);
@@ -117,7 +117,8 @@ export const getLandlordInvoices = async (req: Request, res: Response) => {
     const { invoices, total } = await InvoiceService.getInvoicesByLandlord(
       landlordId,
       skip,
-      limitNumber
+      limitNumber,
+      paymentStatus as string | undefined
     );
 
     return res.json({
@@ -275,6 +276,7 @@ export const markInvoiceAsPaid = async (req: Request, res: Response) => {
   try {
     const landlordId = req.userId;
     let { id: invoiceId } = req.params;
+    const { landlordPaymentNote } = req.body;
 
     if (!landlordId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
@@ -282,14 +284,14 @@ export const markInvoiceAsPaid = async (req: Request, res: Response) => {
     if (!invoiceId || typeof invoiceId !== "string" || !mongoose.Types.ObjectId.isValid(invoiceId))
       return res.status(400).json({ success: false, message: "Invalid invoice id" });
 
-    const invoice = await InvoiceService.markAsPaid(invoiceId, landlordId);
+    const invoice = await InvoiceService.markAsPaid(invoiceId, landlordId, landlordPaymentNote);
 
     if (!invoice)
       return res.status(404).json({ success: false, message: "Invoice not found" });
 
     return res.json({
       success: true,
-      message: "Invoice marked as paid",
+      message: "Đã đánh dấu hóa đơn là đã thanh toán",
       data: invoice,
     });
   } catch (err: any) {
@@ -688,5 +690,62 @@ export const getPreviousReadingByBooking = async (req: Request, res: Response) =
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * MARK INVOICE AS UNPAID (Landlord — revert from PAID back to UNPAID)
+ */
+export const markInvoiceAsUnpaid = async (req: Request, res: Response) => {
+  try {
+    const landlordId = req.userId;
+    const invoiceId = req.params.id as string;
+    if (!landlordId) return res.status(401).json({ success: false, message: "Unauthorized" });
+    if (!invoiceId || !mongoose.Types.ObjectId.isValid(invoiceId))
+      return res.status(400).json({ success: false, message: "Invalid invoice id" });
+
+    const invoice = await InvoiceService.markAsUnpaid(invoiceId, landlordId);
+    return res.json({ success: true, message: "Đã đánh dấu hóa đơn là chưa thanh toán", data: invoice });
+  } catch (err: any) {
+    const sc = err.message.includes("not found") || err.message.includes("do not own") ? 403 : 400;
+    return res.status(sc).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * CANCEL INVOICE (Landlord)
+ */
+export const cancelInvoice = async (req: Request, res: Response) => {
+  try {
+    const landlordId = req.userId;
+    const invoiceId = req.params.id as string;
+    if (!landlordId) return res.status(401).json({ success: false, message: "Unauthorized" });
+    if (!invoiceId || !mongoose.Types.ObjectId.isValid(invoiceId))
+      return res.status(400).json({ success: false, message: "Invalid invoice id" });
+
+    const invoice = await InvoiceService.cancelInvoice(invoiceId, landlordId);
+    return res.json({ success: true, message: "Đã hủy hóa đơn", data: invoice });
+  } catch (err: any) {
+    const sc = err.message.includes("not found") || err.message.includes("do not own") ? 403 : 400;
+    return res.status(sc).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * TENANT MARKS "I HAVE TRANSFERRED" → PENDING_CONFIRMATION
+ */
+export const markPendingConfirmation = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.userId;
+    const invoiceId = req.params.id as string;
+    if (!tenantId) return res.status(401).json({ success: false, message: "Unauthorized" });
+    if (!invoiceId || !mongoose.Types.ObjectId.isValid(invoiceId))
+      return res.status(400).json({ success: false, message: "Invalid invoice id" });
+
+    const invoice = await InvoiceService.markPendingConfirmation(invoiceId, tenantId);
+    return res.json({ success: true, message: "Đã xác nhận chuyển khoản, chờ chủ trọ xác nhận", data: invoice });
+  } catch (err: any) {
+    const sc = err.message.includes("not found") || err.message.includes("are not the tenant") ? 403 : 400;
+    return res.status(sc).json({ success: false, message: err.message });
   }
 };

@@ -10,6 +10,7 @@ import type {
   PreviousReadingData,
   UpdateInvoicePayload,
 } from '../types/invoice.type'
+import type { LandlordPaymentInfoPayload } from '../types/landlord-payment-info.type'
 
 export const invoiceKeys = {
   all: ['invoices'] as const,
@@ -25,6 +26,8 @@ export const invoiceKeys = {
     [...invoiceKeys.meterReadings(), 'my', params ?? {}] as const,
   previousReading: (bookingId: string) =>
     [...invoiceKeys.all, 'previous-reading', bookingId] as const,
+  landlordPaymentInfo: () => [...invoiceKeys.all, 'landlord-payment-info'] as const,
+  landlordPaymentInfoMy: () => [...invoiceKeys.landlordPaymentInfo(), 'my'] as const,
 }
 
 // ---- Queries ----
@@ -194,8 +197,8 @@ export function useMarkInvoicePaid() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { data } = await invoiceApi.markPaid(id)
+    mutationFn: async ({ id, landlordPaymentNote }: { id: string; landlordPaymentNote?: string }) => {
+      const { data } = await invoiceApi.markPaid(id, landlordPaymentNote)
       return data.data
     },
     onSuccess: () => {
@@ -237,6 +240,100 @@ export function useGetPreviousReading(bookingId: string | null, billingMonth?: s
     queryFn: async () => {
       const { data } = await invoiceApi.getPreviousReadingByBooking(bookingId as string, billingMonth)
       return data.data as PreviousReadingData
+    },
+  })
+}
+
+// ---- New Manual Bank Transfer mutations ----
+
+export function useMarkInvoiceUnpaid() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await invoiceApi.markUnpaid(id)
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
+      toast.success('Đã đánh dấu hóa đơn là chưa thanh toán')
+    },
+    onError: (error) => {
+      toast.error('Không thể cập nhật', { description: getApiErrorMessage(error, '') })
+    },
+  })
+}
+
+export function useCancelInvoice() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await invoiceApi.cancelInvoice(id)
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
+      toast.success('Đã hủy hóa đơn')
+    },
+    onError: (error) => {
+      toast.error('Không thể hủy hóa đơn', { description: getApiErrorMessage(error, '') })
+    },
+  })
+}
+
+export function useMarkPendingConfirmation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await invoiceApi.markPendingConfirmation(id)
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
+      toast.success('Đã xác nhận chuyển khoản, chờ chủ trọ xác nhận')
+    },
+    onError: (error) => {
+      toast.error('Không thể xác nhận', { description: getApiErrorMessage(error, '') })
+    },
+  })
+}
+
+// ---- Landlord Payment Info hooks ----
+
+export function useGetMyPaymentInfo() {
+  return useQuery({
+    queryKey: invoiceKeys.landlordPaymentInfoMy(),
+    queryFn: async () => {
+      const { data } = await invoiceApi.getMyPaymentInfo()
+      return data.data
+    },
+  })
+}
+
+export function useCheckPaymentInfo() {
+  return useQuery({
+    queryKey: [...invoiceKeys.landlordPaymentInfoMy(), 'check'],
+    queryFn: async () => {
+      const { data } = await invoiceApi.checkPaymentInfo()
+      return data.data
+    },
+  })
+}
+
+export function useUpsertMyPaymentInfo() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: LandlordPaymentInfoPayload) => {
+      const { data } = await invoiceApi.upsertMyPaymentInfo(payload)
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.landlordPaymentInfo() })
+      toast.success('Đã cập nhật thông tin thanh toán')
+    },
+    onError: (error) => {
+      toast.error('Không thể cập nhật thông tin thanh toán', {
+        description: getApiErrorMessage(error, 'Vui lòng kiểm tra lại.'),
+      })
     },
   })
 }
