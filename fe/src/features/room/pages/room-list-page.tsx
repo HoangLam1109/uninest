@@ -8,6 +8,7 @@ import {
   Search,
   Users,
 } from 'lucide-react'
+import { Pagination } from '@/components/common/pagination'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { MainLayout } from '@/layouts/main-layout'
@@ -93,6 +94,7 @@ function formatPriceRange(minPrice?: number, maxPrice?: number) {
 
 export function RoomListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const currentPage = Math.max(1, getNumberParam(searchParams.get('page')) ?? 1)
   const initialKeyword = searchParams.get('q') ?? ''
   const initialCity = searchParams.get('city') ?? ''
   const initialDistrict = searchParams.get('district') ?? ''
@@ -116,8 +118,8 @@ export function RoomListPage() {
     const roomType = getRoomTypeParam(searchParams.get('roomType'))
 
     return {
-      page: 1,
-      limit: 10,
+      page: currentPage,
+      limit: 9,
       status: 'AVAILABLE',
       q,
       city: cityParam,
@@ -126,13 +128,14 @@ export function RoomListPage() {
       maxPrice: maxPriceParam,
       roomType,
     }
-  }, [searchParams])
+  }, [currentPage, searchParams])
 
   const activeQuery = useRoomSearch(searchQueryParams)
   const visibleRooms = useMemo(
     () => activeQuery.data?.data ?? [],
     [activeQuery.data?.data],
   )
+  const pagination = activeQuery.data?.pagination
   const totalRoomsQuery = useGetRooms({
     page: 1,
     limit: 1,
@@ -163,29 +166,29 @@ export function RoomListPage() {
 
   const seoTitle = useMemo(() => {
     if (searchQueryParams.district) {
-      return `Phong cho thue tai ${searchQueryParams.district} | UniNest`
+      return `Phòng cho thuê tại ${searchQueryParams.district} | UniNest`
     }
 
     if (searchQueryParams.roomType) {
       return `${formatRoomType(searchQueryParams.roomType)} cho thue tai TP.HCM | UniNest`
     }
 
-    return 'Phong cho thue tai TP.HCM | UniNest'
+    return 'Phòng cho thuê tại TP.HCM | UniNest'
   }, [searchQueryParams.district, searchQueryParams.roomType])
 
   const seoDescription = useMemo(() => {
     const base =
-      'Kham pha danh sach phong tro, studio, phong ghep va can ho dang mo tren UniNest.'
+      'Khám phá danh sách phòng trọ, studio, phòng ghép và căn hộ sẵn có trên UniNest.'
 
     if (activeFilterLabels.length === 0) {
-      return `${base} Loc theo gia, khu vuc va loai phong de tim lua chon phu hop.`
+      return `${base} Lọc theo giá, khu vực và loại phòng phù hợp.`
     }
 
-    return `${base} Bo loc dang ap dung: ${activeFilterLabels.join(', ')}.`
+    return `${base} Bộ lọc đang áp dụng: ${activeFilterLabels.join(', ')}.`
   }, [activeFilterLabels])
 
   const structuredData = useMemo(() => {
-    const items = visibleRooms.slice(0, 10).map((room, index) => ({
+    const items = visibleRooms.slice(0, 9).map((room, index) => ({
       '@type': 'ListItem',
       position: index + 1,
       url: toAbsoluteUrl(`/phong/${room._id}`),
@@ -194,12 +197,12 @@ export function RoomListPage() {
 
     return [
       createBreadcrumbSchema([
-        { name: 'Trang chu', path: '/' },
-        { name: 'Phong cho thue', path: '/phong' },
+        { name: 'Trang chủ', path: '/' },
+        { name: 'Phòng cho thuê', path: '/phong' },
       ]),
       {
         '@type': 'CollectionPage',
-        name: 'Danh sach phong cho thue',
+        name: 'Danh sách phòng cho thuê',
         url: toAbsoluteUrl('/phong'),
         description: seoDescription,
         mainEntity: {
@@ -215,10 +218,20 @@ export function RoomListPage() {
     setSearchParams(nextParams)
   }
 
+  function setPageParam(page: number) {
+    const nextParams = new URLSearchParams(searchParams)
+
+    if (page <= 1) nextParams.delete('page')
+    else nextParams.set('page', String(page))
+
+    commitFilters(nextParams)
+  }
+
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('page')
     const trimmedKeyword = keyword.trim()
     const trimmedCity = city.trim()
     const trimmedDistrict = district.trim()
@@ -251,6 +264,7 @@ export function RoomListPage() {
     setSelectedRoomType(nextValue)
 
     const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('page')
     if (nextValue) nextParams.set('roomType', nextValue)
     else nextParams.delete('roomType')
 
@@ -265,6 +279,7 @@ export function RoomListPage() {
     setMaxPrice(nextMaxPrice)
 
     const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('page')
     if (nextMinPrice) nextParams.set('minPrice', nextMinPrice)
     else nextParams.delete('minPrice')
 
@@ -539,11 +554,23 @@ export function RoomListPage() {
               {!activeQuery.isLoading &&
               !activeQuery.isError &&
               visibleRooms.length > 0 ? (
-                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                  {visibleRooms.map((room) => (
-                    <RoomListCard key={room._id} room={room} />
-                  ))}
-                </div>
+                <>
+                  <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                    {visibleRooms.map((room) => (
+                      <RoomListCard key={room._id} room={room} />
+                    ))}
+                  </div>
+
+                  {pagination ? (
+                    <Pagination
+                      page={pagination.page}
+                      totalPages={pagination.totalPages}
+                      isDisabled={activeQuery.isFetching}
+                      className="justify-center pt-2 lg:justify-end"
+                      onPageChange={setPageParam}
+                    />
+                  ) : null}
+                </>
               ) : null}
             </div>
           </div>

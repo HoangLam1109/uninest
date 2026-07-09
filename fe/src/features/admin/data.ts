@@ -1,6 +1,7 @@
 import {
   CreditCard,
   LayoutGrid,
+  Newspaper,
   PackagePlus,
   ShieldCheck,
   Users,
@@ -10,6 +11,7 @@ export const adminNavItems = [
   { label: 'Tổng quan', href: '/quan-tri', icon: LayoutGrid },
   { label: 'Người dùng', href: '/quan-tri/nguoi-dung', icon: Users },
   { label: 'Kiểm duyệt', href: '/quan-tri/kiem-duyet', icon: ShieldCheck },
+  { label: 'Blog', href: '/quan-tri/blog', icon: Newspaper },
   { label: 'Gói dịch vụ', href: '/quan-tri/goi-dich-vu', icon: PackagePlus },
   { label: 'Doanh thu', href: '/quan-tri/doanh-thu', icon: CreditCard },
 ] as const
@@ -21,4 +23,3 @@ export const adminSidebarConfig = {
   navItems: adminNavItems,
   ctaIcon: CreditCard,
 }
-

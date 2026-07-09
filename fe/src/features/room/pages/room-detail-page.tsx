@@ -62,19 +62,19 @@ export function RoomDetailPage() {
     : '/hero.jpg'
   const reviewStats = reviewsQuery.data?.statistics
   const seoTitle = room
-    ? `${room.title} | Phong cho thue tai ${formatRoomLocation(room)} | UniNest`
-    : 'Chi tiet phong cho thue | UniNest'
+    ? `${room.title} | Phòng cho thuê tại ${formatRoomLocation(room)} | UniNest`
+    : 'Chi tiết phòng cho thuê | UniNest'
   const seoDescription = room
     ? `${room.title} tai ${formatRoomFullLocation(room)}. Gia ${formatRoomCurrency(
         room.pricePerMonth,
-      )}/thang, suc chua toi da ${room.maxOccupants} nguoi. Xem anh, tien ich va danh gia tren UniNest.`
-    : 'Xem chi tiet phong cho thue, hinh anh, gia thue, tien ich va vi tri tren UniNest.'
+      )}/tháng, sức chứa tối đa ${room.maxOccupants} người. Xem ảnh, tiện ích và đánh giá trên UniNest.`
+    : 'Xem chi tiet phòng cho thuê, hình ảnh, giá thuê, tiện ích và vị trí trên UniNest.'
   const structuredData = room
     ? [
         createBreadcrumbSchema([
-          { name: 'Trang chu', path: '/' },
-          { name: 'Phong cho thue', path: '/phong' },
-          { name: room.title, path: `/phong/${room._id}` },
+          { name: 'Trang chủ', path: '/' },
+          { name: 'Phòng cho thuê', path: '/phòng' },
+          { name: room.title, path: `/phòng/${room._id}` },
         ]),
         {
           '@type': 'Product',
@@ -99,17 +99,17 @@ export function RoomDetailPage() {
           additionalProperty: [
             {
               '@type': 'PropertyValue',
-              name: 'Dia chi',
+              name: 'Địa chỉ',
               value: formatRoomFullLocation(room),
             },
             {
               '@type': 'PropertyValue',
-              name: 'Dien tich',
+              name: 'Diện tích',
               value: room.areaSqm ? `${room.areaSqm} m2` : 'Dang cap nhat',
             },
             {
               '@type': 'PropertyValue',
-              name: 'Suc chua',
+              name: 'Sức chứa',
               value: room.maxOccupants,
             },
           ],
@@ -193,7 +193,7 @@ export function RoomDetailPage() {
           {room ? (
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
               <div className="space-y-4">
-                <div className="flex aspect-[16/10] max-h-[520px] min-h-[280px] items-center justify-center overflow-hidden rounded-xl bg-border/60">
+                <div className="relative flex aspect-[4/3] min-h-[220px] items-center justify-center overflow-hidden rounded-xl bg-border/60 sm:aspect-[5/4] sm:min-h-[280px] md:aspect-[16/10] lg:aspect-[5/4] xl:aspect-[16/10] xl:max-h-[520px]">
                   {selectedImage ? (
                     <img
                       src={resolveRoomImageUrl(selectedImage.url)}
@@ -206,12 +206,21 @@ export function RoomDetailPage() {
                       Phòng chưa có ảnh đại diện
                     </div>
                   )}
+                  {images.length > 1 ? (
+                    <div className="absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm sm:bottom-4 sm:right-4">
+                      {images.findIndex((image) => image._id === selectedImage?._id) + 1}/
+                      {images.length}
+                    </div>
+                  ) : null}
                 </div>
 
                 {images.length > 1 ? (
-                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                    {images.slice(0, 5).map((image) => {
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-5">
+                    {images.slice(0, 5).map((image, index) => {
                       const isSelected = image._id === selectedImage?._id
+                      const remainingImages = images.length - 5
+                      const showRemainingOverlay =
+                        index === 4 && remainingImages > 0
 
                       return (
                         <button
@@ -219,7 +228,7 @@ export function RoomDetailPage() {
                           type="button"
                           aria-pressed={isSelected}
                           onClick={() => setSelectedImageId(image._id)}
-                          className={`aspect-[4/3] overflow-hidden rounded-lg bg-border/60 ring-offset-2 transition hover:ring-2 hover:ring-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                          className={`relative aspect-[4/3] overflow-hidden rounded-lg bg-border/60 ring-offset-2 transition hover:ring-2 hover:ring-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                             isSelected ? 'ring-2 ring-primary' : ''
                           }`}
                         >
@@ -229,6 +238,11 @@ export function RoomDetailPage() {
                             className="size-full object-cover object-center"
                             decoding="async"
                           />
+                          {showRemainingOverlay ? (
+                            <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-sm font-semibold text-white">
+                              +{remainingImages}
+                            </span>
+                          ) : null}
                         </button>
                       )
                     })}

@@ -10,7 +10,7 @@ export const bookingApi = {
   create: (payload: CreateBookingPayload) =>
     api.post<BookingResponse>('/bookings', payload),
 
-  my: (params: Pick<BookingListParams, 'page' | 'limit'>) =>
+  my: (params: BookingListParams) =>
     api.get<BookingListResponse>('/bookings/my', { params }),
 
   landlord: (params: BookingListParams) =>

@@ -265,6 +265,36 @@ export const updateIdentity = async (req: Request, res: Response) => {
 };
 
 /**
+ * DELETE /api/identities/:id
+ * Tenant xóa hồ sơ định danh của mình khi hồ sơ chưa được sử dụng trong booking
+ */
+export const deleteIdentity = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    const id = req.params.id as string;
+
+    if (!userId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ success: false, message: "Invalid identity id" });
+
+    const identity = await IdentityService.deleteIdentity(id, userId);
+    return res.json({
+      success: true,
+      message: "Identity deleted successfully",
+      data: identity,
+    });
+  } catch (err: any) {
+    const statusCode = err.message.includes("not found") ? 404
+      : err.message.includes("do not own") ? 403
+      : err.message.includes("being used in a booking") ? 400
+      : 500;
+    return res.status(statusCode).json({ success: false, message: err.message });
+  }
+};
+
+/**
  * GET /api/identities/search?cccd=XXXX
  * Tìm kiếm hồ sơ định danh bằng số CCCD (dùng khi tạo booking để thêm người thuê cùng)
  */

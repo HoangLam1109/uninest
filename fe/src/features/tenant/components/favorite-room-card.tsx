@@ -121,7 +121,7 @@ export function FavoriteRoomCard({ room, view }: FavoriteRoomCardProps) {
         >
           <p className="font-bold text-primary">
             {formatRoomCurrency(room.pricePerMonth)}
-            <span className="text-xs font-normal text-slate-500">/thang</span>
+            <span className="text-xs font-normal text-slate-500">/tháng</span>
           </p>
           <div className="flex items-center gap-2">
             <Button
