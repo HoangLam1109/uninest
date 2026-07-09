@@ -151,22 +151,24 @@ export const createBlogPost = async (req: Request, res: Response) => {
     }
 
     const uploadedImage = req.file ? await persistCoverImage(req.file, req) : null;
-    const post = await BlogPostService.create(adminId, adminName, {
-      title,
-      content,
-      ...(typeof req.body.excerpt === "string"
-        ? { excerpt: req.body.excerpt }
-        : {}),
-      ...(typeof parseBoolean(req.body.isPublished) === "boolean"
-        ? { isPublished: parseBoolean(req.body.isPublished) }
-        : {}),
-      ...(uploadedImage
-        ? {
-            coverImageUrl: uploadedImage.coverImageUrl,
-            coverImageStorageKey: uploadedImage.coverImageStorageKey,
-          }
-        : {}),
-    });
+    const isPublished = parseBoolean(req.body.isPublished);
+
+const post = await BlogPostService.create(adminId, adminName, {
+  title,
+  content,
+  ...(typeof req.body.excerpt === "string"
+    ? { excerpt: req.body.excerpt }
+    : {}),
+  ...(isPublished !== undefined
+    ? { isPublished }
+    : {}),
+  ...(uploadedImage
+    ? {
+        coverImageUrl: uploadedImage.coverImageUrl,
+        coverImageStorageKey: uploadedImage.coverImageStorageKey,
+      }
+    : {}),
+});
 
     return res.status(201).json({
       success: true,
@@ -196,25 +198,22 @@ export const updateBlogPost = async (req: Request, res: Response) => {
     const uploadedImage = req.file ? await persistCoverImage(req.file, req) : null;
     const shouldRemoveCover = parseBoolean(req.body.removeCoverImage) === true;
 
-    const post = await BlogPostService.update(id, adminId, adminName, {
-      ...(typeof req.body.title === "string" ? { title: req.body.title } : {}),
-      ...(typeof req.body.excerpt === "string" ? { excerpt: req.body.excerpt } : {}),
-      ...(typeof req.body.content === "string" ? { content: req.body.content } : {}),
-      ...(typeof parseBoolean(req.body.isPublished) === "boolean"
-        ? { isPublished: parseBoolean(req.body.isPublished) }
-        : {}),
-      ...(uploadedImage
-        ? {
-            coverImageUrl: uploadedImage.coverImageUrl,
-            coverImageStorageKey: uploadedImage.coverImageStorageKey,
-          }
-        : shouldRemoveCover
-          ? {
-              coverImageUrl: null,
-              coverImageStorageKey: null,
-            }
-          : {}),
-    });
+    const isPublished = parseBoolean(req.body.isPublished);
+
+const post = await BlogPostService.update(id, adminId, adminName, {
+  ...(typeof req.body.title === "string"
+    ? { title: req.body.title }
+    : {}),
+  ...(typeof req.body.excerpt === "string"
+    ? { excerpt: req.body.excerpt }
+    : {}),
+  ...(typeof req.body.content === "string"
+    ? { content: req.body.content }
+    : {}),
+  ...(isPublished !== undefined
+    ? { isPublished }
+    : {}),
+});
 
     if (uploadedImage || shouldRemoveCover) {
       await removeStoredImage(existing.coverImageStorageKey);
