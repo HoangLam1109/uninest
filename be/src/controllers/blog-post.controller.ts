@@ -100,6 +100,11 @@ function getStoredUploadsPath(post: {
       .trim()
       .replaceAll("\\", "/")
       .replace(/^\/+/, "");
+
+    if (normalizedStorageKey.startsWith("cloudinary:")) {
+      return null;
+    }
+
     return `/uploads/${normalizedStorageKey}`;
   }
 
