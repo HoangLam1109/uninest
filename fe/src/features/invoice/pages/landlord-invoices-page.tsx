@@ -17,7 +17,6 @@ import {
 } from '../hooks/use-invoices'
 import type { Invoice, InvoicePaymentStatus } from '../types/invoice.type'
 import { sumPaidAmount, sumUnpaidAmount, formatPrice } from '../lib/invoice-display'
-import { cn } from '@/lib/utils'
 
 const PAYMENT_STATUS_TABS: { label: string; value: InvoicePaymentStatus | 'all' }[] = [
   { label: 'Tất cả', value: 'all' },

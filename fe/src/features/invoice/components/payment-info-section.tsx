@@ -7,7 +7,7 @@ import {
   useGetMyPaymentInfo,
   useUpsertMyPaymentInfo,
 } from '@/features/invoice/hooks/use-invoices'
-import type { LandlordPaymentInfo, PaymentInfoStatus } from '@/features/invoice/types/landlord-payment-info.type'
+import type { PaymentInfoStatus } from '@/features/invoice/types/landlord-payment-info.type'
 
 const statusLabels: Record<PaymentInfoStatus, string> = {
   PENDING: 'Chờ duyệt',

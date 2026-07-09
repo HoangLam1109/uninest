@@ -5,14 +5,13 @@ import {
   CheckCircle2,
   Clock3,
   Loader2,
-  TrendingUp,
   XCircle,
   RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { paymentApi } from '../api/payment.api'
 import { useQuery } from '@tanstack/react-query'
-import type { AdminPayment, AdminPaymentStats } from '../types/payment.type'
+import type { AdminPayment } from '../types/payment.type'
 
 const TYPE_LABELS: Record<string, string> = {
   TENANT_PACKAGE: 'Gói Tenant',
