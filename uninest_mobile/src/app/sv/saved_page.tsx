@@ -234,7 +234,7 @@ export default function SavedPage() {
           ) : null}
         </ScrollView>
 
-        <BottomNavigation activeTab="saved" />
+        <BottomNavigation activeTab="profile" />
       </SafeAreaView>
     </ThemedView>
   );

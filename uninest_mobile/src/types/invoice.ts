@@ -1,4 +1,16 @@
-export type InvoiceStatus = "DRAFT" | "SENT" | "PAID" | "OVERDUE";
+export type InvoiceStatus =
+  | "DRAFT"
+  | "SENT"
+  | "PAID"
+  | "OVERDUE"
+  | "CANCELLED";
+
+export type InvoicePaymentStatus =
+  | "unpaid"
+  | "pending_confirmation"
+  | "paid"
+  | "overdue"
+  | "cancelled";
 
 export type InvoiceUserRef = {
   _id: string;
@@ -33,8 +45,35 @@ export type Invoice = {
   notes?: string;
   sentAt?: string | null;
   paidAt?: string | null;
+  paymentBankName?: string;
+  paymentAccountNumber?: string;
+  paymentAccountHolder?: string;
+  paymentQrUrl?: string;
+  paymentNote?: string;
+  paymentMethodType?: string;
+  paymentStatus?: InvoicePaymentStatus;
+  landlordPaymentNote?: string;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type PreviousReadingData = {
+  hasPreviousInvoice: boolean;
+  hasMeterData: boolean;
+  previousInvoice: {
+    billingMonth: string;
+    electricityNewIndex: number | null;
+    waterNewIndex: number | null;
+    electricityOldIndex: number | null;
+    waterOldIndex: number | null;
+    electricityRate: number | null;
+    waterRate: number | null;
+  } | null;
+};
+
+export type PreviousReadingResponse = {
+  success: boolean;
+  data: PreviousReadingData;
 };
 
 export type InvoiceDetail = {
@@ -92,6 +131,8 @@ export type CreateUtilityInvoicePayload = {
   rentAmount: number;
   electricityNewIndex?: number;
   waterNewIndex?: number;
+  electricityOldIndex?: number;
+  waterOldIndex?: number;
   electricityRate?: number;
   waterRate?: number;
   additionalFees?: number;

@@ -1,5 +1,12 @@
-import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -21,11 +28,18 @@ import {
 
 import { bookingApi } from "@/api/booking.api";
 import { invoiceApi } from "@/api/invoice.api";
+import { landlordPaymentInfoApi } from "@/api/landlord-payment-info.api";
 import { LandlordBottomNavigation } from "@/components/landlord/bottom-navigation";
 import { ThemedText } from "@/components/themed-text";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { Booking } from "@/types/booking";
-import type { Invoice, InvoiceDetail, InvoiceStatus } from "@/types/invoice";
+import type {
+  Invoice,
+  InvoiceDetail,
+  InvoicePaymentStatus,
+  PreviousReadingData,
+} from "@/types/invoice";
+import type { LandlordPaymentInfo } from "@/types/landlord-payment-info";
 import {
   getBookingRoom,
   getBookingTenant,
@@ -35,6 +49,9 @@ import {
   formatInvoiceDate,
   getRoomTitleFromInvoice,
   getTenantName,
+  hasApprovedPaymentInfo,
+  invoicePaymentStatusLabel,
+  invoicePaymentStatusStyle,
   invoiceStatusLabel,
   invoiceStatusStyle,
   sumPaidAmount,
@@ -47,14 +64,15 @@ import {
   validateInvoiceUtilityForm,
 } from "@/utils/validation/invoice";
 
-type StatusFilter = "ALL" | InvoiceStatus | "UNPAID";
+type PaymentStatusFilter = InvoicePaymentStatus | "all";
 
-const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
-  { id: "ALL", label: "Tất cả" },
-  { id: "DRAFT", label: "Nháp" },
-  { id: "UNPAID", label: "Chờ thu" },
-  { id: "PAID", label: "Đã thu" },
-  { id: "OVERDUE", label: "Quá hạn" },
+const PAYMENT_STATUS_FILTERS: { id: PaymentStatusFilter; label: string }[] = [
+  { id: "all", label: "Tất cả" },
+  { id: "unpaid", label: "Chưa TT" },
+  { id: "pending_confirmation", label: "Chờ xác nhận" },
+  { id: "paid", label: "Đã TT" },
+  { id: "overdue", label: "Quá hạn" },
+  { id: "cancelled", label: "Đã hủy" },
 ];
 
 type CreateMode = "manual" | "utility";
@@ -68,6 +86,8 @@ type CreateForm = {
   waterAmount: string;
   electricityNewIndex: string;
   waterNewIndex: string;
+  electricityOldIndex: string;
+  waterOldIndex: string;
   electricityRate: string;
   waterRate: string;
   additionalFees: string;
@@ -102,14 +122,6 @@ function parseAmount(value: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function matchesFilter(invoice: Invoice, filter: StatusFilter) {
-  if (filter === "ALL") return true;
-  if (filter === "UNPAID") {
-    return invoice.status === "SENT" || invoice.status === "OVERDUE";
-  }
-  return invoice.status === filter;
-}
-
 function emptyCreateForm(): CreateForm {
   return {
     bookingId: "",
@@ -120,6 +132,8 @@ function emptyCreateForm(): CreateForm {
     waterAmount: "",
     electricityNewIndex: "",
     waterNewIndex: "",
+    electricityOldIndex: "",
+    waterOldIndex: "",
     electricityRate: "",
     waterRate: "",
     additionalFees: "",
@@ -159,10 +173,12 @@ function validateEditForm(form: EditForm): string | null {
 
 export default function LandlordInvoicesPage() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [paymentStatusFilter, setPaymentStatusFilter] =
+    useState<PaymentStatusFilter>("all");
   const [actionInvoiceId, setActionInvoiceId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [createMode, setCreateMode] = useState<CreateMode>("manual");
@@ -174,9 +190,14 @@ export default function LandlordInvoicesPage() {
   const [loadingBookings, setLoadingBookings] = useState(false);
 
   const loadInvoices = useCallback(async () => {
-    const res = await invoiceApi.listLandlord({ page: 1, limit: 100 });
+    const res = await invoiceApi.listLandlord({
+      page: 1,
+      limit: 100,
+      paymentStatus:
+        paymentStatusFilter === "all" ? undefined : paymentStatusFilter,
+    });
     setInvoices(res.data ?? []);
-  }, []);
+  }, [paymentStatusFilter]);
 
   const loadData = useCallback(async () => {
     try {
@@ -197,10 +218,23 @@ export default function LandlordInvoicesPage() {
     }, [loadData]),
   );
 
-  const filtered = useMemo(
-    () => invoices.filter((inv) => matchesFilter(inv, statusFilter)),
-    [invoices, statusFilter],
-  );
+  const skipFilterReload = useRef(true);
+  useEffect(() => {
+    if (skipFilterReload.current) {
+      skipFilterReload.current = false;
+      return;
+    }
+    setLoading(true);
+    void loadInvoices()
+      .catch((err) => {
+        Alert.alert(
+          "Không tải được hóa đơn",
+          getApiErrorMessage(err, "Vui lòng thử lại."),
+        );
+        setInvoices([]);
+      })
+      .finally(() => setLoading(false));
+  }, [paymentStatusFilter, loadInvoices]);
 
   const summary = useMemo(() => {
     return {
@@ -218,6 +252,37 @@ export default function LandlordInvoicesPage() {
   };
 
   const openCreateForm = async () => {
+    try {
+      const check = await landlordPaymentInfoApi.checkMy();
+      const info = check.data?.paymentInfo;
+      if (!hasApprovedPaymentInfo(info)) {
+        Alert.alert(
+          "Chưa có thông tin thanh toán",
+          !info
+            ? "Vui lòng cập nhật thông tin ngân hàng trong Hồ sơ trước khi tạo hóa đơn."
+            : info.status === "PENDING"
+              ? "Thông tin thanh toán đang chờ admin duyệt."
+              : info.status === "REJECTED"
+                ? `Thông tin thanh toán bị từ chối: ${info.rejectionReason ?? "vui lòng cập nhật lại"}.`
+                : "Vui lòng hoàn tất thông tin thanh toán trong Hồ sơ.",
+          [
+            { text: "Đóng", style: "cancel" },
+            {
+              text: "Đi tới Hồ sơ",
+              onPress: () => router.push("/landlord/profile_page" as any),
+            },
+          ],
+        );
+        return;
+      }
+    } catch (err) {
+      Alert.alert(
+        "Không kiểm tra được thông tin thanh toán",
+        getApiErrorMessage(err, "Vui lòng thử lại."),
+      );
+      return;
+    }
+
     setCreateMode("manual");
     setForm(emptyCreateForm());
     setFormOpen(true);
@@ -276,6 +341,8 @@ export default function LandlordInvoicesPage() {
           rentAmount: parseAmount(form.rentAmount) ?? 0,
           electricityNewIndex: parseAmount(form.electricityNewIndex),
           waterNewIndex: parseAmount(form.waterNewIndex),
+          electricityOldIndex: parseAmount(form.electricityOldIndex),
+          waterOldIndex: parseAmount(form.waterOldIndex),
           electricityRate: parseAmount(form.electricityRate),
           waterRate: parseAmount(form.waterRate),
           additionalFees: parseAmount(form.additionalFees),
@@ -352,13 +419,15 @@ export default function LandlordInvoicesPage() {
 
   const runInvoiceAction = async (
     invoice: Invoice,
-    action: "send" | "markPaid" | "delete",
+    action: "send" | "markPaid" | "markUnpaid" | "cancel" | "delete",
     successMessage: string,
   ) => {
     setActionInvoiceId(invoice._id);
     try {
       if (action === "send") await invoiceApi.send(invoice._id);
       if (action === "markPaid") await invoiceApi.markPaid(invoice._id);
+      if (action === "markUnpaid") await invoiceApi.markUnpaid(invoice._id);
+      if (action === "cancel") await invoiceApi.cancel(invoice._id);
       if (action === "delete") await invoiceApi.delete(invoice._id);
       await loadInvoices();
       Alert.alert("Thành công", successMessage);
@@ -396,6 +465,41 @@ export default function LandlordInvoicesPage() {
               invoice,
               "markPaid",
               "Đã đánh dấu thanh toán.",
+            ),
+        },
+      ],
+    );
+  };
+
+  const handleCancel = (invoice: Invoice) => {
+    Alert.alert(
+      "Hủy hóa đơn",
+      `Hủy hóa đơn ${formatBillingMonth(invoice.billingMonth)}?`,
+      [
+        { text: "Không", style: "cancel" },
+        {
+          text: "Hủy HĐ",
+          style: "destructive",
+          onPress: () =>
+            void runInvoiceAction(invoice, "cancel", "Đã hủy hóa đơn."),
+        },
+      ],
+    );
+  };
+
+  const handleMarkUnpaid = (invoice: Invoice) => {
+    Alert.alert(
+      "Hoàn trạng thái",
+      "Đánh dấu hóa đơn này là chưa thanh toán?",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xác nhận",
+          onPress: () =>
+            void runInvoiceAction(
+              invoice,
+              "markUnpaid",
+              "Đã đánh dấu chưa thanh toán.",
             ),
         },
       ],
@@ -471,12 +575,12 @@ export default function LandlordInvoicesPage() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filterRow}
           >
-            {STATUS_FILTERS.map((item) => {
-              const active = statusFilter === item.id;
+            {PAYMENT_STATUS_FILTERS.map((item) => {
+              const active = paymentStatusFilter === item.id;
               return (
                 <Pressable
                   key={item.id}
-                  onPress={() => setStatusFilter(item.id)}
+                  onPress={() => setPaymentStatusFilter(item.id)}
                   style={[styles.filterChip, active && styles.filterChipActive]}
                 >
                   <ThemedText
@@ -499,20 +603,20 @@ export default function LandlordInvoicesPage() {
               style={{ marginTop: 40 }}
               size="large"
             />
-          ) : filtered.length === 0 ? (
+          ) : invoices.length === 0 ? (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyIcon}>🧾</Text>
               <ThemedText type="smallBold" style={styles.emptyTitle}>
-                {invoices.length === 0
+                {paymentStatusFilter === "all"
                   ? "Chưa có hóa đơn"
                   : "Không có hóa đơn trong mục này"}
               </ThemedText>
               <ThemedText type="small" style={styles.emptyText}>
-                {invoices.length === 0
+                {paymentStatusFilter === "all"
                   ? "Tạo hóa đơn từ đơn đặt phòng đã được duyệt."
                   : "Thử chọn bộ lọc khác."}
               </ThemedText>
-              {invoices.length === 0 ? (
+              {paymentStatusFilter === "all" ? (
                 <Pressable
                   style={styles.emptyButton}
                   onPress={() => void openCreateForm()}
@@ -524,13 +628,15 @@ export default function LandlordInvoicesPage() {
               ) : null}
             </View>
           ) : (
-            filtered.map((invoice) => (
+            invoices.map((invoice) => (
               <InvoiceCard
                 key={invoice._id}
                 invoice={invoice}
                 busy={actionInvoiceId === invoice._id}
                 onSend={() => handleSend(invoice)}
                 onMarkPaid={() => handleMarkPaid(invoice)}
+                onMarkUnpaid={() => handleMarkUnpaid(invoice)}
+                onCancel={() => handleCancel(invoice)}
                 onDelete={() => handleDelete(invoice)}
                 onEdit={() => openEditForm(invoice)}
               />
@@ -610,6 +716,8 @@ function InvoiceCard({
   busy,
   onSend,
   onMarkPaid,
+  onMarkUnpaid,
+  onCancel,
   onDelete,
   onEdit,
 }: {
@@ -617,11 +725,14 @@ function InvoiceCard({
   busy: boolean;
   onSend: () => void;
   onMarkPaid: () => void;
+  onMarkUnpaid: () => void;
+  onCancel: () => void;
   onDelete: () => void;
   onEdit: () => void;
 }) {
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
   const statusStyle = invoiceStatusStyle(invoice.status);
+  const paymentStyle = invoicePaymentStatusStyle(invoice.paymentStatus);
   const roomTitle = getRoomTitleFromInvoice(invoice);
 
   useEffect(() => {
@@ -649,10 +760,19 @@ function InvoiceCard({
             {roomTitle ? ` • ${roomTitle}` : ""}
           </ThemedText>
         </View>
-        <View style={[styles.statusPill, statusStyle.pill]}>
-          <Text style={[styles.statusText, statusStyle.text]}>
-            {invoiceStatusLabel(invoice.status)}
-          </Text>
+        <View style={styles.cardBadges}>
+          <View style={[styles.statusPill, statusStyle.pill]}>
+            <Text style={[styles.statusText, statusStyle.text]}>
+              {invoiceStatusLabel(invoice.status)}
+            </Text>
+          </View>
+          {invoice.paymentStatus ? (
+            <View style={[styles.statusPill, paymentStyle.pill]}>
+              <Text style={[styles.statusText, paymentStyle.text]}>
+                {invoicePaymentStatusLabel(invoice.paymentStatus)}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
 
@@ -750,18 +870,43 @@ function InvoiceCard({
       ) : null}
 
       {invoice.status === "SENT" || invoice.status === "OVERDUE" ? (
+        <View style={styles.actionRow}>
+          <Pressable
+            style={[styles.actionBtn, styles.actionBtnMuted]}
+            onPress={onCancel}
+            disabled={busy}
+          >
+            <ThemedText type="smallBold" style={styles.actionBtnMutedText}>
+              Hủy HĐ
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            style={[styles.actionBtn, styles.actionBtnPrimary, { flex: 1 }]}
+            onPress={onMarkPaid}
+            disabled={busy}
+          >
+            {busy ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <ThemedText type="smallBold" style={styles.actionBtnPrimaryText}>
+                {invoice.paymentStatus === "pending_confirmation"
+                  ? "Xác nhận đã thu"
+                  : "Đánh dấu đã thanh toán"}
+              </ThemedText>
+            )}
+          </Pressable>
+        </View>
+      ) : null}
+
+      {invoice.status === "PAID" ? (
         <Pressable
-          style={[styles.actionBtn, styles.actionBtnPrimary, styles.actionBtnFull]}
-          onPress={onMarkPaid}
+          style={[styles.actionBtn, styles.actionBtnMuted, styles.actionBtnFull]}
+          onPress={onMarkUnpaid}
           disabled={busy}
         >
-          {busy ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
-            <ThemedText type="smallBold" style={styles.actionBtnPrimaryText}>
-              Đánh dấu đã thanh toán
-            </ThemedText>
-          )}
+          <ThemedText type="smallBold" style={styles.actionBtnMutedText}>
+            Đánh dấu chưa thanh toán
+          </ThemedText>
         </Pressable>
       ) : null}
     </View>
@@ -820,10 +965,74 @@ function CreateInvoiceModal({
   onSubmit: () => void;
 }) {
   const insets = useSafeAreaInsets();
+  const [paymentInfo, setPaymentInfo] = useState<LandlordPaymentInfo | null>(null);
+  const [loadingPaymentInfo, setLoadingPaymentInfo] = useState(false);
+  const [previousReading, setPreviousReading] =
+    useState<PreviousReadingData | null>(null);
+
+  const hasPaymentInfo = hasApprovedPaymentInfo(paymentInfo);
+  const hasPreviousData = previousReading?.hasMeterData ?? false;
+  const hasElectricity = form.electricityNewIndex.trim() !== "";
+  const hasWater = form.waterNewIndex.trim() !== "";
 
   const setField = <K extends keyof CreateForm>(key: K, value: CreateForm[K]) => {
     onChange({ ...form, [key]: value });
   };
+
+  useEffect(() => {
+    if (!visible) return;
+    setLoadingPaymentInfo(true);
+    void landlordPaymentInfoApi
+      .getMy()
+      .then((res) => setPaymentInfo(res.data ?? null))
+      .catch(() => setPaymentInfo(null))
+      .finally(() => setLoadingPaymentInfo(false));
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible || !form.bookingId || !form.billingMonth.trim()) {
+      setPreviousReading(null);
+      return;
+    }
+
+    let cancelled = false;
+    void invoiceApi
+      .getPreviousReadingByBooking(form.bookingId, form.billingMonth.trim())
+      .then((res) => {
+        if (!cancelled) setPreviousReading(res.data ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setPreviousReading(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, form.bookingId, form.billingMonth]);
+
+  useEffect(() => {
+    if (!previousReading?.hasMeterData || !previousReading.previousInvoice) return;
+
+    const prev = previousReading.previousInvoice;
+    onChange({
+      ...form,
+      electricityOldIndex:
+        prev.electricityNewIndex != null && prev.electricityNewIndex >= 0
+          ? String(prev.electricityNewIndex)
+          : form.electricityOldIndex,
+      waterOldIndex:
+        prev.waterNewIndex != null && prev.waterNewIndex >= 0
+          ? String(prev.waterNewIndex)
+          : form.waterOldIndex,
+      electricityRate:
+        prev.electricityRate != null
+          ? String(prev.electricityRate)
+          : form.electricityRate,
+      waterRate:
+        prev.waterRate != null ? String(prev.waterRate) : form.waterRate,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- auto-fill when previous reading loads
+  }, [previousReading]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -987,32 +1196,99 @@ function CreateInvoiceModal({
                       </Field>
                     </View>
                   </View>
-                  <View style={styles.formRow}>
-                    <View style={styles.formCol}>
-                      <Field label="Giá điện (đ/kWh)">
-                        <TextInput
-                          value={form.electricityRate}
-                          onChangeText={(v) => setField("electricityRate", v)}
-                          placeholder="Lấy từ phòng"
-                          placeholderTextColor="#9AA3B2"
-                          style={styles.input}
-                          keyboardType="number-pad"
-                        />
-                      </Field>
+
+                  {hasElectricity || hasWater ? (
+                    <View style={styles.previousReadingBox}>
+                      <View style={styles.previousReadingHeader}>
+                        <ThemedText type="smallBold" style={styles.previousReadingTitle}>
+                          Chỉ số cũ & đơn giá
+                        </ThemedText>
+                        <View
+                          style={[
+                            styles.previousReadingBadge,
+                            hasPreviousData
+                              ? styles.previousReadingBadgeAuto
+                              : styles.previousReadingBadgeManual,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.previousReadingBadgeText,
+                              hasPreviousData
+                                ? styles.previousReadingBadgeTextAuto
+                                : styles.previousReadingBadgeTextManual,
+                            ]}
+                          >
+                            {hasPreviousData
+                              ? "Đã điền từ tháng trước"
+                              : "Nhập thủ công"}
+                          </Text>
+                        </View>
+                      </View>
+                      {hasPreviousData && previousReading?.previousInvoice ? (
+                        <ThemedText type="small" style={styles.previousReadingHint}>
+                          Dữ liệu từ hóa đơn tháng{" "}
+                          {previousReading.previousInvoice.billingMonth}. Bạn có
+                          thể sửa lại nếu cần.
+                        </ThemedText>
+                      ) : null}
+                      <View style={styles.formRow}>
+                        <View style={styles.formCol}>
+                          <Field label="Chỉ số điện cũ">
+                            <TextInput
+                              value={form.electricityOldIndex}
+                              onChangeText={(v) =>
+                                setField("electricityOldIndex", v)
+                              }
+                              placeholder="1000"
+                              placeholderTextColor="#9AA3B2"
+                              style={styles.input}
+                              keyboardType="number-pad"
+                            />
+                          </Field>
+                        </View>
+                        <View style={styles.formCol}>
+                          <Field label="Giá điện (đ/kWh)">
+                            <TextInput
+                              value={form.electricityRate}
+                              onChangeText={(v) => setField("electricityRate", v)}
+                              placeholder="3500"
+                              placeholderTextColor="#9AA3B2"
+                              style={styles.input}
+                              keyboardType="number-pad"
+                            />
+                          </Field>
+                        </View>
+                      </View>
+                      <View style={styles.formRow}>
+                        <View style={styles.formCol}>
+                          <Field label="Chỉ số nước cũ">
+                            <TextInput
+                              value={form.waterOldIndex}
+                              onChangeText={(v) => setField("waterOldIndex", v)}
+                              placeholder="500"
+                              placeholderTextColor="#9AA3B2"
+                              style={styles.input}
+                              keyboardType="number-pad"
+                            />
+                          </Field>
+                        </View>
+                        <View style={styles.formCol}>
+                          <Field label="Giá nước (đ/m³)">
+                            <TextInput
+                              value={form.waterRate}
+                              onChangeText={(v) => setField("waterRate", v)}
+                              placeholder="15000"
+                              placeholderTextColor="#9AA3B2"
+                              style={styles.input}
+                              keyboardType="number-pad"
+                            />
+                          </Field>
+                        </View>
+                      </View>
                     </View>
-                    <View style={styles.formCol}>
-                      <Field label="Giá nước (đ/m³)">
-                        <TextInput
-                          value={form.waterRate}
-                          onChangeText={(v) => setField("waterRate", v)}
-                          placeholder="Lấy từ phòng"
-                          placeholderTextColor="#9AA3B2"
-                          style={styles.input}
-                          keyboardType="number-pad"
-                        />
-                      </Field>
-                    </View>
-                  </View>
+                  ) : null}
+
                   <ThemedText type="small" style={styles.hintText}>
                     Cần hợp đồng active và chỉ số công tơ ban đầu. Hệ thống tự
                     tính tiền điện/nước từ chỉ số cũ → mới.
@@ -1070,13 +1346,32 @@ function CreateInvoiceModal({
                 />
               </Field>
 
+              {!loadingPaymentInfo && !hasPaymentInfo ? (
+                <View style={styles.paymentWarning}>
+                  <ThemedText type="small" style={styles.paymentWarningText}>
+                    {!paymentInfo
+                      ? "Bạn chưa có thông tin thanh toán. Vào Hồ sơ → Thông tin thanh toán để cập nhật."
+                      : paymentInfo.status === "PENDING"
+                        ? "Thông tin thanh toán đang chờ admin duyệt."
+                        : paymentInfo.status === "REJECTED"
+                          ? `Thông tin thanh toán bị từ chối: ${paymentInfo.rejectionReason ?? "vui lòng cập nhật lại"}.`
+                          : "Vui lòng cập nhật đầy đủ thông tin thanh toán trong Hồ sơ."}
+                  </ThemedText>
+                </View>
+              ) : null}
+
               <Pressable
                 style={[
                   styles.submitButton,
-                  isSubmitting && styles.submitButtonDisabled,
+                  (isSubmitting || !hasPaymentInfo) && styles.submitButtonDisabled,
                 ]}
                 onPress={onSubmit}
-                disabled={isSubmitting || bookings.length === 0}
+                disabled={
+                  isSubmitting ||
+                  bookings.length === 0 ||
+                  !form.bookingId ||
+                  !hasPaymentInfo
+                }
               >
                 {isSubmitting ? (
                   <ActivityIndicator color="#FFFFFF" />
@@ -1397,6 +1692,10 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  cardBadges: {
+    alignItems: "flex-end",
+    gap: 6,
+  },
   cardTitle: {
     fontSize: 16,
     color: "#1F2940",
@@ -1614,6 +1913,63 @@ const styles = StyleSheet.create({
   },
   hintText: {
     color: "#7A869A",
+    lineHeight: 18,
+  },
+  previousReadingBox: {
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "#F0C674",
+    backgroundColor: "#FFFBF0",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    gap: 10,
+  },
+  previousReadingHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  previousReadingTitle: {
+    color: "#B45309",
+    flex: 1,
+  },
+  previousReadingBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  previousReadingBadgeAuto: {
+    backgroundColor: "#E2F5E8",
+  },
+  previousReadingBadgeManual: {
+    backgroundColor: "#FFF4D6",
+  },
+  previousReadingBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  previousReadingBadgeTextAuto: {
+    color: "#2E8B57",
+  },
+  previousReadingBadgeTextManual: {
+    color: "#C47A10",
+  },
+  previousReadingHint: {
+    color: "#2E8B57",
+    lineHeight: 18,
+  },
+  paymentWarning: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    backgroundColor: "#FEF2F2",
+    padding: 12,
+    marginBottom: 12,
+  },
+  paymentWarningText: {
+    color: "#B91C1C",
     lineHeight: 18,
   },
   submitButton: {

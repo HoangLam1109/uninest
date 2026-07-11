@@ -473,11 +473,14 @@ export default function UpgradePackagePage() {
     const orderCode = params.orderCode ? String(params.orderCode) : "";
     if (!orderCode) return;
 
-    void verifyPayment(
-      orderCode,
-      params.result === "cancel" ? "cancel" : "success",
-    );
-  }, [params.orderCode, params.result, verifyPayment]);
+    router.replace({
+      pathname: "/sv/payment_result_page",
+      params: {
+        orderCode,
+        result: params.result === "cancel" ? "cancel" : "success",
+      },
+    } as any);
+  }, [params.orderCode, params.result, router]);
 
   const handleUpgrade = async (targetRole: RoleUpgradeTarget) => {
     if (isAlreadyUpgraded) {

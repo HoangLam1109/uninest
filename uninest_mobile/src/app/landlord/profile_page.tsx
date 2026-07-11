@@ -20,6 +20,7 @@ import { authApi } from "@/api/auth.api";
 import { invoiceApi } from "@/api/invoice.api";
 import { roomApi } from "@/api/room.api";
 import { LandlordBottomNavigation } from "@/components/landlord/bottom-navigation";
+import { PaymentInfoSection } from "@/components/landlord/payment-info-section";
 import { ThemedText } from "@/components/themed-text";
 import { useAuth } from "@/context/auth-context";
 import { ApiError } from "@/lib/api-client";
@@ -241,9 +242,20 @@ export default function LandlordProfilePage() {
               </View>
 
               <View style={styles.sectionCard}>
-                <ThemedText type="smallBold" style={styles.sectionTitle}>
-                  Thông tin cá nhân
-                </ThemedText>
+                <View style={styles.sectionHeader}>
+                  <ThemedText type="smallBold" style={styles.sectionTitle}>
+                    Thông tin cá nhân
+                  </ThemedText>
+                  <Pressable
+                    onPress={() =>
+                      router.push("/landlord/profile_edit_page" as any)
+                    }
+                  >
+                    <ThemedText type="smallBold" style={styles.editLink}>
+                      Chỉnh sửa
+                    </ThemedText>
+                  </Pressable>
+                </View>
                 <InfoRow label="Họ và tên" value={displayUser?.fullName ?? "—"} />
                 <View style={styles.divider} />
                 <InfoRow label="Email" value={displayUser?.email ?? "—"} />
@@ -255,6 +267,8 @@ export default function LandlordProfilePage() {
                   value={getRoleLabel(displayUser?.role)}
                 />
               </View>
+
+              <PaymentInfoSection />
 
               <ThemedText type="smallBold" style={styles.linksTitle}>
                 Tiện ích
@@ -451,10 +465,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ECE7DF",
   },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
   sectionTitle: {
     fontSize: 16,
     color: "#1F2940",
-    marginBottom: 12,
+  },
+  editLink: {
+    color: "#E68A2E",
+    fontSize: 14,
   },
   infoRow: {
     gap: 4,

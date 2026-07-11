@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,35 +15,38 @@ import {
 } from "react-native-safe-area-context";
 
 import { bookingApi } from "@/api/booking.api";
+import {
+  BookingStatusFilterRow,
+  BookingSummarySection,
+} from "@/components/booking-summary-section";
 import { IdentityDetailModal } from "@/components/identity-detail-modal";
 import { LandlordBookingCard } from "@/components/landlord/landlord-booking-card";
 import { LandlordBottomNavigation } from "@/components/landlord/bottom-navigation";
 import { ThemedText } from "@/components/themed-text";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { Booking, BookingStatus } from "@/types/booking";
+import {
+  BOOKING_STATUS_FILTERS,
+  buildBookingSummaryItems,
+} from "@/utils/booking-summary";
 
 const PAGE_SIZE = 10;
-
-const STATUS_FILTERS: { id: "ALL" | BookingStatus; label: string }[] = [
-  { id: "ALL", label: "Tất cả trạng thái" },
-  { id: "PENDING", label: "Chờ duyệt" },
-  { id: "APPROVED", label: "Đã duyệt" },
-  { id: "REJECTED", label: "Từ chối" },
-  { id: "CANCELLED", label: "Đã hủy" },
-];
 
 export default function LandlordBookingsPage() {
   const insets = useSafeAreaInsets();
   const [statusFilter, setStatusFilter] = useState<"ALL" | BookingStatus>("ALL");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [actionTargetId, setActionTargetId] = useState<string | null>(null);
   const [viewingIdentityId, setViewingIdentityId] = useState<string | null>(null);
 
   const loadBookings = useCallback(async () => {
+    setLoadError(null);
     try {
       const res = await bookingApi.listLandlord({
         page,
@@ -52,13 +55,13 @@ export default function LandlordBookingsPage() {
       });
       setBookings(res.data ?? []);
       setTotalPages(res.pagination?.totalPages ?? 1);
+      setTotalCount(res.pagination?.total ?? res.data?.length ?? 0);
     } catch (err) {
-      Alert.alert(
-        "Không tải được danh sách đặt phòng",
-        getApiErrorMessage(err, "Vui lòng thử lại."),
-      );
+      const message = getApiErrorMessage(err, "Vui lòng thử lại.");
+      setLoadError(message);
       setBookings([]);
       setTotalPages(1);
+      setTotalCount(0);
     }
   }, [page, statusFilter]);
 
@@ -72,6 +75,11 @@ export default function LandlordBookingsPage() {
     await loadBookings();
     setRefreshing(false);
   };
+
+  const summaryItems = useMemo(
+    () => buildBookingSummaryItems(bookings, totalCount),
+    [bookings, totalCount],
+  );
 
   const runAction = async (
     bookingId: string,
@@ -144,7 +152,10 @@ export default function LandlordBookingsPage() {
             { paddingBottom: 120 + insets.bottom },
           ]}
         >
-          <View style={styles.header}>
+          <View style={styles.heroCard}>
+            <ThemedText type="small" style={styles.eyebrow}>
+              BOOKING CENTER
+            </ThemedText>
             <ThemedText type="title" style={styles.pageTitle}>
               Duyệt yêu cầu đặt phòng
             </ThemedText>
@@ -154,70 +165,81 @@ export default function LandlordBookingsPage() {
             </ThemedText>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterRow}
-          >
-            {STATUS_FILTERS.map((item) => {
-              const active = statusFilter === item.id;
-              return (
-                <Pressable
-                  key={item.id}
-                  onPress={() => {
-                    setStatusFilter(item.id);
-                    setPage(1);
-                  }}
-                  style={[styles.filterChip, active && styles.filterChipActive]}
-                >
-                  <ThemedText
-                    type="smallBold"
-                    style={[
-                      styles.filterChipText,
-                      active && styles.filterChipTextActive,
-                    ]}
-                  >
-                    {item.label}
-                  </ThemedText>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+          <BookingStatusFilterRow
+            filters={BOOKING_STATUS_FILTERS}
+            activeId={statusFilter}
+            onChange={(id) => {
+              setStatusFilter(id as "ALL" | BookingStatus);
+              setPage(1);
+            }}
+          />
+
+          {!loadError ? (
+            <BookingSummarySection items={summaryItems} loading={loading} />
+          ) : null}
+
+          {loadError ? (
+            <View style={styles.errorCard}>
+              <ThemedText type="small" style={styles.errorText}>
+                {loadError}
+              </ThemedText>
+            </View>
+          ) : null}
 
           {loading ? (
             <ActivityIndicator
               color="#E68A2E"
-              style={{ marginTop: 40 }}
+              style={{ marginTop: 16 }}
               size="large"
             />
-          ) : bookings.length === 0 ? (
+          ) : null}
+
+          {!loading && !loadError && bookings.length === 0 ? (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyIcon}>📋</Text>
               <ThemedText type="smallBold" style={styles.emptyTitle}>
-                Chưa có danh sách đặt phòng phù hợp
+                {statusFilter === "ALL"
+                  ? "Chưa có danh sách đặt phòng phù hợp"
+                  : "Không có yêu cầu đặt phòng nào phù hợp"}
               </ThemedText>
             </View>
-          ) : (
-            bookings.map((booking) => (
-              <LandlordBookingCard
-                key={booking._id}
-                booking={booking}
-                busy={actionTargetId === booking._id}
-                onApprove={() => handleApprove(booking._id)}
-                onReject={() => handleReject(booking._id)}
-                onDelete={() => handleDelete(booking._id)}
-                onViewIdentity={setViewingIdentityId}
-              />
-            ))
-          )}
+          ) : null}
 
-          {totalPages > 1 ? (
+          {!loading && !loadError && bookings.length > 0 ? (
+            <View style={styles.listSection}>
+              <View style={styles.listHeader}>
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="smallBold" style={styles.listTitle}>
+                    Danh sách booking
+                  </ThemedText>
+                  <ThemedText type="small" style={styles.listSubtitle}>
+                    Hiển thị từng yêu cầu theo dạng card để thao tác duyệt
+                    nhanh hơn.
+                  </ThemedText>
+                </View>
+                <ThemedText type="small" style={styles.pageInfo}>
+                  Trang {page}/{totalPages}
+                </ThemedText>
+              </View>
+
+              {bookings.map((booking) => (
+                <LandlordBookingCard
+                  key={booking._id}
+                  booking={booking}
+                  busy={actionTargetId === booking._id}
+                  onApprove={() => handleApprove(booking._id)}
+                  onReject={() => handleReject(booking._id)}
+                  onDelete={() => handleDelete(booking._id)}
+                  onViewIdentity={setViewingIdentityId}
+                />
+              ))}
+            </View>
+          ) : null}
+
+          {!loading && !loadError && totalPages > 1 ? (
             <View style={styles.pagination}>
               <Pressable
-                style={[
-                  styles.pageBtn,
-                  page <= 1 && styles.pageBtnDisabled,
-                ]}
+                style={[styles.pageBtn, page <= 1 && styles.pageBtnDisabled]}
                 disabled={page <= 1}
                 onPress={() => setPage((current) => Math.max(1, current - 1))}
               >
@@ -270,8 +292,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
   },
-  header: {
+  heroCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#ECE7DF",
+  },
+  eyebrow: {
+    color: "#E68A2E",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    marginBottom: 6,
   },
   pageTitle: {
     fontSize: 24,
@@ -282,27 +316,17 @@ const styles = StyleSheet.create({
     color: "#7A869A",
     lineHeight: 18,
   },
-  filterRow: {
-    gap: 8,
-    paddingBottom: 14,
-  },
-  filterChip: {
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+  errorCard: {
     backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: "#ECE7DF",
+    borderColor: "#F5C2C2",
   },
-  filterChipActive: {
-    backgroundColor: "#FFF0DF",
-    borderColor: "#E68A2E",
-  },
-  filterChipText: {
-    color: "#7A869A",
-  },
-  filterChipTextActive: {
-    color: "#C47A10",
+  errorText: {
+    color: "#D14343",
+    textAlign: "center",
   },
   emptyCard: {
     backgroundColor: "#FFFFFF",
@@ -321,12 +345,35 @@ const styles = StyleSheet.create({
     color: "#7A869A",
     textAlign: "center",
   },
+  listSection: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#ECE7DF",
+  },
+  listHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    marginBottom: 12,
+  },
+  listTitle: {
+    fontSize: 17,
+    color: "#1F2940",
+  },
+  listSubtitle: {
+    color: "#7A869A",
+    marginTop: 4,
+    lineHeight: 18,
+  },
   pagination: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 16,
-    marginTop: 8,
+    marginTop: 4,
     marginBottom: 12,
   },
   pageBtn: {

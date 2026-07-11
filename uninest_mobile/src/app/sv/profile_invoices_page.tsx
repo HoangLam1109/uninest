@@ -18,31 +18,35 @@ import { invoiceApi } from "@/api/invoice.api";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { getApiErrorMessage } from "@/lib/api-error";
-import type { Invoice } from "@/types/invoice";
+import type { Invoice, InvoicePaymentStatus } from "@/types/invoice";
 import { formatPrice } from "@/utils/room-display";
 import {
   formatBillingMonth,
   formatInvoiceDate,
   getLandlordName,
   getRoomTitleFromInvoice,
+  invoicePaymentStatusLabel,
+  invoicePaymentStatusStyle,
   invoiceStatusLabel,
   invoiceStatusStyle,
   isInvoiceUnpaid,
   sumUnpaidAmount,
 } from "@/utils/invoice-display";
 
-type FilterKey = "all" | "unpaid" | "paid";
+type FilterKey = InvoicePaymentStatus | "all";
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "Tất cả" },
-  { key: "unpaid", label: "Chưa thanh toán" },
-  { key: "paid", label: "Đã thanh toán" },
+  { key: "unpaid", label: "Chưa TT" },
+  { key: "pending_confirmation", label: "Chờ xác nhận" },
+  { key: "paid", label: "Đã TT" },
+  { key: "overdue", label: "Quá hạn" },
+  { key: "cancelled", label: "Đã hủy" },
 ];
 
 function matchesFilter(invoice: Invoice, filter: FilterKey) {
   if (filter === "all") return true;
-  if (filter === "paid") return invoice.status === "PAID";
-  return isInvoiceUnpaid(invoice.status);
+  return invoice.paymentStatus === filter;
 }
 
 export default function ProfileInvoicesPage() {
@@ -229,7 +233,12 @@ function InvoiceCard({
   onPress: () => void;
 }) {
   const statusStyle = invoiceStatusStyle(invoice.status);
+  const paymentStyle = invoicePaymentStatusStyle(invoice.paymentStatus);
   const roomTitle = getRoomTitleFromInvoice(invoice);
+  const showPaymentBadge =
+    invoice.paymentStatus &&
+    (invoice.paymentStatus === "pending_confirmation" ||
+      invoice.status !== "PAID");
 
   return (
     <Pressable style={styles.card} onPress={onPress}>
@@ -242,10 +251,19 @@ function InvoiceCard({
             {roomTitle ?? `Chủ nhà: ${getLandlordName(invoice)}`}
           </ThemedText>
         </View>
-        <View style={[styles.statusPill, statusStyle.pill]}>
-          <Text style={[styles.statusText, statusStyle.text]}>
-            {invoiceStatusLabel(invoice.status)}
-          </Text>
+        <View style={styles.cardBadges}>
+          <View style={[styles.statusPill, statusStyle.pill]}>
+            <Text style={[styles.statusText, statusStyle.text]}>
+              {invoiceStatusLabel(invoice.status)}
+            </Text>
+          </View>
+          {showPaymentBadge ? (
+            <View style={[styles.statusPill, paymentStyle.pill]}>
+              <Text style={[styles.statusText, paymentStyle.text]}>
+                {invoicePaymentStatusLabel(invoice.paymentStatus)}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
 
@@ -403,6 +421,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   cardTitleBlock: { flex: 1, minWidth: 0 },
+  cardBadges: {
+    alignItems: "flex-end",
+    gap: 6,
+  },
   cardTitle: { color: "#2F261A", fontSize: 17 },
   cardSubtitle: { color: "#8A7B68", marginTop: 4 },
   statusPill: {

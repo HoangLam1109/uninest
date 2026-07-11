@@ -14,6 +14,11 @@ export function formatRoomLocation(room: Room) {
   return parts.join(", ");
 }
 
+/** Full address string for geocoding — matches FE `formatRoomFullLocation`. */
+export function formatRoomFullLocation(room: Room) {
+  return formatRoomLocation(room);
+}
+
 export function roomStatusLabel(status?: RoomStatus | string) {
   const map: Record<string, string> = {
     AVAILABLE: "Còn trống",

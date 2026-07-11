@@ -6,17 +6,26 @@ import type {
   InvoiceDetailResponse,
   InvoiceListResponse,
   InvoiceMutationResponse,
+  InvoicePaymentStatus,
   InvoiceResponse,
   MeterReadingMutationResponse,
+  PreviousReadingResponse,
   UpdateInvoiceDetailPayload,
   UpdateInvoicePayload,
   UtilityInvoiceMutationResponse,
 } from "@/types/invoice";
 
-function buildListQuery(params?: { page?: number; limit?: number }) {
+function buildListQuery(params?: {
+  page?: number;
+  limit?: number;
+  paymentStatus?: InvoicePaymentStatus | "all";
+}) {
   const query = new URLSearchParams();
   query.set("page", String(params?.page ?? 1));
   query.set("limit", String(params?.limit ?? 100));
+  if (params?.paymentStatus && params.paymentStatus !== "all") {
+    query.set("paymentStatus", params.paymentStatus);
+  }
   return query.toString();
 }
 
@@ -28,7 +37,11 @@ export const invoiceApi = {
     ),
 
   /** GET /api/invoices/landlord */
-  listLandlord: (params?: { page?: number; limit?: number }) =>
+  listLandlord: (params?: {
+    page?: number;
+    limit?: number;
+    paymentStatus?: InvoicePaymentStatus | "all";
+  }) =>
     api.get<InvoiceListResponse>(
       `/invoices/landlord?${buildListQuery(params)}`,
     ),
@@ -37,7 +50,7 @@ export const invoiceApi = {
   create: (payload: CreateInvoicePayload) =>
     api.post<InvoiceMutationResponse>("/invoices/", payload),
 
-  /** POST /api/invoices/utility — tự tính điện/nước từ chỉ số công tơ */
+  /** POST /api/invoices/utility */
   createUtility: (payload: CreateUtilityInvoicePayload) =>
     api.post<UtilityInvoiceMutationResponse>("/invoices/utility", payload),
 
@@ -53,8 +66,24 @@ export const invoiceApi = {
     api.patch<InvoiceMutationResponse>(`/invoices/${id}/send`),
 
   /** PATCH /api/invoices/:id/mark-paid */
-  markPaid: (id: string) =>
-    api.patch<InvoiceMutationResponse>(`/invoices/${id}/mark-paid`),
+  markPaid: (id: string, landlordPaymentNote?: string) =>
+    api.patch<InvoiceMutationResponse>(`/invoices/${id}/mark-paid`, {
+      landlordPaymentNote,
+    }),
+
+  /** PATCH /api/invoices/:id/mark-unpaid */
+  markUnpaid: (id: string) =>
+    api.patch<InvoiceMutationResponse>(`/invoices/${id}/mark-unpaid`),
+
+  /** PATCH /api/invoices/:id/cancel */
+  cancel: (id: string) =>
+    api.patch<InvoiceMutationResponse>(`/invoices/${id}/cancel`),
+
+  /** PATCH /api/invoices/:id/pending-confirmation */
+  markPendingConfirmation: (id: string) =>
+    api.patch<InvoiceMutationResponse>(
+      `/invoices/${id}/pending-confirmation`,
+    ),
 
   /** DELETE /api/invoices/:id */
   delete: (id: string) =>
@@ -67,6 +96,16 @@ export const invoiceApi = {
   /** PUT /api/invoices/:id/detail */
   updateDetail: (id: string, payload: UpdateInvoiceDetailPayload) =>
     api.put<InvoiceDetailResponse>(`/invoices/${id}/detail`, payload),
+
+  /** GET /api/invoices/booking/:bookingId/previous-reading */
+  getPreviousReadingByBooking: (bookingId: string, billingMonth?: string) => {
+    const query = billingMonth
+      ? `?billingMonth=${encodeURIComponent(billingMonth)}`
+      : "";
+    return api.get<PreviousReadingResponse>(
+      `/invoices/booking/${bookingId}/previous-reading${query}`,
+    );
+  },
 
   /** POST /api/invoices/initial-reading */
   createInitialReading: (payload: CreateInitialReadingPayload) =>

@@ -62,6 +62,14 @@ export default function HomePage() {
     router.push("/sv/login_page" as any);
   };
 
+  const goToLandlordRequest = () => {
+    if (!isAuthenticated) {
+      router.push("/sv/login_page" as any);
+      return;
+    }
+    router.push("/sv/landlord_request_page" as any);
+  };
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
@@ -277,29 +285,41 @@ export default function HomePage() {
 
           <View style={styles.landlordCard}>
             <ThemedText type="title" style={styles.landlordTitle}>
-              Are you a landlord?
+              Dành cho chủ nhà
             </ThemedText>
             <ThemedText type="small" style={styles.landlordSubtitle}>
-              Reach thousands of students looking for their next home. List your
-              property on UniNest and find quality tenants quickly.
+              Tiếp cận hàng nghìn sinh viên đang tìm nhà. Đăng ký làm chủ nhà trên
+              UniNest và tìm người thuê chất lượng nhanh chóng.
             </ThemedText>
 
             <View style={styles.landlordButtons}>
-              <TouchableOpacity style={styles.landlordPrimary}>
+              <TouchableOpacity
+                style={styles.landlordPrimary}
+                onPress={goToLandlordRequest}
+              >
                 <ThemedText type="smallBold" style={{ color: "#fff" }}>
-                  List Your Property
+                  Đăng ký làm chủ nhà
                 </ThemedText>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.landlordSecondary}
-                onPress={goToLogin}
+                onPress={goToLandlordRequest}
               >
                 <ThemedText type="smallBold" style={{ color: "#fff" }}>
-                  Learn More
+                  Tìm hiểu thêm
                 </ThemedText>
               </TouchableOpacity>
             </View>
           </View>
+
+          <Pressable
+            style={styles.blogLink}
+            onPress={() => router.push("/sv/blog_list_page" as any)}
+          >
+            <ThemedText type="smallBold" style={styles.blogLinkText}>
+              📰 UniNest Blog — Kinh nghiệm thuê phòng →
+            </ThemedText>
+          </Pressable>
 
           <View style={styles.footer}>
             <AppLogo size={36} withBackground={false} />
@@ -674,6 +694,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: "center",
+  },
+  blogLink: {
+    marginTop: Spacing.three,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#E8E1D8",
+    alignItems: "center",
+  },
+  blogLinkText: {
+    color: "#F28C1B",
+    textAlign: "center",
   },
   footer: {
     marginTop: Spacing.four,
