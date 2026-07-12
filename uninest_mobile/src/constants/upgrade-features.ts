@@ -90,5 +90,7 @@ export const UPGRADE_FEATURES: Record<UpgradeFeatureKey, UpgradeFeatureConfig> =
   },
 };
 
-export const TENANT_PACKAGE_PRICE = "30.000đ";
-export const LANDLORD_PACKAGE_PRICE = "99.000đ";
+/** @deprecated Giá lấy từ GET /service-packages/active — không hardcode nữa */
+export const TENANT_PACKAGE_PRICE = "Theo bảng giá";
+/** @deprecated Giá lấy từ GET /service-packages/active — không hardcode nữa */
+export const LANDLORD_PACKAGE_PRICE = "Theo bảng giá";
