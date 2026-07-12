@@ -5,6 +5,7 @@ export const paths = {
   ai: '/ai',
   login: '/dang-nhap',
   register: '/dang-ky',
+  forgotPassword: '/quen-mat-khau',
   rooms: '/phong',
   roomDetail: '/phong/:id',
   createRoom: '/dang-tin',

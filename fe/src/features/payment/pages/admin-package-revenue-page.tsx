@@ -124,7 +124,7 @@ export function AdminPackageRevenuePage() {
           />
           <StatCard
             label="Tổng doanh thu"
-            value={formatPrice(stats.totalAmount)}
+            value={formatPrice(stats.completedAmount)}
             icon={<Banknote className="size-4" />}
             highlight
           />
