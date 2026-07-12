@@ -1,9 +1,11 @@
 import {
+  forgotPassword,
   getMe,
   refreshToken,
   loginUser,
   logoutUser,
   registerUser,
+  resetPassword,
   sendRegisterOtp,
 } from "../controllers/auth.controller.js";
 import express from "express";
@@ -14,6 +16,8 @@ const router = express.Router();
 router.post("/register", registerUser);
 router.post("/register/send-otp", sendRegisterOtp);
 router.post("/login", loginUser);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 router.get("/me", authenticateUser.authenticateUser, getMe);
 router.post("/logout", authenticateUser.authenticateUser, logoutUser);
 router.post("/refresh-token", authenticateUser.refreshTokenValidation, refreshToken);

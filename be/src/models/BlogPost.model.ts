@@ -95,7 +95,6 @@ const BlogPostSchema = new Schema<IBlogPost>(
   },
 );
 
-BlogPostSchema.index({ slug: 1 }, { unique: true });
 BlogPostSchema.index({ isPublished: 1, publishedAt: -1, deletedAt: 1 });
 
 export const BlogPostModel = model<IBlogPost>("BlogPost", BlogPostSchema);

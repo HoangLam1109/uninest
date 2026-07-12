@@ -3,9 +3,11 @@ import type { ApiResponse } from '@/types/api'
 import type {
   AuthResponse,
   AuthUserResponse,
+  ForgotPasswordPayload,
   LoginPayload,
   RefreshTokenResponse,
   RegisterPayload,
+  ResetPasswordPayload,
   SendRegisterOtpPayload,
 } from '@/types/auth'
 
@@ -18,6 +20,12 @@ export const authApi = {
 
   sendRegisterOtp: (payload: SendRegisterOtpPayload) =>
     api.post<ApiResponse<{ message: string }>>('/auth/register/send-otp', payload),
+
+  forgotPassword: (payload: ForgotPasswordPayload) =>
+    api.post<ApiResponse<{ message: string }>>('/auth/forgot-password', payload),
+
+  resetPassword: (payload: ResetPasswordPayload) =>
+    api.post<ApiResponse<{ message: string }>>('/auth/reset-password', payload),
 
   refresh: (refreshToken: string) =>
     api.post<ApiResponse<RefreshTokenResponse>>('/auth/refresh-token', {

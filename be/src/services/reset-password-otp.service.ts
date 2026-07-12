@@ -1,4 +1,4 @@
-import { RegisterOtpModel } from "../models/RegisterOtp.model.js";
+import { ResetPasswordOtpModel } from "../models/ResetPasswordOtp.model.js";
 import {
   OTP_TTL_MS,
   OtpRateLimitError,
@@ -9,16 +9,16 @@ import {
   sendOtpEmail,
 } from "./email-otp.service.js";
 
-type RegisterOtpRecord = {
+type ResetPasswordOtpRecord = {
   otpHash: string;
   expiresAt: number;
   lastSentAt: number;
 };
 
-export class RegisterOtpService {
+export class ResetPasswordOtpService {
   async sendOtp(email: string): Promise<void> {
     const normalizedEmail = normalizeEmail(email);
-    const existingOtp = await RegisterOtpModel.findOne({ email: normalizedEmail }).lean();
+    const existingOtp = await ResetPasswordOtpModel.findOne({ email: normalizedEmail }).lean();
     const now = Date.now();
 
     if (
@@ -29,13 +29,13 @@ export class RegisterOtpService {
     }
 
     const otp = createOtp();
-    const record: RegisterOtpRecord = {
+    const record: ResetPasswordOtpRecord = {
       otpHash: hashOtp(normalizedEmail, otp),
       expiresAt: now + OTP_TTL_MS,
       lastSentAt: now,
     };
 
-    await RegisterOtpModel.findOneAndUpdate(
+    await ResetPasswordOtpModel.findOneAndUpdate(
       { email: normalizedEmail },
       {
         email: normalizedEmail,
@@ -51,27 +51,27 @@ export class RegisterOtpService {
     );
 
     try {
-      await sendOtpEmail(normalizedEmail, otp, "register");
+      await sendOtpEmail(normalizedEmail, otp, "reset-password");
     } catch (error) {
-      await RegisterOtpModel.deleteOne({ email: normalizedEmail });
+      await ResetPasswordOtpModel.deleteOne({ email: normalizedEmail });
       throw error;
     }
   }
 
   async verifyOtp(email: string, otp: string): Promise<boolean> {
     const normalizedEmail = normalizeEmail(email);
-    const record = await RegisterOtpModel.findOne({ email: normalizedEmail }).lean();
+    const record = await ResetPasswordOtpModel.findOne({ email: normalizedEmail }).lean();
 
     if (!record) return false;
 
     if (Date.now() > new Date(record.expiresAt).getTime()) {
-      await RegisterOtpModel.deleteOne({ email: normalizedEmail });
+      await ResetPasswordOtpModel.deleteOne({ email: normalizedEmail });
       return false;
     }
 
     const isValid = record.otpHash === hashOtp(normalizedEmail, otp);
     if (isValid) {
-      await RegisterOtpModel.deleteOne({ email: normalizedEmail });
+      await ResetPasswordOtpModel.deleteOne({ email: normalizedEmail });
     }
 
     return isValid;
