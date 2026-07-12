@@ -1,7 +1,7 @@
 import "./env.js";
 
 const LOCAL_FRONTEND_ORIGIN = "http://localhost:5173";
-const DEPLOY_FRONTEND_ORIGIN = "https://uninest-one.vercel.app";
+const DEPLOY_FRONTEND_ORIGIN = "https://www.uninest.io.vn/";
 
 function normalizeOrigins(origins: Array<string | undefined>) {
   return Array.from(
