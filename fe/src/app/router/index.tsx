@@ -99,6 +99,11 @@ const LoginPage = lazy(() =>
     default: module.LoginPage,
   })),
 )
+const ForgotPasswordPage = lazy(() =>
+  import('@/features/auth/pages/forgot-password-page').then((module) => ({
+    default: module.ForgotPasswordPage,
+  })),
+)
 const NotFoundPage = lazy(() =>
   import('@/pages/not-found').then((module) => ({
     default: module.NotFoundPage,
@@ -192,6 +197,7 @@ export function AppRouter() {
         <Route path={paths.rooms} element={<RoomListPage />} />
         <Route path={paths.roomDetail} element={<RoomDetailPage />} />
         <Route path={paths.login} element={<LoginPage />} />
+        <Route path={paths.forgotPassword} element={<ForgotPasswordPage />} />
         <Route path={paths.register} element={<RegisterPage />} />
         <Route path={paths.dashboard} element={<DashboardRedirectPage />} />
         <Route

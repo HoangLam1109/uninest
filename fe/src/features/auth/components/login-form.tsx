@@ -1,7 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { paths } from '@/config/constants'
 import { loginSchema } from '../schemas/auth.schema'
 import type { LoginFormValues } from '../types/auth.type'
 import { useLogin } from '../hooks/use-login'
@@ -68,12 +70,12 @@ export function LoginForm() {
             />
             Ghi nhớ đăng nhập
           </label>
-          <a
-            href="#"
+          <Link
+            to={paths.forgotPassword}
             className="font-semibold text-primary hover:text-primary/80"
           >
             Quên mật khẩu?
-          </a>
+          </Link>
         </div>
 
         <Button
@@ -90,18 +92,6 @@ export function LoginForm() {
         <div className="absolute inset-0 flex items-center" aria-hidden>
           <div className="w-full border-t border-border" />
         </div>
-        <p className="relative mx-auto w-fit bg-white px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          hoặc
-        </p>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Button type="button" variant="outline" className="w-full">
-          Google
-        </Button>
-        <Button type="button" variant="outline" className="w-full">
-          Facebook
-        </Button>
       </div>
     </>
   )
