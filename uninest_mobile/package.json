@@ -37,6 +37,7 @@
   "devDependencies": {
     "@types/react": "~19.2.2",
     "babel-preset-expo": "^56.0.14",
+    "eas-cli": "^20.5.1",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~56.0.4",
     "prettier-plugin-tailwindcss": "^0.5.14",
@@ -51,7 +52,9 @@
     "web": "expo start --web",
     "export:web": "expo export --platform web",
     "vercel-build": "expo export --platform web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "build:apk": "eas-cli build -p android --profile preview",
+    "build:aab": "eas-cli build -p android --profile production"
   },
   "private": true
 }

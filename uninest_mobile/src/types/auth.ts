@@ -24,6 +24,20 @@ export type SendRegisterOtpResponse = {
   message: string;
 };
 
+export type ForgotPasswordPayload = {
+  email: string;
+};
+
+export type ResetPasswordPayload = {
+  email: string;
+  otp: string;
+  newPassword: string;
+};
+
+export type AuthMessageResponse = {
+  message: string;
+};
+
 export type LoginPayload = {
   email: string;
   password: string;
