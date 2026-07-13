@@ -53,6 +53,9 @@ export const roomTypeOptions = [
   { value: 'single', label: 'Phòng đơn' },
 ] as const
 
+export const mobileDownloadUrl =
+  'https://expo.dev/accounts/viethq2004s-team/projects/uninest/builds/535adf1f-e220-4510-aa95-d9cba2b94404'
+
 export const homeFaqs = [
   {
     question: 'Uninest giúp chúng ta tìm phòng trọ tại TP.HCM như thế nào?',
