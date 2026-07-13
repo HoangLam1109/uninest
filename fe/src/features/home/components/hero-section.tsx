@@ -1,7 +1,14 @@
 import { useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import gsap from 'gsap'
-import { DoorOpen, MapPin, Search, Wallet } from 'lucide-react'
+import {
+  DoorOpen,
+  Download,
+  MapPin,
+  Search,
+  Smartphone,
+  Wallet,
+} from 'lucide-react'
 import { images } from '@/assets/images'
 import { Button } from '@/components/ui/button'
 import { paths } from '@/config/constants'
@@ -13,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { budgetOptions, roomTypeOptions } from '../data'
+import { budgetOptions, mobileDownloadUrl, roomTypeOptions } from '../data'
 
 const budgetRanges = {
   'under-5': { maxPrice: 5_000_000 },
@@ -112,13 +119,38 @@ export function HeroSection() {
       <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center gap-8 text-center">
         <div className="space-y-4" data-hero-animate>
           <h1 className="font-sans text-4xl font-bold leading-tight tracking-normal text-white drop-shadow-sm sm:text-5xl lg:text-7xl lg:leading-[1.1]">
-            Tìm kiếm không gian sống{' '}
-            <span className="text-primary">lí tưởng</span> tại TP.HCM
+            Tìm kiếm không gian sống <span className="text-primary">lý tưởng</span>{' '}
+            tại TP.HCM
           </h1>
           <p className="mx-auto max-w-2xl text-lg font-light leading-relaxed text-white/90 lg:text-xl">
-            Hệ thống căn hộ dịch vụ và phòng trọ chất lượng cao dành riêng cho
-            sinh viên và người đi làm hiện đại.
+            Hệ thống căn hộ dịch vụ và phòng trọ chất lượng cao dành riêng cho sinh
+            viên và người đi làm hiện đại.
           </p>
+        </div>
+
+        <div
+          className="flex w-full max-w-3xl flex-col items-center gap-3 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm sm:flex-row sm:justify-between sm:p-5"
+          data-hero-animate
+        >
+          <div className="space-y-1 text-center sm:text-left">
+            <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/90">
+              <Smartphone className="size-4" />
+              UniNest Mobile
+            </p>
+            <p className="text-sm text-white/85 sm:text-base">
+              Tải ứng dụng để tìm phòng và theo dõi đặt chỗ ngay trên điện thoại.
+            </p>
+          </div>
+          <Button
+            asChild
+            size="lg"
+            className="w-full min-w-[220px] bg-white text-foreground hover:bg-white/90 sm:w-auto"
+          >
+            <a href={mobileDownloadUrl} target="_blank" rel="noopener noreferrer">
+              <Download className="size-[18px]" />
+              Tải app mobile
+            </a>
+          </Button>
         </div>
 
         <form
@@ -129,13 +161,13 @@ export function HeroSection() {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
             <SearchField
               icon={<MapPin className="size-4 text-primary" />}
-              label="Vi tri"
+              label="Vị trí"
             >
               <input
                 type="text"
                 value={keyword}
                 onChange={(event) => setKeyword(event.target.value)}
-                placeholder="Quan 1, Quan 7, Binh Thanh..."
+                placeholder="Quận 1, Quận 7, Bình Thạnh..."
                 className="w-full bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/60"
               />
             </SearchField>

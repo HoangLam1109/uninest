@@ -1,9 +1,13 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { paths } from '@/config/constants'
+import { useNavigate } from 'react-router-dom'
+import { mobileDownloadUrl } from '../data'
 import { useGsapReveal } from '../hooks/use-gsap-reveal'
 
 export function CtaSection() {
   const sectionRef = useGsapReveal<HTMLElement>()
+  const navigate = useNavigate()
 
   return (
     <section ref={sectionRef} className="bg-surface px-6 py-16 lg:px-20 lg:py-20">
@@ -20,12 +24,15 @@ export function CtaSection() {
             Bạn đã sẵn sàng để chuyển đến nhà mới?
           </h2>
           <p className="mx-auto max-w-xl text-base font-medium text-white/90">
-            Đăng ký ngay để nhận thông báo về những căn phòng mới nhất và ưu đãi
-            đặc quyền cho cư dân UniNest.
+            Đăng ký ngay để nhận thông báo về những căn phòng mới nhất và ưu đãi đặc
+            quyền cho cư dân UniNest.
           </p>
           <form
             className="mx-auto flex max-w-lg flex-col gap-3 sm:flex-row sm:items-stretch"
-            onSubmit={(e) => e.preventDefault()}
+            onSubmit={(e) => {
+              e.preventDefault()
+              navigate(paths.register)
+            }}
           >
             <Input
               type="email"
@@ -37,6 +44,21 @@ export function CtaSection() {
               Đăng ký ngay
             </Button>
           </form>
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-white/80">
+              Hoặc tải phiên bản mobile để trải nghiệm UniNest ngay trên điện thoại.
+            </p>
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="border-white text-white hover:bg-white/10"
+            >
+              <a href={mobileDownloadUrl} target="_blank" rel="noopener noreferrer">
+                Tải ứng dụng mobile
+              </a>
+            </Button>
+          </div>
         </div>
       </div>
     </section>
