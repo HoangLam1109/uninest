@@ -1,8 +1,3 @@
-import {
-  LANDLORD_PACKAGE_PRICE,
-  TENANT_PACKAGE_PRICE,
-} from "@/constants/upgrade-features";
-
 export type MembershipPlanKey =
   | "GUEST"
   | "TENANT"
@@ -60,7 +55,6 @@ export function getMembershipPlanDisplay(
         icon: "🔑",
         accent: "#F28C1B",
         accentSoft: "#FFF4E8",
-        priceLabel: `${TENANT_PACKAGE_PRICE}/tháng`,
         statusLabel: active ? "Đang dùng" : "Đã hết hạn",
         statusTone: active ? "active" : "expired",
         expiryText: expiryText ? `Hết hạn: ${expiryText}` : undefined,
@@ -76,7 +70,6 @@ export function getMembershipPlanDisplay(
         icon: "🏠",
         accent: "#5D4E37",
         accentSoft: "#F0EBE3",
-        priceLabel: `${LANDLORD_PACKAGE_PRICE}/tháng`,
         statusLabel: expired ? "Đã hết hạn" : "Đang dùng",
         statusTone: expired ? "expired" : "active",
         expiryText: expiryText ? `Hết hạn: ${expiryText}` : undefined,

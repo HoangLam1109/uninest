@@ -1,11 +1,12 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -16,7 +17,6 @@ import {
 } from "react-native-safe-area-context";
 
 import { invoiceApi } from "@/api/invoice.api";
-import { paymentApi } from "@/api/payment.api";
 import { roomApi } from "@/api/room.api";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -24,36 +24,59 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import type { Invoice, InvoiceDetail } from "@/types/invoice";
 import { formatPrice } from "@/utils/room-display";
 import {
+  canTenantConfirmTransfer,
   formatBillingMonth,
   formatInvoiceDate,
   getBookingRoomId,
   getLandlordName,
+  invoicePaymentStatusLabel,
+  invoicePaymentStatusStyle,
   invoiceStatusLabel,
   invoiceStatusStyle,
   isInvoiceUnpaid,
 } from "@/utils/invoice-display";
-import { verifyPayOSPayment } from "@/utils/payos-verify";
 
 function LineRow({
   label,
   value,
   bold,
+  copyable,
 }: {
   label: string;
   value: string;
   bold?: boolean;
+  copyable?: boolean;
 }) {
+  const handleCopy = async () => {
+    try {
+      await Share.share({ message: value });
+    } catch {
+      Alert.alert(label, value);
+    }
+  };
+
   return (
     <View style={styles.lineRow}>
       <ThemedText type="small" style={styles.lineLabel}>
         {label}
       </ThemedText>
-      <ThemedText
-        type="smallBold"
-        style={[styles.lineValue, bold && styles.lineValueBold]}
+      <Pressable
+        style={styles.lineValueWrap}
+        onPress={copyable ? () => void handleCopy() : undefined}
+        disabled={!copyable}
       >
-        {value}
-      </ThemedText>
+        <ThemedText
+          type="smallBold"
+          style={[styles.lineValue, bold && styles.lineValueBold]}
+        >
+          {value}
+        </ThemedText>
+        {copyable ? (
+          <ThemedText type="small" style={styles.copyHint}>
+            Chia sẻ
+          </ThemedText>
+        ) : null}
+      </Pressable>
     </View>
   );
 }
@@ -66,11 +89,7 @@ function amountOrDash(value?: number) {
 export default function ProfileInvoiceDetailPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const params = useLocalSearchParams<{
-    id: string;
-    result?: string;
-    orderCode?: string;
-  }>();
+  const params = useLocalSearchParams<{ id: string }>();
   const invoiceId =
     typeof params.id === "string"
       ? params.id
@@ -82,10 +101,8 @@ export default function ProfileInvoiceDetailPage() {
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
   const [roomTitle, setRoomTitle] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [paying, setPaying] = useState(false);
-  const [verifying, setVerifying] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const handledOrdersRef = useRef<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     if (!invoiceId) {
@@ -131,85 +148,34 @@ export default function ProfileInvoiceDetailPage() {
     void load();
   }, [load]);
 
-  const handleVerifyPayment = useCallback(
-    async (orderCode: string, result: "success" | "cancel") => {
-      if (handledOrdersRef.current.has(orderCode)) return;
+  const handleConfirmTransfer = async () => {
+    if (!invoice || !canTenantConfirmTransfer(invoice)) return;
 
-      setVerifying(true);
-      try {
-        const verifyResult = await verifyPayOSPayment(orderCode, result);
-        handledOrdersRef.current.add(orderCode);
-
-        if (verifyResult === "cancelled") {
-          Alert.alert("Đã hủy", "Thanh toán đã bị hủy.");
-          return;
-        }
-
-        if (verifyResult === "pending") {
-          Alert.alert(
-            "Đang xử lý",
-            "Thanh toán đang được xác minh. Thử lại sau vài phút.",
-          );
-          return;
-        }
-
-        await load();
-        Alert.alert(
-          "Thanh toán thành công",
-          "Hóa đơn đã được thanh toán thành công.",
-        );
-      } catch (err) {
-        Alert.alert(
-          "Lỗi",
-          getApiErrorMessage(err, "Không xác minh được thanh toán."),
-        );
-      } finally {
-        setVerifying(false);
-      }
-    },
-    [load],
-  );
-
-  useEffect(() => {
-    const orderCode = params.orderCode ? String(params.orderCode) : "";
-    if (!orderCode) return;
-
-    void handleVerifyPayment(
-      orderCode,
-      params.result === "cancel" ? "cancel" : "success",
-    );
-  }, [params.orderCode, params.result, handleVerifyPayment]);
-
-  const handlePay = async () => {
-    if (!invoice || !isInvoiceUnpaid(invoice.status)) return;
-
-    setPaying(true);
+    setConfirming(true);
     try {
-      const res = await paymentApi.payInvoice(invoice._id);
-      const checkoutUrl = res.data.checkoutUrl;
-      const orderCode = String(res.data.orderCode);
-      if (!checkoutUrl) {
-        throw new Error("Không nhận được link thanh toán.");
-      }
-
-      await WebBrowser.openBrowserAsync(checkoutUrl);
-
-      if (!handledOrdersRef.current.has(orderCode)) {
-        await handleVerifyPayment(orderCode, "success");
-      }
-    } catch (err) {
+      await invoiceApi.markPendingConfirmation(invoice._id);
+      await load();
       Alert.alert(
-        "Lỗi",
-        getApiErrorMessage(err, "Không tạo được thanh toán."),
+        "Đã gửi xác nhận",
+        "Chủ trọ sẽ kiểm tra và xác nhận thanh toán.",
       );
+    } catch (err) {
+      Alert.alert("Lỗi", getApiErrorMessage(err, "Không gửi được xác nhận."));
     } finally {
-      setPaying(false);
+      setConfirming(false);
     }
   };
 
   const statusStyle = invoice
     ? invoiceStatusStyle(invoice.status)
     : invoiceStatusStyle("DRAFT");
+  const paymentStyle = invoice
+    ? invoicePaymentStatusStyle(invoice.paymentStatus)
+    : invoicePaymentStatusStyle("unpaid");
+  const showPaymentInfo =
+    invoice &&
+    (invoice.status === "SENT" || invoice.status === "OVERDUE") &&
+    invoice.paymentBankName;
 
   return (
     <ThemedView style={styles.screen}>
@@ -224,14 +190,9 @@ export default function ProfileInvoiceDetailPage() {
           <View style={styles.iconButton} />
         </View>
 
-        {loading || verifying ? (
+        {loading ? (
           <View style={styles.centerBox}>
             <ActivityIndicator size="large" color="#F28C1B" />
-            {verifying ? (
-              <ThemedText type="small" style={styles.hintText}>
-                Đang xác minh thanh toán...
-              </ThemedText>
-            ) : null}
           </View>
         ) : error || !invoice ? (
           <View style={styles.centerBox}>
@@ -246,169 +207,243 @@ export default function ProfileInvoiceDetailPage() {
           </View>
         ) : (
           <>
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{
-              padding: 16,
-              paddingBottom: isInvoiceUnpaid(invoice.status)
-                ? 100 + insets.bottom
-                : 32 + insets.bottom,
-            }}
-          >
-            <View style={styles.heroCard}>
-              <View style={styles.heroTop}>
-                <View>
-                  <ThemedText type="title" style={styles.heroTitle}>
-                    {formatBillingMonth(invoice.billingMonth)}
-                  </ThemedText>
-                  <ThemedText type="small" style={styles.heroSubtitle}>
-                    {roomTitle ?? "Phòng thuê"}
-                  </ThemedText>
-                </View>
-                <View style={[styles.statusPill, statusStyle.pill]}>
-                  <Text style={[styles.statusText, statusStyle.text]}>
-                    {invoiceStatusLabel(invoice.status)}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.heroAmount}>
-                {formatPrice(invoice.totalAmount)}
-              </Text>
-              <ThemedText type="small" style={styles.heroDue}>
-                Hạn thanh toán: {formatInvoiceDate(invoice.dueDate)}
-              </ThemedText>
-              {invoice.paidAt ? (
-                <ThemedText type="small" style={styles.heroPaid}>
-                  Đã thanh toán: {formatInvoiceDate(invoice.paidAt)}
-                </ThemedText>
-              ) : null}
-            </View>
-
-            <Section title="Thông tin">
-              <LineRow label="Chủ nhà" value={getLandlordName(invoice)} />
-              {invoice.sentAt ? (
-                <LineRow
-                  label="Ngày gửi"
-                  value={formatInvoiceDate(invoice.sentAt)}
-                />
-              ) : null}
-              <LineRow
-                label="Ngày tạo"
-                value={
-                  invoice.createdAt
-                    ? formatInvoiceDate(invoice.createdAt)
-                    : "—"
-                }
-              />
-            </Section>
-
-            <Section title="Chi phí">
-              <LineRow
-                label="Tiền thuê"
-                value={amountOrDash(invoice.rentAmount)}
-              />
-              <LineRow
-                label="Tiền điện"
-                value={amountOrDash(invoice.electricityAmount)}
-              />
-              <LineRow
-                label="Tiền nước"
-                value={amountOrDash(invoice.waterAmount)}
-              />
-              {(invoice.additionalFees ?? 0) > 0 ? (
-                <LineRow
-                  label="Phí khác"
-                  value={amountOrDash(invoice.additionalFees)}
-                />
-              ) : null}
-              <View style={styles.totalLine}>
-                <ThemedText type="smallBold" style={styles.totalLabel}>
-                  Tổng cộng
-                </ThemedText>
-                <ThemedText type="smallBold" style={styles.totalValue}>
-                  {formatPrice(invoice.totalAmount)}
-                </ThemedText>
-              </View>
-            </Section>
-
-            {detail ? (
-              <Section title="Chỉ số điện nước">
-                {detail.electricityUsage != null ? (
-                  <LineRow
-                    label="Điện tiêu thụ"
-                    value={`${detail.electricityUsage} kWh`}
-                  />
-                ) : null}
-                {detail.electricityOldIndex != null &&
-                detail.electricityNewIndex != null ? (
-                  <LineRow
-                    label="Chỉ số điện"
-                    value={`${detail.electricityOldIndex} → ${detail.electricityNewIndex}`}
-                  />
-                ) : null}
-                {detail.waterUsage != null ? (
-                  <LineRow
-                    label="Nước tiêu thụ"
-                    value={`${detail.waterUsage} m³`}
-                  />
-                ) : null}
-                {detail.waterOldIndex != null &&
-                detail.waterNewIndex != null ? (
-                  <LineRow
-                    label="Chỉ số nước"
-                    value={`${detail.waterOldIndex} → ${detail.waterNewIndex}`}
-                  />
-                ) : null}
-              </Section>
-            ) : null}
-
-            {invoice.notes ? (
-              <Section title="Ghi chú">
-                <ThemedText type="small" style={styles.notes}>
-                  {invoice.notes}
-                </ThemedText>
-              </Section>
-            ) : null}
-
-            {invoice.status === "SENT" || invoice.status === "OVERDUE" ? (
-              <View style={styles.payHintCard}>
-                <Text style={styles.payHintIcon}>💳</Text>
-                <ThemedText type="small" style={styles.payHintText}>
-                  Bấm &quot;Thanh toán PayOS&quot; bên dưới để thanh toán trực
-                  tuyến qua PayOS.
-                </ThemedText>
-              </View>
-            ) : null}
-          </ScrollView>
-
-          {isInvoiceUnpaid(invoice.status) ? (
-            <View
-              style={[
-                styles.payFooter,
-                { paddingBottom: Math.max(insets.bottom, 12) },
-              ]}
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{
+                padding: 16,
+                paddingBottom:
+                  canTenantConfirmTransfer(invoice) ||
+                  invoice.paymentStatus === "pending_confirmation"
+                    ? 100 + insets.bottom
+                    : 32 + insets.bottom,
+              }}
             >
-              <Pressable
+              <View style={styles.heroCard}>
+                <View style={styles.heroTop}>
+                  <View>
+                    <ThemedText type="title" style={styles.heroTitle}>
+                      {formatBillingMonth(invoice.billingMonth)}
+                    </ThemedText>
+                    <ThemedText type="small" style={styles.heroSubtitle}>
+                      {roomTitle ?? "Phòng thuê"}
+                    </ThemedText>
+                  </View>
+                  <View style={styles.badgeColumn}>
+                    <View style={[styles.statusPill, statusStyle.pill]}>
+                      <Text style={[styles.statusText, statusStyle.text]}>
+                        {invoiceStatusLabel(invoice.status)}
+                      </Text>
+                    </View>
+                    {invoice.paymentStatus ? (
+                      <View style={[styles.statusPill, paymentStyle.pill]}>
+                        <Text style={[styles.statusText, paymentStyle.text]}>
+                          {invoicePaymentStatusLabel(invoice.paymentStatus)}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+                <Text style={styles.heroAmount}>
+                  {formatPrice(invoice.totalAmount)}
+                </Text>
+                <ThemedText type="small" style={styles.heroDue}>
+                  Hạn thanh toán: {formatInvoiceDate(invoice.dueDate)}
+                </ThemedText>
+                {invoice.paidAt ? (
+                  <ThemedText type="small" style={styles.heroPaid}>
+                    Đã thanh toán: {formatInvoiceDate(invoice.paidAt)}
+                  </ThemedText>
+                ) : null}
+              </View>
+
+              <Section title="Thông tin">
+                <LineRow label="Chủ nhà" value={getLandlordName(invoice)} />
+                {invoice.sentAt ? (
+                  <LineRow
+                    label="Ngày gửi"
+                    value={formatInvoiceDate(invoice.sentAt)}
+                  />
+                ) : null}
+                <LineRow
+                  label="Ngày tạo"
+                  value={
+                    invoice.createdAt
+                      ? formatInvoiceDate(invoice.createdAt)
+                      : "—"
+                  }
+                />
+              </Section>
+
+              <Section title="Chi phí">
+                <LineRow
+                  label="Tiền thuê"
+                  value={amountOrDash(invoice.rentAmount)}
+                />
+                <LineRow
+                  label="Tiền điện"
+                  value={amountOrDash(invoice.electricityAmount)}
+                />
+                <LineRow
+                  label="Tiền nước"
+                  value={amountOrDash(invoice.waterAmount)}
+                />
+                {(invoice.additionalFees ?? 0) > 0 ? (
+                  <LineRow
+                    label="Phí khác"
+                    value={amountOrDash(invoice.additionalFees)}
+                  />
+                ) : null}
+                <View style={styles.totalLine}>
+                  <ThemedText type="smallBold" style={styles.totalLabel}>
+                    Tổng cộng
+                  </ThemedText>
+                  <ThemedText type="smallBold" style={styles.totalValue}>
+                    {formatPrice(invoice.totalAmount)}
+                  </ThemedText>
+                </View>
+              </Section>
+
+              {detail ? (
+                <Section title="Chỉ số điện nước">
+                  {detail.electricityUsage != null ? (
+                    <LineRow
+                      label="Điện tiêu thụ"
+                      value={`${detail.electricityUsage} kWh`}
+                    />
+                  ) : null}
+                  {detail.electricityOldIndex != null &&
+                  detail.electricityNewIndex != null ? (
+                    <LineRow
+                      label="Chỉ số điện"
+                      value={`${detail.electricityOldIndex} → ${detail.electricityNewIndex}`}
+                    />
+                  ) : null}
+                  {detail.waterUsage != null ? (
+                    <LineRow
+                      label="Nước tiêu thụ"
+                      value={`${detail.waterUsage} m³`}
+                    />
+                  ) : null}
+                  {detail.waterOldIndex != null &&
+                  detail.waterNewIndex != null ? (
+                    <LineRow
+                      label="Chỉ số nước"
+                      value={`${detail.waterOldIndex} → ${detail.waterNewIndex}`}
+                    />
+                  ) : null}
+                </Section>
+              ) : null}
+
+              {invoice.notes ? (
+                <Section title="Ghi chú">
+                  <ThemedText type="small" style={styles.notes}>
+                    {invoice.notes}
+                  </ThemedText>
+                </Section>
+              ) : null}
+
+              {showPaymentInfo ? (
+                <Section title="Thông tin thanh toán">
+                  <ThemedText type="small" style={styles.paymentHint}>
+                    Vui lòng chuyển khoản trực tiếp cho chủ trọ theo thông tin
+                    dưới đây. Hệ thống không xử lý giao dịch thanh toán hóa đơn.
+                  </ThemedText>
+                  <LineRow label="Ngân hàng" value={invoice.paymentBankName!} />
+                  <LineRow
+                    label="Số tài khoản"
+                    value={invoice.paymentAccountNumber ?? "—"}
+                    copyable
+                  />
+                  <LineRow
+                    label="Chủ tài khoản"
+                    value={invoice.paymentAccountHolder ?? "—"}
+                  />
+                  {invoice.paymentNote ? (
+                    <LineRow
+                      label="Nội dung chuyển khoản"
+                      value={invoice.paymentNote}
+                      copyable
+                      bold
+                    />
+                  ) : null}
+                  {invoice.paymentQrUrl ? (
+                    <View style={styles.qrWrap}>
+                      <ThemedText type="small" style={styles.qrLabel}>
+                        Quét mã QR để chuyển khoản
+                      </ThemedText>
+                      <Image
+                        source={{ uri: invoice.paymentQrUrl }}
+                        style={styles.qrImage}
+                        resizeMode="contain"
+                      />
+                    </View>
+                  ) : null}
+                </Section>
+              ) : isInvoiceUnpaid(invoice.status) ? (
+                <View style={styles.payHintCard}>
+                  <Text style={styles.payHintIcon}>🏦</Text>
+                  <ThemedText type="small" style={styles.payHintText}>
+                    Chưa có thông tin chuyển khoản trên hóa đơn. Vui lòng liên
+                    hệ chủ trọ.
+                  </ThemedText>
+                </View>
+              ) : null}
+
+              {invoice.status === "PAID" ? (
+                <View style={styles.paidCard}>
+                  <Text style={styles.paidIcon}>✓</Text>
+                  <View style={styles.paidTextWrap}>
+                    <ThemedText type="smallBold" style={styles.paidTitle}>
+                      Đã thanh toán
+                    </ThemedText>
+                    <ThemedText type="small" style={styles.paidText}>
+                      Hóa đơn đã được xác nhận
+                      {invoice.paidAt
+                        ? ` vào ${formatInvoiceDate(invoice.paidAt)}`
+                        : ""}
+                      .
+                    </ThemedText>
+                  </View>
+                </View>
+              ) : null}
+            </ScrollView>
+
+            {canTenantConfirmTransfer(invoice) ? (
+              <View
                 style={[
-                  styles.payButton,
-                  (paying || verifying) && styles.payButtonDisabled,
+                  styles.payFooter,
+                  { paddingBottom: Math.max(insets.bottom, 12) },
                 ]}
-                disabled={paying || verifying}
-                onPress={() => void handlePay()}
               >
-                {paying ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Text style={styles.payButtonText}>Thanh toán PayOS</Text>
-                    <Text style={styles.payButtonAmount}>
-                      {formatPrice(invoice.totalAmount)}
-                    </Text>
-                  </>
-                )}
-              </Pressable>
-            </View>
-          ) : null}
+                <Pressable
+                  style={[
+                    styles.confirmButton,
+                    confirming && styles.confirmButtonDisabled,
+                  ]}
+                  disabled={confirming}
+                  onPress={() => void handleConfirmTransfer()}
+                >
+                  {confirming ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <ThemedText type="smallBold" style={styles.confirmButtonText}>
+                      Tôi đã chuyển khoản
+                    </ThemedText>
+                  )}
+                </Pressable>
+              </View>
+            ) : invoice.paymentStatus === "pending_confirmation" ? (
+              <View
+                style={[
+                  styles.pendingFooter,
+                  { paddingBottom: Math.max(insets.bottom, 12) },
+                ]}
+              >
+                <ThemedText type="smallBold" style={styles.pendingFooterText}>
+                  Đã gửi xác nhận, chờ chủ trọ kiểm tra
+                </ThemedText>
+              </View>
+            ) : null}
           </>
         )}
       </SafeAreaView>
@@ -461,7 +496,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   errorText: { color: "#D14343", textAlign: "center" },
-  hintText: { color: "#8A7B68", marginTop: 8 },
   retryButton: {
     backgroundColor: "#F28C1B",
     borderRadius: 10,
@@ -483,6 +517,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 10,
   },
+  badgeColumn: { gap: 6, alignItems: "flex-end" },
   heroTitle: { color: "#2F261A", fontSize: 22 },
   heroSubtitle: { color: "#8A7B68", marginTop: 4 },
   statusPill: {
@@ -521,12 +556,14 @@ const styles = StyleSheet.create({
   lineRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12,
   },
   lineLabel: { color: "#8A7B68", flex: 1 },
-  lineValue: { color: "#2F261A" },
+  lineValueWrap: { alignItems: "flex-end", maxWidth: "62%" },
+  lineValue: { color: "#2F261A", textAlign: "right" },
   lineValueBold: { color: "#F28C1B", fontSize: 16 },
+  copyHint: { color: "#E68A2E", marginTop: 2, fontSize: 11 },
   totalLine: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -538,6 +575,16 @@ const styles = StyleSheet.create({
   totalLabel: { color: "#2F261A", fontSize: 15 },
   totalValue: { color: "#F28C1B", fontSize: 17 },
   notes: { color: "#5A4936", lineHeight: 20 },
+  paymentHint: { color: "#7A6B58", lineHeight: 20, marginBottom: 4 },
+  qrWrap: { alignItems: "center", gap: 8, marginTop: 8 },
+  qrLabel: { color: "#8A7B68" },
+  qrImage: {
+    width: 180,
+    height: 180,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E8E1D8",
+  },
   payHintCard: {
     flexDirection: "row",
     gap: 10,
@@ -550,6 +597,20 @@ const styles = StyleSheet.create({
   },
   payHintIcon: { fontSize: 20 },
   payHintText: { flex: 1, color: "#7A6B58", lineHeight: 20 },
+  paidCard: {
+    flexDirection: "row",
+    gap: 12,
+    backgroundColor: "#E2F5E8",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#B8E6C8",
+    padding: 14,
+    alignItems: "flex-start",
+  },
+  paidIcon: { fontSize: 20, color: "#2E8B57" },
+  paidTextWrap: { flex: 1, gap: 4 },
+  paidTitle: { color: "#2E8B57" },
+  paidText: { color: "#3D7A55", lineHeight: 20 },
   payFooter: {
     position: "absolute",
     left: 0,
@@ -561,26 +622,23 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(63,47,34,0.08)",
   },
-  payButton: {
-    backgroundColor: "#F28C1B",
+  confirmButton: {
+    backgroundColor: "#1F2940",
     borderRadius: 14,
     paddingVertical: 16,
-    paddingHorizontal: 20,
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
   },
-  payButtonDisabled: {
-    opacity: 0.7,
+  confirmButtonDisabled: { opacity: 0.7 },
+  confirmButtonText: { color: "#FFFFFF", fontSize: 16 },
+  pendingFooter: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: 0,
+    paddingVertical: 14,
+    backgroundColor: "#E8F0FF",
+    borderRadius: 12,
+    alignItems: "center",
   },
-  payButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  payButtonAmount: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "800",
-  },
+  pendingFooterText: { color: "#4B6CB7" },
 });

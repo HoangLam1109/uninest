@@ -6,7 +6,7 @@ export type LandlordTab =
   | "home"
   | "rooms"
   | "bookings"
-  | "tenants"
+  | "contracts"
   | "reports"
   | "profile";
 
@@ -14,7 +14,7 @@ const TAB_ROUTES: Partial<Record<LandlordTab, string>> = {
   home: "/landlord/home_page",
   rooms: "/landlord/rooms_page",
   bookings: "/landlord/bookings_page",
-  tenants: "/landlord/tenants_page",
+  contracts: "/landlord/contracts_page",
   reports: "/landlord/invoices_page",
   profile: "/landlord/profile_page",
 };
@@ -31,7 +31,7 @@ export function LandlordBottomNavigation({
     { id: "home", label: "Trang chủ", icon: "▦" },
     { id: "rooms", label: "Phòng", icon: "🛏" },
     { id: "bookings", label: "Đặt phòng", icon: "📅" },
-    { id: "tenants", label: "Người thuê", icon: "👥" },
+    { id: "contracts", label: "Hợp đồng", icon: "📄" },
     { id: "reports", label: "Báo cáo", icon: "🧾" },
     { id: "profile", label: "Hồ sơ", icon: "👤" },
   ];

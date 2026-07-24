@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -21,11 +20,13 @@ import { chatApi } from "@/api/chat.api";
 import { reviewApi } from "@/api/review.api";
 import { roomApi } from "@/api/room.api";
 import { FavoriteHeartButton } from "@/components/favorite-heart-button";
+import { RoomLocationMap } from "@/components/room-location-map";
 import { RoomReviewsSection } from "@/components/room-reviews-section";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/auth-context";
 import { isLandlordRole } from "@/utils/landlord-access";
+import { isGuestUser } from "@/utils/tenant-access";
 import { useTenantGate } from "@/hooks/use-tenant-gate";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { Booking } from "@/types/booking";
@@ -35,7 +36,7 @@ import { getBookingRoomId } from "@/utils/booking-display";
 import {
   buildRoomHighlights,
   formatPrice,
-  formatRoomLocation,
+  formatRoomFullLocation,
   getLandlordName,
   getRoomImageSource,
   sortRoomImages,
@@ -74,6 +75,7 @@ export default function DetailPage() {
   const roomId = typeof id === "string" ? id : Array.isArray(id) ? id[0] : "";
   const { isAuthenticated, user } = useAuth();
   const { requireTenant, handleTenantApiError, TenantGatePrompt } = useTenantGate();
+  const isGuest = isGuestUser(user?.role);
 
   const [room, setRoom] = useState<Room | null>(null);
   const [images, setImages] = useState<RoomImage[]>([]);
@@ -124,12 +126,6 @@ export default function DetailPage() {
       pathname: "/sv/booking_page",
       params: { roomId: room._id, title: room.title },
     } as any);
-  };
-
-  const openMap = () => {
-    if (!room) return;
-    const query = encodeURIComponent(formatRoomLocation(room));
-    void Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
   };
 
   const loadRoom = useCallback(async () => {
@@ -311,7 +307,7 @@ export default function DetailPage() {
               {room.title}
             </ThemedText>
             <ThemedText type="small" style={styles.location}>
-              📍 {formatRoomLocation(room)}
+              📍 {formatRoomFullLocation(room)}
             </ThemedText>
           </View>
 
@@ -393,21 +389,14 @@ export default function DetailPage() {
             </>
           ) : null}
 
-          <View style={styles.section}>
-            <ThemedText type="smallBold" style={styles.sectionTitle}>
-              Vị trí
-            </ThemedText>
-            <Pressable style={styles.mapCard} onPress={openMap}>
-              <View style={styles.mapBlob} />
-              <View style={styles.mapMarker}>
-                <Text style={styles.mapMarkerText}>⌂</Text>
-              </View>
-            </Pressable>
-
-            <ThemedText type="small" style={styles.mapHint}>
-              {room ? formatRoomLocation(room) : ""} — Chạm để mở Google Maps
-            </ThemedText>
-          </View>
+          {room ? (
+            <RoomLocationMap
+              address={formatRoomFullLocation(room)}
+              title={room.title}
+              latitude={room.latitude}
+              longitude={room.longitude}
+            />
+          ) : null}
 
           {!isLoading && !error && room ? (
           <View style={styles.bookingCard}>
@@ -467,6 +456,15 @@ export default function DetailPage() {
               </>
             ) : (
               <>
+                {isGuest ? (
+                  <Pressable
+                    style={styles.upgradeButton}
+                    onPress={() => router.push("/sv/upgrade_package_page" as any)}
+                  >
+                    <Text style={styles.upgradeButtonText}>👑 Nâng cấp gói</Text>
+                  </Pressable>
+                ) : null}
+
                 <Pressable style={styles.bookButton} onPress={handleBookNow}>
                   <Text style={styles.bookButtonText}>Đặt ngay →</Text>
                 </Pressable>
@@ -759,44 +757,6 @@ const styles = StyleSheet.create({
   contactText: {
     color: "#F28C1B",
   },
-  mapCard: {
-    height: 220,
-    borderRadius: 18,
-    backgroundColor: "#FFFFFF",
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#E8E1D6",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  mapHint: {
-    color: "#8A7B68",
-    marginTop: 10,
-    lineHeight: 18,
-  },
-  mapBlob: {
-    width: 240,
-    height: 150,
-    borderRadius: 70,
-    backgroundColor: "#93C35B",
-    transform: [{ rotate: "-12deg" }],
-    opacity: 0.95,
-  },
-  mapMarker: {
-    position: "absolute",
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#F28C1B",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 4,
-    borderColor: "#FFFFFF",
-  },
-  mapMarkerText: {
-    color: "#FFFFFF",
-    fontSize: 20,
-  },
   accessRow: {
     flexDirection: "row",
     gap: 14,
@@ -919,6 +879,21 @@ const styles = StyleSheet.create({
     flex: 1,
     color: "#2E8B57",
     lineHeight: 20,
+  },
+  upgradeButton: {
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: "#F28C1B",
+    backgroundColor: "#FFF8F0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 16,
+  },
+  upgradeButtonText: {
+    color: "#F28C1B",
+    fontSize: 16,
+    fontWeight: "800",
   },
   bookButton: {
     height: 54,

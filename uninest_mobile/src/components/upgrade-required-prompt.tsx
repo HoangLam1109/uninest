@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -8,12 +9,13 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { servicePackageApi } from "@/api/service-package.api";
 import {
-  TENANT_PACKAGE_PRICE,
   UPGRADE_FEATURES,
   type UpgradeFeatureKey,
 } from "@/constants/upgrade-features";
 import { isGuestUser, isLandlordUser } from "@/utils/tenant-access";
+import { formatServicePackagePrice } from "@/utils/service-package-display";
 
 type UpgradeRequiredPromptProps = {
   visible: boolean;
@@ -31,6 +33,31 @@ export function UpgradeRequiredPrompt({
   onUpgrade,
 }: UpgradeRequiredPromptProps) {
   const insets = useSafeAreaInsets();
+  const [tenantPriceLabel, setTenantPriceLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    let cancelled = false;
+    void servicePackageApi
+      .listActive({ page: 1, limit: 50 })
+      .then((res) => {
+        if (cancelled) return;
+        const tenantPkg = (res.data ?? []).find(
+          (pkg) => pkg.targetRole === "TENANT" && pkg.isActive,
+        );
+        setTenantPriceLabel(
+          tenantPkg ? formatServicePackagePrice(tenantPkg.price) : null,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setTenantPriceLabel(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visible]);
 
   if (!visible) return null;
 
@@ -87,8 +114,9 @@ export function UpgradeRequiredPrompt({
               {canUpgrade ? (
                 <View style={styles.priceRow}>
                   <Text style={styles.priceLabel}>Gói Người thuê</Text>
-                  <Text style={styles.priceValue}>{TENANT_PACKAGE_PRICE}</Text>
-                  <Text style={styles.priceNote}>/ tháng</Text>
+                  <Text style={styles.priceValue}>
+                    {tenantPriceLabel ?? "Xem bảng giá"}
+                  </Text>
                 </View>
               ) : null}
             </>

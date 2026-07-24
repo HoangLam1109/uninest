@@ -19,6 +19,7 @@ import {
 } from "react-native-safe-area-context";
 
 import { identityApi } from "@/api/identity.api";
+import { IdentityDetailView } from "@/components/identity-detail-view";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -30,6 +31,13 @@ import {
 } from "@/utils/identity-display";
 import { validateIdentityForm } from "@/utils/validation/identity";
 
+type FormMode = "create" | "edit";
+
+function formatDateInput(value?: string) {
+  if (!value) return "";
+  return value.split("T")[0] ?? value;
+}
+
 export default function ProfileIdentityPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -37,6 +45,10 @@ export default function ProfileIdentityPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<FormMode>("create");
+  const [editingIdentity, setEditingIdentity] = useState<Identity | null>(null);
+  const [viewingIdentity, setViewingIdentity] = useState<Identity | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const [fullName, setFullName] = useState("");
@@ -88,6 +100,38 @@ export default function ProfileIdentityPage() {
     setCccdNumber("");
     setFrontUri(null);
     setBackUri(null);
+    setEditingIdentity(null);
+    setFormMode("create");
+  };
+
+  const openCreateForm = () => {
+    resetForm();
+    setFormMode("create");
+    setFormOpen(true);
+  };
+
+  const openEditForm = (identity: Identity) => {
+    if (identity.status !== "PENDING_VERIFICATION") {
+      Alert.alert(
+        "Không thể sửa",
+        "Chỉ hồ sơ đang chờ xác minh mới có thể chỉnh sửa.",
+      );
+      return;
+    }
+    setEditingIdentity(identity);
+    setFormMode("edit");
+    setFullName(identity.fullName);
+    setDateOfBirth(formatDateInput(identity.dateOfBirth));
+    setPhone(identity.phone);
+    setCccdNumber(identity.cccdNumber);
+    setFrontUri(null);
+    setBackUri(null);
+    setFormOpen(true);
+  };
+
+  const closeForm = () => {
+    setFormOpen(false);
+    resetForm();
   };
 
   const handleSubmit = async () => {
@@ -95,36 +139,90 @@ export default function ProfileIdentityPage() {
       fullName,
       dateOfBirth,
       phone,
-      cccdNumber,
+      cccdNumber: formMode === "edit" ? editingIdentity?.cccdNumber ?? cccdNumber : cccdNumber,
     });
     if (error) {
       Alert.alert("Lỗi", error);
       return;
     }
-    if (!frontUri || !backUri) {
-      Alert.alert("Lỗi", "Vui lòng tải ảnh CCCD mặt trước và mặt sau.");
-      return;
+
+    if (formMode === "create") {
+      if (!frontUri || !backUri) {
+        Alert.alert("Lỗi", "Vui lòng tải ảnh CCCD mặt trước và mặt sau.");
+        return;
+      }
     }
 
     setSubmitting(true);
     try {
-      await identityApi.create({
-        fullName: fullName.trim(),
-        dateOfBirth: dateOfBirth.trim(),
-        phone: phone.trim(),
-        cccdNumber: cccdNumber.trim(),
-        cccdFront: { uri: frontUri },
-        cccdBack: { uri: backUri },
-      });
-      Alert.alert("Thành công", "Hồ sơ xác minh đã được gửi.");
-      setFormOpen(false);
-      resetForm();
+      if (formMode === "edit" && editingIdentity) {
+        await identityApi.update(editingIdentity._id, {
+          fullName: fullName.trim(),
+          dateOfBirth: dateOfBirth.trim(),
+          phone: phone.trim(),
+          ...(frontUri ? { cccdFront: { uri: frontUri } } : {}),
+          ...(backUri ? { cccdBack: { uri: backUri } } : {}),
+        });
+        Alert.alert("Thành công", "Hồ sơ xác minh đã được cập nhật.");
+      } else {
+        await identityApi.create({
+          fullName: fullName.trim(),
+          dateOfBirth: dateOfBirth.trim(),
+          phone: phone.trim(),
+          cccdNumber: cccdNumber.trim(),
+          cccdFront: { uri: frontUri! },
+          cccdBack: { uri: backUri! },
+        });
+        Alert.alert("Thành công", "Hồ sơ xác minh đã được gửi.");
+      }
+      closeForm();
       await loadIdentities(true);
     } catch (err) {
-      Alert.alert("Lỗi", getApiErrorMessage(err, "Không gửi được hồ sơ."));
+      Alert.alert(
+        "Lỗi",
+        getApiErrorMessage(
+          err,
+          formMode === "edit"
+            ? "Không cập nhật được hồ sơ."
+            : "Không gửi được hồ sơ.",
+        ),
+      );
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleDelete = (identity: Identity) => {
+    Alert.alert(
+      "Xóa hồ sơ",
+      `Bạn có chắc muốn xóa hồ sơ CCCD của ${identity.fullName}?`,
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: () => {
+            setDeletingId(identity._id);
+            void identityApi
+              .delete(identity._id)
+              .then(async () => {
+                if (viewingIdentity?._id === identity._id) {
+                  setViewingIdentity(null);
+                }
+                await loadIdentities(true);
+                Alert.alert("Thành công", "Đã xóa hồ sơ xác minh.");
+              })
+              .catch((err) => {
+                Alert.alert(
+                  "Lỗi",
+                  getApiErrorMessage(err, "Không xóa được hồ sơ."),
+                );
+              })
+              .finally(() => setDeletingId(null));
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -137,7 +235,7 @@ export default function ProfileIdentityPage() {
           <ThemedText type="smallBold" style={styles.headerTitle}>
             Xác minh danh tính
           </ThemedText>
-          <Pressable style={styles.iconButton} onPress={() => setFormOpen(true)}>
+          <Pressable style={styles.iconButton} onPress={openCreateForm}>
             <Text style={styles.addText}>+</Text>
           </Pressable>
         </View>
@@ -188,6 +286,34 @@ export default function ProfileIdentityPage() {
                 <ThemedText type="small" style={styles.cardMeta}>
                   SĐT: {identity.phone}
                 </ThemedText>
+
+                <View style={styles.cardActions}>
+                  <Pressable
+                    style={styles.actionButton}
+                    onPress={() => setViewingIdentity(identity)}
+                  >
+                    <Text style={styles.actionButtonText}>Xem</Text>
+                  </Pressable>
+                  {identity.status === "PENDING_VERIFICATION" ? (
+                    <Pressable
+                      style={styles.actionButton}
+                      onPress={() => openEditForm(identity)}
+                    >
+                      <Text style={styles.actionButtonText}>Sửa</Text>
+                    </Pressable>
+                  ) : null}
+                  <Pressable
+                    style={[styles.actionButton, styles.actionButtonDanger]}
+                    disabled={deletingId === identity._id}
+                    onPress={() => handleDelete(identity)}
+                  >
+                    {deletingId === identity._id ? (
+                      <ActivityIndicator color="#D14343" size="small" />
+                    ) : (
+                      <Text style={styles.actionButtonDangerText}>Xóa</Text>
+                    )}
+                  </Pressable>
+                </View>
               </View>
             ))
           )}
@@ -197,11 +323,11 @@ export default function ProfileIdentityPage() {
       <Modal visible={formOpen} animationType="slide">
         <SafeAreaView style={styles.modalSafe}>
           <View style={styles.modalHeader}>
-            <Pressable onPress={() => setFormOpen(false)}>
+            <Pressable onPress={closeForm}>
               <Text style={styles.iconText}>←</Text>
             </Pressable>
             <ThemedText type="smallBold" style={styles.modalTitle}>
-              Tạo hồ sơ CCCD
+              {formMode === "edit" ? "Cập nhật hồ sơ CCCD" : "Tạo hồ sơ CCCD"}
             </ThemedText>
             <View style={{ width: 40 }} />
           </View>
@@ -213,15 +339,34 @@ export default function ProfileIdentityPage() {
               onChangeText={setDateOfBirth}
             />
             <Field label="Số điện thoại" value={phone} onChangeText={setPhone} />
-            <Field label="Số CCCD" value={cccdNumber} onChangeText={setCccdNumber} />
+            {formMode === "create" ? (
+              <Field label="Số CCCD" value={cccdNumber} onChangeText={setCccdNumber} />
+            ) : (
+              <View style={styles.field}>
+                <ThemedText type="small" style={styles.fieldLabel}>
+                  Số CCCD
+                </ThemedText>
+                <ThemedText type="smallBold" style={styles.readOnlyValue}>
+                  {cccdNumber}
+                </ThemedText>
+              </View>
+            )}
             <Pressable style={styles.imageButton} onPress={() => void pickImage("front")}>
               <ThemedText type="smallBold" style={styles.imageButtonText}>
-                {frontUri ? "✓ Ảnh mặt trước" : "Tải ảnh mặt trước"}
+                {frontUri
+                  ? "✓ Ảnh mặt trước mới"
+                  : formMode === "edit"
+                    ? "Đổi ảnh mặt trước (tuỳ chọn)"
+                    : "Tải ảnh mặt trước"}
               </ThemedText>
             </Pressable>
             <Pressable style={styles.imageButton} onPress={() => void pickImage("back")}>
               <ThemedText type="smallBold" style={styles.imageButtonText}>
-                {backUri ? "✓ Ảnh mặt sau" : "Tải ảnh mặt sau"}
+                {backUri
+                  ? "✓ Ảnh mặt sau mới"
+                  : formMode === "edit"
+                    ? "Đổi ảnh mặt sau (tuỳ chọn)"
+                    : "Tải ảnh mặt sau"}
               </ThemedText>
             </Pressable>
             <Pressable
@@ -233,11 +378,30 @@ export default function ProfileIdentityPage() {
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <ThemedText type="smallBold" style={styles.submitText}>
-                  Gửi hồ sơ
+                  {formMode === "edit" ? "Lưu thay đổi" : "Gửi hồ sơ"}
                 </ThemedText>
               )}
             </Pressable>
           </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      <Modal visible={Boolean(viewingIdentity)} animationType="slide">
+        <SafeAreaView style={styles.modalSafe}>
+          <View style={styles.modalHeader}>
+            <Pressable onPress={() => setViewingIdentity(null)}>
+              <Text style={styles.iconText}>←</Text>
+            </Pressable>
+            <ThemedText type="smallBold" style={styles.modalTitle}>
+              Chi tiết hồ sơ
+            </ThemedText>
+            <View style={{ width: 40 }} />
+          </View>
+          <View style={styles.detailBody}>
+            {viewingIdentity ? (
+              <IdentityDetailView identity={viewingIdentity} />
+            ) : null}
+          </View>
         </SafeAreaView>
       </Modal>
     </ThemedView>
@@ -312,6 +476,33 @@ const styles = StyleSheet.create({
   cardTitle: { color: "#2F261A", flex: 1 },
   cardMeta: { color: "#8A7B68" },
   statusText: { fontSize: 12, fontWeight: "800" },
+  cardActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#F0EBE4",
+  },
+  actionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#FFF0DF",
+  },
+  actionButtonText: {
+    color: "#C47A10",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  actionButtonDanger: {
+    backgroundColor: "#FDECEC",
+  },
+  actionButtonDangerText: {
+    color: "#D14343",
+    fontWeight: "700",
+    fontSize: 13,
+  },
   modalSafe: { flex: 1, backgroundColor: "#F5EFE6" },
   modalHeader: {
     flexDirection: "row",
@@ -321,9 +512,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   modalTitle: { fontSize: 17, color: "#2F261A" },
+  detailBody: { flex: 1, paddingHorizontal: 16 },
   form: { padding: 16, gap: 12 },
   field: { gap: 6 },
   fieldLabel: { color: "#6B5C4E" },
+  readOnlyValue: { color: "#2F261A" },
   input: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
