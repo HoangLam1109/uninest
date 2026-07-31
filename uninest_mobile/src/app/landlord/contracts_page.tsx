@@ -294,7 +294,7 @@ export default function LandlordContractsPage() {
           ) : null}
         </ScrollView>
 
-        <LandlordBottomNavigation activeTab="profile" />
+        <LandlordBottomNavigation activeTab="contracts" />
       </SafeAreaView>
 
       <ContractFormModal

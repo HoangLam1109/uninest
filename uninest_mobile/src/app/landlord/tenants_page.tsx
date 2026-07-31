@@ -106,7 +106,7 @@ export default function LandlordTenantsPage() {
           )}
         </ScrollView>
 
-        <LandlordBottomNavigation activeTab="tenants" />
+        <LandlordBottomNavigation activeTab="profile" />
       </SafeAreaView>
     </View>
   );

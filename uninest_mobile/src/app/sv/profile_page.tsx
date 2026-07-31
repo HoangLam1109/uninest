@@ -284,14 +284,7 @@ export default function ProfilePage() {
           <SectionHeader
             title="Đơn đăng ký của tôi"
             actionLabel="Xem tất cả"
-            onAction={() =>
-              Alert.alert(
-                "Đơn đăng ký",
-                bookingTotal > 0
-                  ? `Bạn có ${bookingTotal} đơn đăng ký.`
-                  : "Chưa có đơn đăng ký nào.",
-              )
-            }
+            onAction={() => router.push("/sv/profile_rooms_page" as any)}
           />
 
           {loadingBookings ? (

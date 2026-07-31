@@ -2,7 +2,7 @@ import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-type BottomTab = "home" | "explore" | "saved" | "messages" | "profile";
+type BottomTab = "home" | "explore" | "bookings" | "messages" | "profile";
 
 export function BottomNavigation({ activeTab }: { activeTab: BottomTab }) {
   const router = useRouter();
@@ -26,10 +26,10 @@ export function BottomNavigation({ activeTab }: { activeTab: BottomTab }) {
         onPress={() => router.push("/sv/search_page" as any)}
       />
       <NavItem
-        label="Đã lưu"
-        icon="heart"
-        active={activeTab === "saved"}
-        onPress={() => router.push("/sv/saved_page" as any)}
+        label="Đặt phòng"
+        icon="calendar"
+        active={activeTab === "bookings"}
+        onPress={() => router.push("/sv/profile_rooms_page" as any)}
       />
       <NavItem
         label="Tin nhắn"
@@ -53,7 +53,7 @@ function NavItem({
   active,
   onPress,
 }: {
-  icon: "home" | "compass" | "heart" | "message" | "person";
+  icon: "home" | "compass" | "calendar" | "message" | "person";
   label: string;
   active?: boolean;
   onPress?: () => void;
@@ -85,7 +85,7 @@ function NavIcon({
   color,
   active,
 }: {
-  icon: "home" | "compass" | "heart" | "message" | "person";
+  icon: "home" | "compass" | "calendar" | "message" | "person";
   color: string;
   active?: boolean;
 }) {
@@ -106,8 +106,13 @@ function NavIcon({
     );
   }
 
-  if (icon === "heart") {
-    return <Text style={[styles.heartIcon, { color }]}>{active ? "♥" : "♡"}</Text>;
+  if (icon === "calendar") {
+    return (
+      <View style={[styles.calendarIcon, { borderColor: color }]}>
+        <View style={[styles.calendarTop, { backgroundColor: color }]} />
+        <View style={[styles.calendarDot, { backgroundColor: color }]} />
+      </View>
+    );
   }
 
   if (icon === "message") {
@@ -163,6 +168,29 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     transform: [{ rotate: "45deg" }],
+  },
+  calendarIcon: {
+    width: 22,
+    height: 20,
+    borderWidth: 2,
+    borderRadius: 4,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingBottom: 3,
+  },
+  calendarTop: {
+    position: "absolute",
+    top: -1,
+    left: -1,
+    right: -1,
+    height: 6,
+    borderTopLeftRadius: 3,
+    borderTopRightRadius: 3,
+  },
+  calendarDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
   },
   heartIcon: {
     fontSize: 23,

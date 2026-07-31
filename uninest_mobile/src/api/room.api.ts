@@ -9,6 +9,7 @@ import type {
   RoomPayload,
   RoomResponse,
   RoomStatus,
+  RoomType,
 } from "@/types/room";
 
 export type RoomImageUploadInput = {
@@ -28,17 +29,39 @@ export type RoomListParams = {
   status?: RoomStatus;
   minPrice?: number;
   maxPrice?: number;
+  roomType?: RoomType;
 };
 
-function buildRoomQuery(params?: RoomListParams) {
-  const query = new URLSearchParams();
-  query.set("page", String(params?.page ?? 1));
-  query.set("limit", String(params?.limit ?? 50));
+export type RoomSearchParams = RoomListParams & {
+  q?: string;
+};
+
+function appendRoomFilters(
+  query: URLSearchParams,
+  params?: RoomListParams,
+) {
   if (params?.city) query.set("city", params.city);
   if (params?.district) query.set("district", params.district);
   if (params?.status) query.set("status", params.status);
   if (params?.minPrice != null) query.set("minPrice", String(params.minPrice));
   if (params?.maxPrice != null) query.set("maxPrice", String(params.maxPrice));
+  if (params?.roomType) query.set("roomType", params.roomType);
+}
+
+function buildRoomQuery(params?: RoomListParams) {
+  const query = new URLSearchParams();
+  query.set("page", String(params?.page ?? 1));
+  query.set("limit", String(params?.limit ?? 50));
+  appendRoomFilters(query, params);
+  return query.toString();
+}
+
+function buildSearchQuery(params?: RoomSearchParams) {
+  const query = new URLSearchParams();
+  query.set("page", String(params?.page ?? 1));
+  query.set("limit", String(params?.limit ?? 50));
+  appendRoomFilters(query, params);
+  if (params?.q) query.set("q", params.q);
   return query.toString();
 }
 
@@ -47,6 +70,9 @@ export const roomApi = {
 
   list: (params?: RoomListParams) =>
     api.get<RoomListResponse>(`/rooms/getAll?${buildRoomQuery(params)}`),
+
+  search: (params?: RoomSearchParams) =>
+    api.get<RoomListResponse>(`/rooms/search?${buildSearchQuery(params)}`),
 
   listMy: (params?: RoomListParams) =>
     api.get<RoomListResponse>(`/rooms/my?${buildRoomQuery(params)}`),

@@ -31,6 +31,8 @@ export type Room = {
   areaSqm?: number;
   maxOccupants?: number;
   isPublished?: boolean;
+  latitude?: number;
+  longitude?: number;
   amenityIds?: Array<string | Amenity>;
   landlordId?: string | RoomLandlord;
   deletedAt?: string | null;

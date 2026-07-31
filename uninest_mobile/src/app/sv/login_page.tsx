@@ -148,7 +148,7 @@ export default function LoginPage() {
                   Mật khẩu
                 </ThemedText>
                 <Pressable
-                  onPress={() => setPasswordVisible((current) => !current)}
+                  onPress={() => router.push("/sv/forgot_password_page" as any)}
                 >
                   <ThemedText type="smallBold" style={styles.forgotLink}>
                     Quên mật khẩu?
