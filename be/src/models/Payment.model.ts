@@ -29,6 +29,7 @@ export interface IPayment extends Document {
   payerId: Types.ObjectId;
   receiverId: Types.ObjectId;
   invoiceId?: Types.ObjectId;
+  subscriptionPackageId?: Types.ObjectId;
   amount: number;
   currency: String;
   type: PAYMENT_TYPE;
@@ -63,6 +64,11 @@ const PaymentSchema = new Schema<IPayment>(
     invoiceId: {
       type: Schema.Types.ObjectId,
       ref: "Invoice",
+      index: true,
+    },
+    subscriptionPackageId: {
+      type: Schema.Types.ObjectId,
+      ref: "ServicePackage",
       index: true,
     },
     amount: {

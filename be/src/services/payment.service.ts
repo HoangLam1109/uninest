@@ -53,6 +53,10 @@ export class PaymentService {
       paymentData.invoiceId = params.invoiceId;
     }
 
+    if (params.subscriptionPackageId) {
+      paymentData.subscriptionPackageId = params.subscriptionPackageId;
+    }
+
     const payment: any = await PaymentRepository.create(paymentData);
     if (!payment) {
       throw new Error("Failed to create payment record");
