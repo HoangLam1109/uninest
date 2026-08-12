@@ -194,8 +194,12 @@ export class PayOSService {
     }
 
     const note: string = payment.note || "";
-    if (payment.type === "SERVICE_FEE" && note.includes("Subscription:")) {
-      const packageId = extractSubscriptionPackageId(note);
+    if (payment.type === "SERVICE_FEE") {
+      const packageId =
+        payment.subscriptionPackageId?.toString?.() ||
+        payment.subscriptionPackageId ||
+        extractSubscriptionPackageId(note);
+
       if (packageId) {
         const pkg = await ServicePackageRepository.findById(packageId);
         if (pkg) {
@@ -205,15 +209,18 @@ export class PayOSService {
           endDate.setDate(endDate.getDate() + pkg.durationDays);
           const targetRole = resolvePackageTargetRole(pkg);
 
-          await ServiceSubscriptionRepository.create({
-            userId,
-            packageId,
-            paymentId: payment._id,
-            startDate,
-            endDate,
-            status: SUBSCRIPTION_STATUS.ACTIVE,
-            autoRenew: false,
-          });
+          const activeSub = await ServiceSubscriptionRepository.findActiveByUserId(userId);
+          if (!activeSub) {
+            await ServiceSubscriptionRepository.create({
+              userId,
+              packageId,
+              paymentId: payment._id,
+              startDate,
+              endDate,
+              status: SUBSCRIPTION_STATUS.ACTIVE,
+              autoRenew: false,
+            });
+          }
 
           // Upgrade user role to the package target role with expiry matching subscription end
           await userRepository.updateById(userId, {

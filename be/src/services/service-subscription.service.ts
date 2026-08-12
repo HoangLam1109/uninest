@@ -53,7 +53,7 @@ export class ServiceSubscriptionService {
       receiverId: userId, // platform receives subscription fee
       amount: pkg.price,
       type: PAYMENT_TYPE.SERVICE_FEE,
-      description: `Phi goi Tenant`,
+      description: `Subscription ${pkg.targetRole}`,
       method,
       subscriptionPackageId: packageId,
     });

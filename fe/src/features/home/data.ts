@@ -54,7 +54,7 @@ export const roomTypeOptions = [
 ] as const
 
 export const mobileDownloadUrl =
-  'https://expo.dev/accounts/viethq2004s-team/projects/uninest/builds/535adf1f-e220-4510-aa95-d9cba2b94404'
+  'https://expo.dev/accounts/viethq2004s-team/projects/uninest/builds/ab9f6179-b5cd-487a-9424-00f6692feece'
 
 export const homeFaqs = [
   {
